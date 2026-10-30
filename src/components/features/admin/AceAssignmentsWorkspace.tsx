@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useQueryClient } from 'react-query';
 import { aceAssignmentsRepository, AceAssignmentDraftPatch } from '../../../data/repos/aceAssignments';
+import { AceParticipationReview } from './AceParticipationReview';
 import { logAdminActivity } from '../../../data/repos/adminActivity';
 import { toUserMessage } from '../../../data/errors';
 import {
@@ -63,7 +64,7 @@ const STATUS_COPY: Record<AceAssignmentCycle['status'], { label: string; hint: s
 };
 
 const primaryBtnCls =
-  'rounded border-0 bg-[var(--color-text)] px-3 py-1.5 font-sans text-xs font-medium text-[var(--color-bg)] disabled:opacity-50';
+  'rounded border-0 bg-brand-600 px-3 py-1.5 font-sans text-xs font-medium text-white hover:bg-brand-700 dark:bg-brand-300 dark:text-brand-950 dark:hover:bg-brand-200 disabled:opacity-50';
 const ghostBtnCls =
   'rounded border border-[var(--color-border)] bg-transparent px-3 py-1.5 font-sans text-xs font-medium text-[var(--color-text2)] transition-colors hover:bg-[var(--color-surface2)] disabled:opacity-50';
 const inputCls =
@@ -490,6 +491,9 @@ export function AceAssignmentsWorkspace() {
       <NextStepBanner step={nextStep} onFilter={setFilter} onDismiss={() => setNextStep(null)} />
 
       {preflight && <WorkflowProgress title={`${formatAcademicYear(cycle.academic_year_start)} ACE`} steps={progress} />}
+      {cycle.status === 'published' && (
+        <AceParticipationReview key={cycle.id} cycleId={cycle.id} year={cycle.academic_year_start} />
+      )}
 
       {preflight && (
         <div className="grid grid-cols-2 gap-4 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:grid-cols-4">

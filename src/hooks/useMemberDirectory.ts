@@ -7,7 +7,7 @@ export const MEMBER_DIRECTORY_QUERY_KEY = ['member-directory'] as const;
 
 /** Admin-only: every public_members row, for exact-name link suggestions. */
 export function useMemberDirectory(enabled = true) {
-  const { data: members = [], isLoading: loading, error } = useQuery<MemberOption[]>({
+  const { data: members = [], isLoading: loading, error, refetch } = useQuery<MemberOption[]>({
     queryKey: MEMBER_DIRECTORY_QUERY_KEY,
     queryFn: () => memberLookupRepository.listMemberDirectory(),
     enabled,
@@ -18,5 +18,5 @@ export function useMemberDirectory(enabled = true) {
   const byId = useMemo(() => new Map(members.map((member) => [member.id, member])), [members]);
   const nameIndex = useMemo(() => buildMemberNameIndex(members), [members]);
 
-  return { members, byId, nameIndex, loading, error };
+  return { members, byId, nameIndex, loading, error, refetch };
 }

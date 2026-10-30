@@ -7,7 +7,7 @@ import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { useCurrentVcnArchive } from '../hooks/useVcnArchives';
 import { formatDateOnly } from '../lib/dateOnly';
 import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
-import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
+import { OptimizedImage } from '../components/common/OptimizedImage';
 import { ProgramContentStatus, VCNArchive } from '../types';
 
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
@@ -103,6 +103,7 @@ export function VCNCurrent() {
         <PublicBreadcrumbs />
         <div className="program-app min-h-[60vh]">
           <EditorialHero
+            tone="stage"
             eyebrow="Current Production"
             title={<>VCN <EditorialHeroScript>{currentVcn.year || 'Coming Soon'}</EditorialHeroScript></>}
             meta={
@@ -138,6 +139,7 @@ export function VCNCurrent() {
 
       <div className="program-app">
         <EditorialHero
+          tone="stage"
           eyebrow="Current Production"
           title={currentVcn.title || `Vietnamese Culture Night ${currentVcn.year}`}
           meta={
@@ -199,14 +201,21 @@ export function VCNCurrent() {
               <div className={currentVcn.posterUrl && currentVcn.trailerUrl ? 'grid gap-5 md:grid-cols-2' : 'grid gap-5'}>
                 {currentVcn.posterUrl && (
                   <div className="program-poster-card">
-                    <img 
-                      src={getSupabaseImageUrl(currentVcn.posterUrl, { width: 720, resize: 'contain', quality: 74 })}
-                      srcSet={getSupabaseImageSrcSet(currentVcn.posterUrl, [360, 720, 960], { resize: 'contain', quality: 74 })}
+                    <OptimizedImage
+                      src={currentVcn.posterUrl}
+                      width={720}
+                      height={960}
+                      widths={[360, 720, 960]}
+                      resize="contain"
+                      quality={74}
                       sizes="(min-width: 768px) 50vw, 100vw"
-                      alt={`VCN ${currentVcn.year} poster`} 
-                      className="w-full object-cover" 
-                      loading="lazy"
-                      decoding="async"
+                      alt={`VCN ${currentVcn.year} poster`}
+                      className="h-auto w-full object-cover"
+                      fallback={
+                        <p className="p-6 font-sans text-sm text-[var(--color-text2)]">
+                          The poster couldn&rsquo;t be loaded.
+                        </p>
+                      }
                     />
                   </div>
                 )}

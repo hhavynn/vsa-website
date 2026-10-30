@@ -2,9 +2,9 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAnalyticsConsent } from '../../context/AnalyticsConsentContext';
 import { FOOTER_GROUPS, FOOTER_LEGAL_LINKS } from './navigation/footerLinks';
-import { usePublicEditorialRoute } from './publicEditorialTheme';
 import { useSiteSettings } from '../../context/SiteSettingsContext';
 import { getSupabaseImageUrl } from '../../lib/supabaseImages';
+import { OFFICIAL_LOGO } from '../../config/brandAssets';
 
 const socialLinks = [
   {
@@ -32,7 +32,7 @@ const editorialLabel = 'mb-3 font-mono text-[10px] font-semibold uppercase track
 function EditorialFooter() {
   const { isConfigured, openPreferences } = useAnalyticsConsent();
   const { settings } = useSiteSettings();
-  const logoSrc = settings.logoUrl || `${process.env.PUBLIC_URL || ''}/images/vsa-logo-official.png`;
+  const logoSrc = settings.logoUrl || OFFICIAL_LOGO.small.src;
 
   return (
     <footer className="editorial-footer border-t border-ed-line bg-surface2 text-ed-ink">
@@ -114,93 +114,7 @@ function EditorialFooter() {
   );
 }
 
-const Footer: React.FC = () => {
-  const { isConfigured, openPreferences } = useAnalyticsConsent();
-  const editorial = usePublicEditorialRoute();
-
-  if (editorial) return <EditorialFooter />;
-
-  return (
-    <footer className="scrapbook-board border-t" style={{ borderColor: 'var(--border)' }}>
-      <div className="vsa-container py-12 sm:py-14">
-        <div className="scrapbook-paper p-6 sm:p-8">
-        <div className="grid gap-10 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
-          <div className="min-w-0">
-            <span className="scrapbook-pin" aria-hidden />
-            <div className="font-serif text-[22px]" style={{ color: 'var(--text)' }}>
-              <span className="italic" style={{ color: 'var(--brand)' }}>VSA</span> at UCSD
-            </div>
-            <p className="mt-3 max-w-sm font-sans text-[13px] leading-[1.7]" style={{ color: 'var(--text3)' }}>
-              Vietnamese Student Association at UC San Diego. Sharing Vietnamese culture, building community, and welcoming all students since 1977.
-            </p>
-            <div className="mt-5 flex gap-2">
-              {socialLinks.map((link) => (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  target={link.href.startsWith('mailto') ? undefined : '_blank'}
-                  rel={link.href.startsWith('mailto') ? undefined : 'noopener noreferrer'}
-                  aria-label={link.label}
-                  className="inline-flex h-[38px] w-[38px] touch:h-11 touch:w-11 items-center justify-center rounded-lg border bg-[var(--surface2)] text-[var(--text3)] transition-colors duration-150 hover:border-[var(--brand)] hover:text-[var(--brand)]"
-                  style={{ borderColor: 'var(--border)' }}
-                >
-                  {link.icon}
-                </a>
-              ))}
-            </div>
-          </div>
-
-          {FOOTER_GROUPS.map((group) => (
-            <nav key={group.title} aria-labelledby={`footer-nav-${group.title.toLowerCase()}`}>
-              <h2 id={`footer-nav-${group.title.toLowerCase()}`} className="mb-4 font-sans text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--text3)' }}>
-                {group.title}
-              </h2>
-              {group.links.map((link) => (
-                <Link
-                  key={link.label}
-                  to={link.to}
-                  className="mb-2.5 block touch:mb-0 touch:flex touch:min-h-11 touch:items-center font-sans text-[13.5px] text-[var(--text2)] transition-colors duration-150 hover:text-[var(--brand)]"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-          ))}
-
-          <nav aria-labelledby="footer-nav-connect">
-            <h2 id="footer-nav-connect" className="mb-4 font-sans text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--text3)' }}>
-              Connect
-            </h2>
-            <a className="mb-2.5 block touch:mb-0 touch:flex touch:min-h-11 touch:items-center font-sans text-[13.5px] text-[var(--text2)] transition-colors duration-150 hover:text-[var(--brand)]" href="https://instagram.com/vsaatucsd" target="_blank" rel="noopener noreferrer">@vsaatucsd</a>
-            <a className="mb-2.5 block touch:mb-0 touch:flex touch:min-h-11 touch:items-center font-sans text-[13.5px] text-[var(--text2)] transition-colors duration-150 hover:text-[var(--brand)]" href="https://discord.gg/cSb6Q4gnW8" target="_blank" rel="noopener noreferrer">Discord Server</a>
-          </nav>
-        </div>
-
-        <div className="mt-10 flex flex-col gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: 'var(--border)' }}>
-          <span className="font-sans text-xs" style={{ color: 'var(--text3)' }}>
-            Copyright {new Date().getFullYear()} VSA at UCSD. Est. 1977.
-          </span>
-          <div className="flex flex-wrap gap-x-4 gap-y-2 font-sans text-xs">
-            {FOOTER_LEGAL_LINKS.map((link) => (
-              <Link key={link.to} to={link.to} className="inline-flex touch:min-h-11 items-center text-[var(--text2)] underline-offset-2 hover:text-[var(--brand)] hover:underline">
-                {link.label}
-              </Link>
-            ))}
-            {isConfigured && (
-              <button
-                type="button"
-                onClick={openPreferences}
-                className="inline-flex touch:min-h-11 items-center text-[var(--text2)] underline-offset-2 hover:text-[var(--brand)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
-              >
-                Analytics preferences
-              </button>
-            )}
-          </div>
-        </div>
-        </div>
-      </div>
-    </footer>
-  );
-};
+/** Shared chrome on every route: the editorial footer, themed by tokens. */
+const Footer: React.FC = () => <EditorialFooter />;
 
 export default Footer;

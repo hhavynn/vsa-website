@@ -92,7 +92,7 @@ export function PublicPreviewDialog({
   }, []);
 
   return createPortal(
-    <div className="fixed inset-0 z-[60] flex bg-black/70 backdrop-blur-sm sm:p-4">
+    <div className="fixed inset-0 z-[60] flex bg-scrim backdrop-blur-sm sm:p-4">
       <div
         ref={dialogRef}
         role="dialog"

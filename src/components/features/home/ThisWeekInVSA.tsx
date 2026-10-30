@@ -487,15 +487,15 @@ export function ThisWeekInVSA() {
       <div className="mx-auto max-w-[1400px] px-5 sm:px-[6vw]">
         <SectionHeading
           id="this-week-in-vsa-title"
-          eyebrow="Weekly check-in"
-          title="This Week"
+          title="This week"
           accent="in VSA."
-          titleClassName="text-[clamp(3rem,8vw,6.5rem)]"
-          className="mb-4"
+          action={
+            <p className="max-w-[22rem] font-sans text-sm leading-relaxed text-text-secondary">
+              Your quick check-in for events, points, Houses, and recent memories.
+            </p>
+          }
+          className="mb-10"
         />
-        <p className="mb-10 max-w-md font-sans text-sm leading-relaxed text-text-secondary">
-          Your quick check-in for events, points, Houses, and recent memories.
-        </p>
 
         <div className="snap-rail-container">
           <div className="snap-rail grid gap-6 md:grid-cols-2 xl:grid-cols-4">

@@ -79,7 +79,7 @@ describe('Home.tsx Upcoming Events section', () => {
     renderHome(queryClient);
 
     expect(screen.getByText('Loading upcoming events…')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 2, name: 'Upcoming Events' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Upcoming events' })).toBeInTheDocument();
   });
 
   it('degrades to fallback links when the events query fails', async () => {
@@ -111,7 +111,7 @@ describe('Home.tsx Upcoming Events section', () => {
 
     const programs = await screen.findByRole('navigation', { name: 'VSA programs' });
     const hrefs = within(programs).getAllByRole('link').map((link) => link.getAttribute('href'));
-    expect(hrefs).toEqual(['/house', '/ace', '/intern-program', '/vcn']);
+    expect(hrefs).toEqual(['/house', '/ace', '/intern-program', '/vcn', '/wild-n-culture']);
     expect(screen.getByRole('heading', { level: 2, name: /There’s more\s*to explore\./ })).toBeInTheDocument();
   });
 
@@ -142,9 +142,13 @@ describe('Home.tsx Upcoming Events section', () => {
 
     renderHome(queryClient);
 
-    expect(await screen.findByText('Future Social')).toBeInTheDocument();
-    expect(screen.getByText('Price Center Ballroom')).toBeInTheDocument();
-    expect(screen.getByText('2 points')).toBeInTheDocument();
+    const section = await screen.findByRole('region', { name: 'Upcoming events' });
+    expect(await within(section).findByText('Future Social')).toBeInTheDocument();
+    expect(within(section).getByText('Price Center Ballroom')).toBeInTheDocument();
+    expect(within(section).getByText('2 points')).toBeInTheDocument();
+    // The date block reads the event's San Diego calendar day.
+    expect(within(section).getByText('25')).toBeInTheDocument();
+    expect(within(section).getByText('Sun')).toBeInTheDocument();
   });
 
   it('links recent photos to actual public gallery albums instead of hardcoded examples', async () => {

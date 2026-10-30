@@ -6,12 +6,12 @@ export default function AdminFeedback() {
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="Feedback" />
 
-      <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Feedback</h1>
-        <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>Bug reports, feature requests, and suggestions.</p>
+      <div className="vsa-admin-field vsa-ribbon-bottom border-[var(--color-border)] border-b px-5 py-6 sm:px-8 sm:py-7">
+        <h1 className="font-display text-[2rem] font-normal leading-[1.05] tracking-[-0.02em] text-text-primary sm:text-[2.6rem]">Feedback</h1>
+        <p className="mt-2 font-sans text-sm text-text-secondary">Bug reports, feature requests, and suggestions.</p>
       </div>
 
-      <div style={{ padding: '24px 28px' }}>
+      <div className="px-5 py-6 sm:px-8">
         <FeedbackTab />
       </div>
     </div>

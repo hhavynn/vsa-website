@@ -117,9 +117,7 @@ export const MemberPhotoRequestFormSchema = z.object({
     // server-side rejection into a message beside the field.
     .regex(/@ucsd\.edu$/i, 'Use your UCSD email (it must end in @ucsd.edu)'),
   note_to_admins: z.string().max(1000, 'Note must be 1,000 characters or fewer'),
-  consent_confirmed: z.literal(true, {
-    errorMap: () => ({ message: 'You must confirm consent to submit a photo' }),
-  }),
+  consent_confirmed: z.literal(true, { error: 'You must confirm consent to submit a photo' }),
 }).strict();
 
 export const DataRightsDependencyPreviewSchema = z.object({

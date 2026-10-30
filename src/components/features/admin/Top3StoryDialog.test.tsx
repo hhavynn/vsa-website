@@ -51,7 +51,7 @@ describe('Top3StoryDialog', () => {
     render(<Top3StoryDialog onClose={() => undefined} />);
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Download Story Image' })).toBeEnabled());
-    expect(screen.getByText(/Current public leaderboard \(2026–27\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Members leaderboard \(2026–27\)/)).toBeInTheDocument();
     expect(screen.getByText('An Nguyen')).toBeInTheDocument();
     expect(screen.getByText('1,240 pts')).toBeInTheDocument();
     expect(screen.getByText('Chi Le')).toBeInTheDocument();
@@ -117,4 +117,28 @@ describe('Top3StoryDialog', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Download Story Image' })).toBeEnabled());
   });
 
+});
+
+
+it('lets an admin choose the verified Board cohort before creating a Top N Story', async () => {
+  mockData = {
+    academicYearStart: 2026, entries: [entry(1, 'Fictional Officer', 1250)], loading: false, error: null,
+  };
+  render(<Top3StoryDialog onClose={() => undefined} />);
+  expect(screen.getByRole('radio', { name: 'Members' })).toBeChecked();
+  fireEvent.click(screen.getByRole('radio', { name: 'Board' }));
+  expect(screen.getByRole('radio', { name: 'Board' })).toBeChecked();
+  expect(screen.getByText(/Board leaderboard \(2026–27\)/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('radio', { name: 'Top 10' }));
+  expect(screen.getByRole('heading', { name: 'Top 10 Story' })).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Download Story Image' })).toBeEnabled());
+});
+
+it('blocks export instead of publishing a mislabeled Member cohort when roster read fails', async () => {
+  mockData = {
+    academicYearStart: 2026, entries: [], loading: false, error: null, cohortUnavailable: true,
+  };
+  render(<Top3StoryDialog onClose={() => undefined} />);
+  expect(screen.getByText(/Verified Board roster is unavailable/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Download Story Image' })).toBeDisabled();
 });

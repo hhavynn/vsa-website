@@ -38,8 +38,10 @@ export function EditorialArrow({ direction = 'out' }: { direction?: 'out' | 'dow
 type HeadingTone = 'default' | 'inverse';
 
 /**
- * Figma `.section-heading`: eyebrow | display title | action, bottom-aligned
- * over a hairline. Collapses to eyebrow + action above a full-width title.
+ * Section header: the title sits on the left edge with an optional action
+ * opposite it, over a hairline. The kicker is optional and kept for the rare
+ * section where it carries information; most sections are titled by their
+ * heading alone so the page does not repeat one eyebrow template.
  */
 export function SectionHeading({
   id,
@@ -53,7 +55,7 @@ export function SectionHeading({
   titleClassName,
 }: {
   id?: string;
-  eyebrow: ReactNode;
+  eyebrow?: ReactNode;
   title: ReactNode;
   accent?: ReactNode;
   action?: ReactNode;
@@ -66,32 +68,34 @@ export function SectionHeading({
   return (
     <header
       className={cn(
-        'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-4 border-b pb-7 sm:pb-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] lg:items-end',
-        inverse ? 'border-white/25' : 'border-ed-line',
+        'flex flex-wrap items-end justify-between gap-x-10 gap-y-4 border-b pb-6 sm:pb-7',
+        inverse ? 'border-white/30' : 'border-ed-line',
         className,
       )}
     >
-      <Eyebrow className={cn('lg:pb-3', inverse ? 'text-white/90' : 'text-ed-muted')}>{eyebrow}</Eyebrow>
-      {action && (
-        <div className="col-start-2 row-start-1 justify-self-end lg:col-start-3 lg:pb-2">{action}</div>
-      )}
-      <Tag
-        id={id}
-        className={cn(
-          editorialDisplay,
-          'col-span-2 m-0 text-[clamp(3.25rem,11vw,8rem)] leading-[0.86] lg:col-span-1 lg:col-start-2 lg:row-start-1',
-          inverse ? 'text-white' : 'text-ed-ink',
-          titleClassName,
+      <div className="min-w-0">
+        {eyebrow && (
+          <Eyebrow className={cn('mb-3', inverse ? 'text-white/85' : 'text-ed-muted')}>{eyebrow}</Eyebrow>
         )}
-      >
-        {title}
-        {accent && (
-          <>
-            {' '}
-            <em className={cn('font-normal', inverse ? 'text-figma-pink' : 'text-ed-accent')}>{accent}</em>
-          </>
-        )}
-      </Tag>
+        <Tag
+          id={id}
+          className={cn(
+            editorialDisplay,
+            'm-0 text-[clamp(2.75rem,7vw,5.25rem)] leading-[0.9] [text-wrap:balance]',
+            inverse ? 'text-white' : 'text-ed-ink',
+            titleClassName,
+          )}
+        >
+          {title}
+          {accent && (
+            <>
+              {' '}
+              <em className={cn('font-normal', inverse ? 'text-figma-pink' : 'text-ed-accent')}>{accent}</em>
+            </>
+          )}
+        </Tag>
+      </div>
+      {action && <div className="shrink-0 pb-1">{action}</div>}
     </header>
   );
 }

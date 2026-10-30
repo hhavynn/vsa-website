@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTop3StoryData } from '../../../hooks/useTop3StoryData';
+import type { LeaderboardCohort } from '../../../lib/memberCohorts';
 import { drawTop3Story, type Top3StoryAssets } from '../../../lib/story/drawTop3Story';
 import { drawTopNStory } from '../../../lib/story/drawTopNStory';
 import { STORY_LIMITS, formatTopNFileName, shouldUseTopNList, storyPresetForLimit, type StoryLimit } from '../../../lib/story/topNStory';
@@ -22,7 +23,8 @@ const THEMES: { id: StoryTheme; label: string }[] = [
 
 export function Top3StoryDialog({ onClose }: { onClose: () => void }) {
   const [limit, setLimit] = useState<StoryLimit>(3);
-  const { academicYearStart, entries, loading, error, excludedBoundaryTie = 0, excludedRank = null } = useTop3StoryData(limit);
+  const [cohort, setCohort] = useState<LeaderboardCohort>('members');
+  const { academicYearStart, entries, loading, error, cohortUnavailable = false, excludedBoundaryTie = 0, excludedRank = null } = useTop3StoryData(limit, cohort);
   const [presetId, setPresetId] = useState<Top3StoryPreset['id']>('current');
   const [theme, setTheme] = useState<StoryTheme>('dark');
   const [assets, setAssets] = useState<Top3StoryAssets | null>(null);
@@ -60,15 +62,17 @@ export function Top3StoryDialog({ onClose }: { onClose: () => void }) {
   const draw = useCallback(
     (ctx: CanvasRenderingContext2D) => {
       if (!assets || academicYearStart === null) return;
-      const content = { entries, preset, theme, yearLabel: formatStoryYearLabel(academicYearStart), asOfLabel, handle: INSTAGRAM_HANDLE };
+      const content = { entries, preset, theme, yearLabel: formatStoryYearLabel(academicYearStart), asOfLabel, handle: INSTAGRAM_HANDLE, cohort };
       if (shouldUseTopNList(limit, entries)) drawTopNStory(ctx, { ...content, limit }, assets);
       else drawTop3Story(ctx, content, assets);
     },
-    [assets, academicYearStart, entries, preset, theme, asOfLabel, limit],
+    [assets, academicYearStart, entries, preset, theme, asOfLabel, limit, cohort],
   );
 
   const status = error
     ? 'Could not load the leaderboard. Close and try again.'
+    : cohortUnavailable
+      ? 'Verified Board roster is unavailable. No member or Board story can be exported until its public roles are confirmed.'
     : loading || !assets
       ? 'Building your story…'
       : academicYearStart === null
@@ -86,17 +90,34 @@ export function Top3StoryDialog({ onClose }: { onClose: () => void }) {
       title={`Top ${limit} Story`}
       description={
         yearLabel
-          ? `Current public leaderboard (${yearLabel}) — same names, points, photos, and Houses members see.`
+          ? `${cohort === 'board' ? 'Board' : 'Members'} leaderboard (${yearLabel}) — verified public cohort, matching leaderboard points and events.`
           : 'Current public leaderboard.'
       }
       draw={status ? null : draw}
       status={status}
       fileName={academicYearStart !== null
-        ? limit === 3 ? formatStoryFileName(academicYearStart, preset.id, theme) : formatTopNFileName(academicYearStart, limit, preset.id, theme)
+        ? limit === 3 && cohort === 'members' ? formatStoryFileName(academicYearStart, preset.id, theme) : formatTopNFileName(academicYearStart, limit, preset.id, theme, cohort)
         : `vsa-top${limit}-story.png`}
       tone={theme}
       onClose={onClose}
     >
+      <fieldset>
+        <legend className="mb-2 font-sans text-2xs font-semibold uppercase tracking-label text-[var(--color-text2)]">
+          Leaderboard category
+        </legend>
+        <div className="grid grid-cols-2 gap-2">
+          {(['members', 'board'] as const).map((option) => (
+            <label key={option} className={cn(
+              'flex min-h-11 cursor-pointer items-center justify-center rounded border px-3 py-2 text-sm font-semibold',
+              cohort === option ? 'border-brand-600 bg-brand-600/10' : 'border-border-strong',
+            )}>
+              <input type="radio" className="sr-only" name="story-cohort" checked={cohort === option} onChange={() => setCohort(option)} />
+              {option === 'members' ? 'Members' : 'Board'}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
       <fieldset>
         <legend className="mb-2 font-sans text-2xs font-semibold uppercase tracking-label text-[var(--color-text2)]">
           Leaderboard size
@@ -106,8 +127,8 @@ export function Top3StoryDialog({ onClose }: { onClose: () => void }) {
             <label key={size} className={cn(
               'flex min-h-11 cursor-pointer items-center justify-center rounded border px-2 py-2 font-sans text-sm font-semibold focus-within:ring-2 focus-within:ring-brand-600',
               limit === size
-                ? 'border-brand-600 bg-brand-600/10 text-text-primary'
-                : 'border-border-strong text-text-secondary',
+                ? 'border-brand-600 bg-brand-50 text-brand-800 dark:border-brand-300 dark:bg-brand-900/50 dark:text-brand-100'
+                : 'border-[var(--color-border)] text-text-secondary hover:bg-[var(--color-surface2)]',
             )}>
               <input type="radio" className="sr-only" name="story-limit" checked={limit === size} onChange={() => setLimit(size)} />
               Top {size}
@@ -137,7 +158,7 @@ export function Top3StoryDialog({ onClose }: { onClose: () => void }) {
                   'flex cursor-pointer items-center justify-center gap-2 rounded border px-3 py-2 font-sans text-sm font-semibold transition-colors',
                   'focus-within:ring-2 focus-within:ring-brand-600 dark:focus-within:ring-brand-400',
                   selected
-                    ? 'border-brand-600 bg-brand-600/5 text-[var(--color-text)] dark:border-brand-400 dark:bg-brand-400/10'
+                    ? 'border-brand-600 bg-brand-50 text-[var(--color-text)] dark:border-brand-300 dark:bg-brand-900/50'
                     : 'border-[var(--color-border)] text-[var(--color-text2)] hover:bg-[var(--color-surface2)]',
                 )}
               >
@@ -152,8 +173,10 @@ export function Top3StoryDialog({ onClose }: { onClose: () => void }) {
                 <span
                   aria-hidden
                   className={cn(
-                    'h-3.5 w-3.5 rounded-full border border-[var(--color-border-strong)]',
-                    option.id === 'dark' ? 'bg-[#0d1a20]' : 'bg-[#f5f1ea]',
+                    'h-4 w-4 rounded-full border border-[var(--color-border-strong)]',
+                    option.id === 'dark'
+                      ? 'bg-[linear-gradient(140deg,#2747b4,#6a55bd)]'
+                      : 'bg-[linear-gradient(140deg,#cfe3fb,#eedff4)]',
                   )}
                 />
                 {option.label}
@@ -177,7 +200,7 @@ export function Top3StoryDialog({ onClose }: { onClose: () => void }) {
                   'flex cursor-pointer items-center gap-3 rounded border px-3 py-2.5 transition-colors',
                   'focus-within:ring-2 focus-within:ring-brand-600 dark:focus-within:ring-brand-400',
                   selected
-                    ? 'border-brand-600 bg-brand-600/5 dark:border-brand-400 dark:bg-brand-400/10'
+                    ? 'border-brand-600 bg-brand-50 dark:border-brand-300 dark:bg-brand-900/50'
                     : 'border-[var(--color-border)] hover:bg-[var(--color-surface2)]',
                 )}
               >
@@ -215,7 +238,7 @@ export function Top3StoryDialog({ onClose }: { onClose: () => void }) {
             ))}
           </ol>
           <p className="mt-2 font-sans text-2xs text-[var(--color-text2)]">
-            Public leaderboard cohort only. Members without an approved photo show their initials, as on the leaderboard.
+            {cohort === 'board' ? 'Verified Board roster' : 'Verified Members roster'} only. Members without an approved photo show their initials, as on the leaderboard.
           </p>
         </div>
       )}

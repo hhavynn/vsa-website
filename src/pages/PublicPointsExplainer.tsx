@@ -11,7 +11,7 @@ export function PublicPointsExplainer() {
     <>
       <PageTitle title="Points Guide" />
 
-      <div className="vsa-page-hero">
+      <div className="vsa-page-hero vsa-page-hero--sky">
         <div className="vsa-container relative z-10">
           <div className="scrapbook-paper relative overflow-hidden p-6 sm:p-10">
             <span className="scrapbook-pin" aria-hidden />

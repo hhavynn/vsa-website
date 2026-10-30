@@ -140,7 +140,12 @@ export function initMonitoring(): Promise<void> | undefined {
         beforeBreadcrumb: scrubBreadcrumb,
         beforeSend: scrubEvent,
         denyUrls: [/^(?:chrome|moz|safari-web)-extension:\/\//i, /^chrome:\/\//i],
-        ignoreErrors: [/^ResizeObserver loop/],
+        ignoreErrors: [
+          /^ResizeObserver loop/,
+          // Injected by in-app browsers (social-app webviews) into the page
+          // before our code runs; the stack is the HTML document itself.
+          /window\._META\.IABInnerFrame/,
+        ],
       });
       sentry = Sentry;
       for (const { error, componentStack } of pending.splice(0)) capture(Sentry, error, componentStack);

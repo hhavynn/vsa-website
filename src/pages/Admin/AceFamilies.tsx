@@ -28,6 +28,7 @@ import { toUserMessage } from '../../data/errors';
 import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
 import { MemberLinkPicker, MemberLinkSuggestion } from '../../components/features/admin/MemberLinkPicker';
 import { AceLinkReviewPanel } from '../../components/features/admin/AceLinkReviewPanel';
+import { AceFamHeadReview } from '../../components/features/admin/AceFamHeadReview';
 import { EmptyState, FilterChips, NextStepBanner, SaveBar, YearContextBadge } from '../../components/features/admin/ops';
 import { logAdminActivity } from '../../data/repos/adminActivity';
 import { useOperatingYear } from '../../hooks/useOperatingYear';
@@ -370,8 +371,7 @@ function MemberRow({
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className="rounded border px-2.5 py-1 font-sans text-xs font-medium transition-colors disabled:opacity-50"
-              style={{ background: 'var(--color-text)', color: 'var(--color-bg)', borderColor: 'transparent' }}
+              className="rounded border px-2.5 py-1 font-sans text-xs font-medium transition-colors disabled:opacity-50 border-transparent bg-brand-600 text-white transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 dark:bg-brand-300 dark:text-brand-950 dark:hover:bg-brand-200"
             >
               Save
             </button>
@@ -483,7 +483,7 @@ function TreePreview({
 export default function AdminAceFamilies() {
   const queryClient = useQueryClient();
   const { families, loading, error, refetch } = useAdminAceFamilies();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState<'families' | 'assignments'>(
     searchParams.get('view') === 'assignments' ? 'assignments' : 'families',
   );
@@ -594,7 +594,7 @@ export default function AdminAceFamilies() {
     if (nodeParam && members.some((node) => node.id === nodeParam)) {
       document.getElementById(`ace-node-${nodeParam}`)?.scrollIntoView?.({ block: 'center' });
     }
-  }, [nodeParam, members]);
+  }, [nodeParam, members, nodeFilter]);
   const indicatorFor = (member: AceFamilyMember) =>
     linkIndicatorFor(member, reviewByNodeId.get(member.id), matchingReady);
 
@@ -1065,8 +1065,7 @@ export default function AdminAceFamilies() {
                   type="button"
                   onClick={handleRunImport}
                   disabled={importing || !importPreview}
-                  className="rounded px-4 py-2 font-sans text-xs font-medium disabled:opacity-50"
-                  style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}
+                  className="rounded px-4 py-2 font-sans text-xs font-medium disabled:opacity-50 border-transparent bg-brand-600 text-white transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 dark:bg-brand-300 dark:text-brand-950 dark:hover:bg-brand-200"
                 >
                   {importing ? 'Importing…' : 'Run Import'}
                 </button>
@@ -1130,7 +1129,7 @@ export default function AdminAceFamilies() {
                     </div>
                   )}
                   {importPreview.warnings.length > 0 && (
-                    <ul className="mt-2 list-disc pl-4" style={{ color: '#d4841a' }}>
+                    <ul className="mt-2 list-disc pl-4 text-amber-700 dark:text-amber-300">
                       {importPreview.warnings.map((w, i) => (
                         <li key={i}>{w}</li>
                       ))}
@@ -1448,6 +1447,21 @@ export default function AdminAceFamilies() {
               {selectedFamily.academic_year_start != null && (
                 <YearContextBadge context={describeYearContext(selectedFamily.academic_year_start, operatingYear)} className="mb-4" />
               )}
+
+              <AceFamHeadReview
+                family={selectedFamily}
+                nodes={members}
+                directoryById={directoryById}
+                allLinks={allMemberLinks}
+                evidenceReady={matchingReady}
+                onReviewNode={(nodeId) => {
+                  setNodeFilter('all');
+                  const nextParams = new URLSearchParams(searchParams);
+                  nextParams.set('family', selectedFamily.id);
+                  nextParams.set('node', nodeId);
+                  setSearchParams(nextParams);
+                }}
+              />
 
               <NextStepBanner step={nextStep} onDismiss={() => setNextStep(null)} />
 

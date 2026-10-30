@@ -6,6 +6,7 @@ import { Input } from '../components/ui/Input';
 import { AnimatedCounter } from '../components/ui/AnimatedCounter';
 import { BottomSheet } from '../components/ui/BottomSheet';
 import { Avatar } from '../components/features/avatar/Avatar';
+import { OptimizedImage } from '../components/common/OptimizedImage';
 import { PhotoRequestSection } from '../components/features/avatar/PhotoRequestSection';
 import { LeaderboardSkeleton } from '../components/common/PageSkeletons';
 import { usePagination } from '../hooks/usePagination';
@@ -13,6 +14,13 @@ import { PaginationControls } from '../components/common/PaginationControls';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { useLeaderboardYears } from '../hooks/useLeaderboardYears';
 import { useIndividualLeaderboard, type IndividualLeaderboardMember as Member } from '../hooks/useIndividualLeaderboard';
+import { usePublishedLeaderboardRoles } from '../hooks/usePublishedLeaderboardRoles';
+import { usePublishedBoardRoster } from '../hooks/usePublishedBoardRoster';
+import { usePublishedMemberHouses } from '../hooks/usePublishedMemberHouses';
+import type { PublicMemberHouse } from '../data/repos/houseMemberships';
+import { rankPublishedCohort, type LeaderboardCohort } from '../lib/memberCohorts';
+import { rolesForSelectedYear, type PublicMemberRole } from '../lib/memberRoles';
+import { PublicMemberRoleBadges } from '../components/features/leaderboard/PublicMemberRoleBadges';
 import { leaderboardRepository } from '../data/repos/leaderboard';
 import { useMemberAvatars } from '../hooks/useMemberAvatars';
 import type { MemberAvatarMap } from '../lib/memberPhotos';
@@ -268,12 +276,16 @@ function PublicMemberProfileModal({
   avatarUrl,
   activeTab,
   selectedYear,
+  roles,
+  roleUnavailable,
   onClose,
 }: {
   member: LeaderboardEntry;
   avatarUrl: string | null;
   activeTab: 'points' | 'events';
   selectedYear: SelectedYear | null;
+  roles: PublicMemberRole[];
+  roleUnavailable: boolean;
   onClose: () => void;
 }) {
   const displayName = getMemberDisplayName(member);
@@ -328,15 +340,15 @@ function PublicMemberProfileModal({
       <div className="mb-4 flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-4">
             <div className="relative shrink-0">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt={displayName}
-                  className="h-20 w-20 rounded-full border-4 border-white object-cover shadow-md dark:border-zinc-800"
-                />
-              ) : (
-                <InitialsAvatar name={displayName} size={80} />
-              )}
+              <OptimizedImage
+                src={avatarUrl}
+                alt={displayName}
+                width={80}
+                height={80}
+                priority
+                className="h-20 w-20 rounded-full border-4 border-white object-cover shadow-md dark:border-[var(--color-surface)]"
+                fallback={<InitialsAvatar name={displayName} size={80} />}
+              />
             </div>
             <div className="min-w-0">
               <h2 className="break-words font-serif text-2xl font-bold leading-tight text-[var(--text)]">{displayName}</h2>
@@ -355,7 +367,10 @@ function PublicMemberProfileModal({
                     {houseBadge.display_name}
                   </span>
                 )}
+                <PublicMemberRoleBadges roles={roles} />
               </div>
+              {roleUnavailable && <p className="mt-2 text-xs text-[var(--text3)]">Verified role information is temporarily unavailable.</p>}
+              {selectedYear === 'all' && <p className="mt-2 text-xs text-[var(--text3)]">Choose an academic year to see roles for that year.</p>}
             </div>
           </div>
           <button
@@ -474,7 +489,8 @@ export function Leaderboard() {
   const [activeView, setActiveView] = useState<'individual' | 'houses'>(
     searchParams.get('view') === 'houses' ? 'houses' : 'individual'
   );
-  const [activeTab, setActiveTab] = useState<'points' | 'events'>('points');
+  const [activeTab, setActiveTab] = useState<'points' | 'events'>(searchParams.get('metric') === 'events' ? 'events' : 'points');
+  const [cohort, setCohort] = useState<LeaderboardCohort>(searchParams.get('cohort') === 'board' ? 'board' : 'members');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<SelectedYear | null>(null);
   const [hasUserSelectedYear, setHasUserSelectedYear] = useState(false);
@@ -502,6 +518,9 @@ export function Leaderboard() {
   );
 
   useEffect(() => {
+    const selectedCohort = searchParams.get('cohort') === 'board' ? 'board' : 'members';
+    setCohort(selectedCohort);
+    setActiveTab(searchParams.get('metric') === 'events' ? 'events' : 'points');
     const view = searchParams.get('view');
     if (view === 'houses' && activeView !== 'houses') {
       setActiveView('houses');
@@ -545,8 +564,12 @@ export function Leaderboard() {
     if (hasUserSelectedYear || selectedYear !== null || initialSelectedYear === null) {
       return;
     }
-    setSelectedYear(initialSelectedYear);
-  }, [hasUserSelectedYear, initialSelectedYear, selectedYear]);
+    const wanted = searchParams.get('year');
+    const selectedFromUrl = wanted === 'all' ? 'all' :
+      wanted && academicYears.some((year) => String(year.year) === wanted) ? Number(wanted) : initialSelectedYear;
+    setSelectedYear(selectedFromUrl);
+
+  }, [hasUserSelectedYear, initialSelectedYear, selectedYear, academicYears, searchParams]);
 
   // Approved member avatars (member_id → thumbnail URL) from the shared cached
   // query. Fail-soft: initials remain the fallback.
@@ -572,9 +595,44 @@ export function Leaderboard() {
   const handleSelectedYearChange = (value: string) => {
     setHasUserSelectedYear(true);
     setSelectedYear(value === 'all' ? 'all' : Number(value));
+    if (value === 'all') setCohort('members');
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('year', value);
+      if (value === 'all') next.delete('cohort');
+      return next;
+    }, { replace: true });
+  };
+  const selectMetric = (metric: 'points' | 'events') => {
+    setActiveTab(metric);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (metric === 'points') next.delete('metric');
+      else next.set('metric', 'events');
+      return next;
+    }, { replace: true });
+  };
+  const selectCohort = (nextCohort: LeaderboardCohort) => {
+    setCohort(nextCohort);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (selectedYear !== null) next.set('year', String(selectedYear));
+      if (activeTab === 'events') next.set('metric', 'events');
+      if (nextCohort === 'board') next.set('cohort', 'board');
+      else next.delete('cohort');
+      return next;
+    }, { replace: true });
   };
 
-  const entries = activeTab === 'points' ? byPoints : byEvents;
+  const boardRoster = usePublishedBoardRoster(selectedYear);
+  const cohortAvailable = typeof selectedYear === 'number' && !boardRoster.isLoading && !boardRoster.isError && !!boardRoster.data;
+  const boardRosterUnavailable = typeof selectedYear === 'number' && !boardRoster.isLoading && !cohortAvailable;
+  const unsplitEntries = activeTab === 'points' ? byPoints : byEvents;
+  // A Board roster outage displays an explicitly unsplit fallback. It NEVER
+  // claims everyone is a general member. All-Time is deliberately unsplit.
+  const entries = cohortAvailable
+    ? rankPublishedCohort(members ?? [], boardRoster.data as Set<string>, cohort, activeTab)
+    : cohort === 'board' && typeof selectedYear === 'number' ? [] : unsplitEntries;
   const searchTerm = searchQuery.trim().toLowerCase();
   const filteredEntries = entries.filter(
     (entry) =>
@@ -584,7 +642,7 @@ export function Leaderboard() {
       (entry.year ?? '').toLowerCase().includes(searchTerm)
   );
 
-  const resetKey = `${activeTab}|${searchQuery}|${selectedYear}`;
+  const resetKey = `${activeTab}|${searchQuery}|${selectedYear}|${cohort}`;
   const {
     page,
     totalPages,
@@ -600,6 +658,23 @@ export function Leaderboard() {
   // Skip the podium when a tie spills past 3rd place: there's no fair way to
   // pick which tied members get the last podium spots.
   const showPodium = top3.length >= 3 && top3.every((entry) => isWithinTop(entry, 3));
+
+  // One bounded role read for the actual page, any visible podium members and
+  // the opened profile. This never joins on display name or changes rankings.
+  const visibleRoleIds = Array.from(new Set([
+    ...paginatedData.map((entry) => entry.id),
+    ...(showPodium ? top3.map((entry) => entry.id) : []),
+    ...(selectedMember ? [selectedMember.id] : []),
+  ]));
+  const { data: publishedRoles, isError: rolesUnavailable } = usePublishedLeaderboardRoles(selectedYear, visibleRoleIds);
+  const rolesById = publishedRoles ?? new Map<string, PublicMemberRole[]>();
+  const getRoles = (memberId: string) => rolesForSelectedYear(rolesById, memberId, selectedYear);
+  // Revealed House affiliation comes from the year-scoped, score-free published
+  // membership view. Only visible canonical IDs are requested in one batch.
+  const { data: publishedHouses, isError: housesUnavailable } = usePublishedMemberHouses(
+    selectedYear, visibleRoleIds, activeView === 'individual',
+  );
+  const revealedHouses = publishedHouses ?? new Map();
   const waitingForInitialYear = selectedYear === null && !defaultYearReady;
 
   if ((waitingForInitialYear || loading) && selectedYear === null) return <LeaderboardSkeleton />;
@@ -630,7 +705,7 @@ export function Leaderboard() {
       <PageTitle title="Leaderboard" />
       {isDegradedMode && <DegradedModeBanner sourceName="leaderboard" />}
 
-      <div className="vsa-page-hero">
+      <div className="vsa-page-hero vsa-page-hero--sky">
         <div className="vsa-container relative z-10">
           <div className="scrapbook-paper relative overflow-hidden p-6 sm:p-10">
             <span className="scrapbook-pin" aria-hidden />
@@ -675,7 +750,7 @@ export function Leaderboard() {
                 {(['points', 'events'] as const).map((tab) => (
                   <button
                     key={tab}
-                    onClick={() => setActiveTab(tab)}
+                    onClick={() => selectMetric(tab)}
                     aria-pressed={activeTab === tab}
                     className={`chip-check min-h-[40px] touch:min-h-11 rounded-full border-2 px-4 py-1.5 font-mono text-[11px] font-bold tracking-wider transition-all ${
                       activeTab === tab 
@@ -684,6 +759,27 @@ export function Leaderboard() {
                     }`}
                   >
                     {tab.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Cohorts depend only on verified published Cabinet member IDs. */}
+            {activeView === 'individual' && typeof selectedYear === 'number' && (
+              <div role="group" aria-label="Leaderboard member category" className="flex flex-wrap gap-2">
+                {(['members', 'board'] as const).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={cohort === option}
+                    onClick={() => selectCohort(option)}
+                    className={`chip-check min-h-11 rounded-full border-2 px-4 py-1.5 font-mono text-xs font-bold transition-all ${
+                      cohort === option
+                        ? 'border-[var(--accent)] bg-[var(--accent)] text-[color:var(--color-on-accent)] shadow-sm'
+                        : 'border-[var(--border)] bg-[var(--surface2)] text-[var(--text3)] hover:border-[var(--accent)]'
+                    }`}
+                  >
+                    {option === 'board' ? 'BOARD' : 'MEMBERS'}
                   </button>
                 ))}
               </div>
@@ -730,6 +826,9 @@ export function Leaderboard() {
               top3={top3}
               activeTab={activeTab}
               memberAvatars={memberAvatars}
+              rolesById={rolesById}
+              housesById={revealedHouses}
+              selectedYear={selectedYear}
               onSelectMember={setSelectedMember}
             />
           )}
@@ -740,6 +839,25 @@ export function Leaderboard() {
                 <h2 className="font-serif text-2xl font-bold">Full Standings</h2>
               </div>
 
+              {boardRoster.isLoading && typeof selectedYear === 'number' && (
+                <p role="status" className="mb-3 font-sans text-xs text-text-secondary">Checking the published Cabinet roster before separating Board members…</p>
+              )}
+              {boardRosterUnavailable && (
+                <p role="status" className="mb-3 font-sans text-xs text-text-secondary">
+                  Board roster is unavailable for this academic year. {cohort === 'board'
+                    ? 'Board rankings cannot be verified right now.'
+                    : 'Showing unsegmented standings; no member is being excluded based on an unknown role.'}
+                </p>
+              )}
+              {selectedYear === 'all' && (
+                <p className="mb-3 font-sans text-xs text-text-secondary">All-Time combines everyone. Select an academic year to see separate Members and Board rankings.</p>
+              )}
+              {housesUnavailable && typeof selectedYear === 'number' && (
+                <p role="status" className="mb-3 font-sans text-xs text-text-secondary">Revealed House badges are temporarily unavailable. Rankings and verified roles are unaffected.</p>
+              )}
+              {rolesUnavailable && typeof selectedYear === 'number' && (
+                <p role="status" className="mb-3 font-sans text-xs text-[var(--text3)]">Member roles are temporarily unavailable. Individual points and rankings are unaffected.</p>
+              )}
               <div className="mb-6 relative">
                 <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text3)]" />
                 <Input
@@ -759,7 +877,9 @@ export function Leaderboard() {
                     />
                   ) : (
                     <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                      {searchTerm ? 'No matching members found.' : `No activity recorded for ${selectedYearLabel} yet.`}
+                      {cohort === 'board' && typeof selectedYear === 'number' && !cohortAvailable
+                        ? 'Board rankings are unavailable until a verified published roster can be read.'
+                        : searchTerm ? 'No matching members found in this category.' : `No activity recorded for ${selectedYearLabel} in this category yet.`}
                     </p>
                   )}
                 </div>
@@ -767,7 +887,7 @@ export function Leaderboard() {
                 <div className="space-y-3">
                   {/* The scrapbook card layout needs flexible widths, so expose one
                       ARIA table instead of maintaining a separate hidden table. */}
-                  <div role="table" aria-label={'Full member standings for ' + selectedYearLabel}>
+                  <div role="table" aria-label={(cohortAvailable ? (cohort === 'board' ? 'Board' : 'Members') : 'Full member') + ' standings for ' + selectedYearLabel}>
                     <div role="rowgroup" className="sr-only">
                       <div role="row">
                         <span role="columnheader">Rank</span>
@@ -820,6 +940,7 @@ export function Leaderboard() {
                           <div className="truncate font-sans text-[11px]" style={{ color: 'var(--text3)' }}>
                             {[entry.year, entry.college].filter(Boolean).join(' • ') || 'VSA Member'}
                           </div>
+                          <PublicMemberRoleBadges roles={getRoles(entry.id)} house={revealedHouses.get(entry.id)} compact className="mt-1.5" />
                           {/* On phones the gap caption lives under the name so it can
                               wrap instead of squeezing the name/score columns. */}
                           <div className="sm:hidden">
@@ -865,7 +986,6 @@ export function Leaderboard() {
                       pageStartLabel={pageStartLabel}
                       pageEndLabel={pageEndLabel}
                       totalCount={filteredEntries.length}
-                      theme="zinc"
                     />
                   </div>
                 </div>
@@ -922,6 +1042,8 @@ export function Leaderboard() {
           avatarUrl={memberAvatars.get(selectedMember.id) ?? null}
           activeTab={activeTab}
           selectedYear={selectedYear}
+          roles={getRoles(selectedMember.id)}
+          roleUnavailable={rolesUnavailable}
           onClose={() => setSelectedMember(null)}
         />
       )}
@@ -943,11 +1065,17 @@ function PodiumIndividual({
   top3,
   activeTab,
   memberAvatars,
+  rolesById,
+  housesById,
+  selectedYear,
   onSelectMember,
 }: {
   top3: LeaderboardEntry[];
   activeTab: 'points' | 'events';
   memberAvatars: MemberAvatarMap;
+  rolesById: ReadonlyMap<string, PublicMemberRole[]>;
+  housesById: ReadonlyMap<string, PublicMemberHouse>;
+  selectedYear: SelectedYear | null;
   onSelectMember: (member: LeaderboardEntry) => void;
 }) {
   const shouldReduceMotion = useReducedMotion();
@@ -1008,22 +1136,21 @@ function PodiumIndividual({
               >
                 {rankLabel}
               </div>
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt=""
-                  loading="lazy"
-                  className="h-11 w-11 shrink-0 rounded-full border-2 border-white object-cover dark:border-zinc-800"
-                />
-              ) : (
-                <InitialsAvatar name={name} size={44} />
-              )}
+              <OptimizedImage
+                src={avatarUrl}
+                alt=""
+                width={44}
+                height={44}
+                className="h-11 w-11 shrink-0 rounded-full border-2 border-white object-cover dark:border-[var(--color-surface)]"
+                fallback={<InitialsAvatar name={name} size={44} />}
+              />
               <div className="min-w-0 flex-1">
                 <ProfileOpener name={name} onOpen={() => onSelectMember(entry)} className="max-w-full text-left">
                   <span className="line-clamp-2 block break-words font-serif text-base font-bold leading-tight" style={{ color: 'var(--text)' }}>
                     {name}
                   </span>
                 </ProfileOpener>
+                <PublicMemberRoleBadges roles={rolesForSelectedYear(rolesById, entry.id, selectedYear)} house={housesById.get(entry.id)} compact className="mt-1.5" />
                 {card.gap !== null && (
                   <div className="mt-0.5 font-mono text-[10px] font-semibold" style={{ color: 'var(--text3)' }}>
                     {card.gap.metric === 'tie'
@@ -1097,17 +1224,15 @@ function PodiumIndividual({
                 </div>
 
                 {/* Avatar */}
-                <div className="mx-auto mb-4 h-24 w-24 overflow-hidden rounded-full border-4 border-white shadow-md dark:border-zinc-800">
-                  {memberAvatars.get(card.entry.id) ? (
-                    <img
-                      src={memberAvatars.get(card.entry.id)}
-                      alt={`${card.entry.first_name} ${card.entry.last_name}`}
-                      loading="lazy"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <InitialsAvatar name={`${card.entry.first_name} ${card.entry.last_name}`} size={96} />
-                  )}
+                <div className="mx-auto mb-4 h-24 w-24 overflow-hidden rounded-full border-4 border-white shadow-md dark:border-[var(--color-surface)]">
+                  <OptimizedImage
+                    src={memberAvatars.get(card.entry.id)}
+                    alt={`${card.entry.first_name} ${card.entry.last_name}`}
+                    width={96}
+                    height={96}
+                    className="h-full w-full object-cover"
+                    fallback={<InitialsAvatar name={`${card.entry.first_name} ${card.entry.last_name}`} size={96} />}
+                  />
                 </div>
 
                 {/* Name */}
@@ -1117,7 +1242,7 @@ function PodiumIndividual({
                       {card.entry.first_name} {card.entry.last_name}
                     </span>
                   </ProfileOpener>
-                  <div className="mt-1 font-mono text-[11px] font-bold opacity-60">VSA MEMBER</div>
+                  <PublicMemberRoleBadges roles={rolesForSelectedYear(rolesById, card.entry.id, selectedYear)} house={housesById.get(card.entry.id)} compact className="mt-2 justify-center" />
                 </div>
 
                 {/* Score */}

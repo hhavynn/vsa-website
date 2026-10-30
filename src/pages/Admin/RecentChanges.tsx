@@ -22,8 +22,8 @@ export default function AdminRecentChanges() {
   return (
     <>
       <PageTitle title="Recent Changes" />
-      <div className="border-b border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-6 sm:px-8 sm:py-8">
-        <h1 className="font-serif text-3xl font-bold tracking-tight text-text-primary sm:text-4xl">Recent Changes</h1>
+      <div className="vsa-admin-field vsa-ribbon-bottom border-[var(--color-border)] border-b px-5 py-6 sm:px-8 sm:py-7">
+        <h1 className="font-display text-[2rem] font-normal leading-[1.05] tracking-[-0.02em] text-text-primary sm:text-[2.6rem]">Recent Changes</h1>
         <p className="mt-2 max-w-3xl font-sans text-sm leading-relaxed text-text-secondary">
           Who changed what in the yearly operations tools. Simple edits can be undone while nothing has changed them since; publishing, reveals, and year setup use their own corrective workflows.
         </p>
