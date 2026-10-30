@@ -5,7 +5,7 @@
  * that the query actually carries those constraints — the recording mock makes
  * that assertable rather than a matter of reading the source and hoping.
  */
-import { houseMembershipsRepository } from './houseMemberships';
+import { hasRevealedHouseMemberships, houseMembershipsRepository } from './houseMemberships';
 import { DatabaseError } from '../errors';
 import { supabaseMock, postgrestError } from '../../test-utils/supabaseMock';
 
@@ -214,5 +214,25 @@ describe('getPublicHousesByMemberId — ended memberships', () => {
     expect((await houseMembershipsRepository.getPublicHousesByMemberId(2026, '2027-03-01')).has('m-left')).toBe(false);
     supabaseMock.queueResult('public_house_memberships', { data: [row('2026-11-08', '2027-02-01')], error: null });
     expect((await houseMembershipsRepository.getPublicHousesByMemberId(2026, '2027-08-01')).get('m-left')?.label).toBe('Rarity');
+  });
+});
+
+
+describe('HEAD-only, score-free published House Reveal detection (#641)', () => {
+  it('uses a year-scoped count and returns no canonical IDs to the client', async () => {
+    supabaseMock.queueResult('public_house_memberships', { data: null, count: 1, error: null });
+    await expect(hasRevealedHouseMemberships(2026)).resolves.toBe(true);
+    const calls = supabaseMock.queriesFor('public_house_memberships')[0].calls;
+    expect(calls).toContainEqual({ method: 'select', args: ['member_id', { count: 'exact', head: true }] });
+    expect(calls).toContainEqual({ method: 'eq', args: ['academic_year_start', 2026] });
+    expect(JSON.stringify(calls)).not.toMatch(/house_yearly_points|score|email|review_note|draft|\*/);
+  });
+  it('stays hidden before Reveal, and fails closed on missing count or access failure', async () => {
+    supabaseMock.queueResult('public_house_memberships', { data: null, count: 0, error: null });
+    await expect(hasRevealedHouseMemberships(2026)).resolves.toBe(false);
+    supabaseMock.queueResult('public_house_memberships', { data: null, error: null });
+    await expect(hasRevealedHouseMemberships(2026)).rejects.toThrow(/count was not returned/);
+    supabaseMock.queueResult('public_house_memberships', { data: null, error: postgrestError('permission denied', '42501') });
+    await expect(hasRevealedHouseMemberships(2026)).rejects.toThrow();
   });
 });
