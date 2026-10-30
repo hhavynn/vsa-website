@@ -111,3 +111,35 @@ describe('publishCycle', () => {
     await expect(aceAssignmentsRepository.publishCycle('c1')).rejects.toBeInstanceOf(ValidationError);
   });
 });
+
+describe('published-cycle ACE participation roster (#649)',()=>{
+  const sample=(id:string)=>({id,little_name:'Synthetic '+id,little_member_id:'member-'+id,
+    big_ace_member_id:'big',published_ace_member_id:'node-'+id});
+  it('pages all published-cycle rows beyond 1000 with only identity fields, no draft notes',async()=>{
+    supabaseMock.queueResult('ace_assignment_cycles',{data:{id:'cycle',status:'published',academic_year_start:2026},error:null});
+    supabaseMock.queueResult('ace_assignment_drafts',{data:Array.from({length:500},(_,i)=>sample(String(i))),error:null});
+    supabaseMock.queueResult('ace_assignment_drafts',{data:Array.from({length:500},(_,i)=>sample(String(i+500))),error:null});
+    supabaseMock.queueResult('ace_assignment_drafts',{data:[sample('1000')],error:null});
+    const list=await aceAssignmentsRepository.listPublishedCycleLittles('cycle',2026);
+    expect(list).toHaveLength(1001);
+    const queries=supabaseMock.queriesFor('ace_assignment_drafts');
+    expect(queries.map(q=>q.calls.find(c=>c.method==='range')?.args))
+      .toEqual([[0,499],[500,999],[1000,1499]]);
+    queries.forEach(q=>{
+      expect(q.calls).toContainEqual({method:'eq',args:['cycle_id','cycle']});
+      const selection=String(q.calls.find(c=>c.method==='select')?.args[0]);
+      expect(selection).not.toMatch(/notes|email|\*/);
+    });
+  });
+  it('refuses unapproved cycles and never reads draft roster',async()=>{
+    supabaseMock.queueResult('ace_assignment_cycles',{data:{id:'cycle',status:'locked',academic_year_start:2026},error:null});
+    await expect(aceAssignmentsRepository.listPublishedCycleLittles('cycle',2026)).rejects.toThrow();
+    expect(supabaseMock.queriesFor('ace_assignment_drafts')).toHaveLength(0);
+  });
+  it('later page failure rejects all status counts',async()=>{
+    supabaseMock.queueResult('ace_assignment_cycles',{data:{id:'cycle',status:'published',academic_year_start:2026},error:null});
+    supabaseMock.queueResult('ace_assignment_drafts',{data:Array.from({length:500},(_,i)=>sample(String(i))),error:null});
+    supabaseMock.queueResult('ace_assignment_drafts',{data:null,error:{message:'denied',code:'42501'}});
+    await expect(aceAssignmentsRepository.listPublishedCycleLittles('cycle',2026)).rejects.toThrow();
+  });
+});
