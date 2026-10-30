@@ -764,7 +764,7 @@ export function Leaderboard() {
                     onClick={() => selectCohort(option)}
                     className={`chip-check min-h-11 rounded-full border-2 px-4 py-1.5 font-mono text-xs font-bold transition-all ${
                       cohort === option
-                        ? 'border-[var(--brand)] bg-[var(--brand)] text-[var(--color-on-brand)]'
+                        ? 'border-[var(--brand)] bg-[var(--brand)] text-[color:var(--color-on-accent)]'
                         : 'border-[var(--border)] bg-[var(--surface2)] text-[var(--text3)]'
                     }`}
                   >
