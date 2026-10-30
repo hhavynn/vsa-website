@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 
 import { Skeleton } from '../ui/Skeleton';
+import { cn } from '../../lib/utils';
 
 /**
  * Content-shaped loading skeletons for the highest-traffic data pages.
@@ -10,9 +11,10 @@ import { Skeleton } from '../ui/Skeleton';
  * shared `.skeleton-shimmer` CSS.
  */
 
-function HeroSkeleton({ lines = 2 }: { lines?: number }) {
+/** `tone` matches the page's own hero wash so the band does not change color on load. */
+function HeroSkeleton({ lines = 2, tone }: { lines?: number; tone?: 'sky' | 'lavender' | 'blush' | 'stage' }) {
   return (
-    <div className="vsa-page-hero">
+    <div className={cn('vsa-page-hero', tone && `vsa-page-hero--${tone}`)}>
       <div className="vsa-container relative z-10">
         <Skeleton className="mb-4 h-6 w-32 rounded-full" />
         <Skeleton className="mb-4 h-12 w-2/3 max-w-md" />
@@ -37,7 +39,7 @@ function FilterBarSkeleton({ count = 3 }: { count?: number }) {
 export function LeaderboardSkeleton() {
   return (
     <>
-      <HeroSkeleton />
+      <HeroSkeleton tone="sky" />
       <div className="vsa-container pt-8">
         <FilterBarSkeleton count={4} />
       </div>
@@ -111,7 +113,7 @@ export function GalleryWallSkeleton() {
 export function GallerySkeleton() {
   return (
     <>
-      <HeroSkeleton lines={1} />
+      <HeroSkeleton lines={1} tone="lavender" />
       <div className="vsa-container py-10">
         <GalleryWallSkeleton />
       </div>
@@ -189,7 +191,7 @@ export function HouseDetailSkeleton() {
   return (
     <div role="status" aria-live="polite">
       <span className="sr-only">Loading House page…</span>
-      <div className="vsa-page-hero">
+      <div className="vsa-page-hero vsa-page-hero--blush">
         <div className="vsa-container relative z-10">
           <Skeleton className="h-3 w-44" />
           <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-center">
@@ -230,7 +232,7 @@ export function VcnArchiveSkeleton() {
   return (
     <div role="status" aria-live="polite">
       <span className="sr-only">Loading VCN archive…</span>
-      <HeroSkeleton lines={1} />
+      <HeroSkeleton lines={1} tone="stage" />
       <div className="vsa-container py-8 lg:py-10">
         <Skeleton className="mb-5 h-4 w-44" />
         <div className="flex flex-col gap-7">

@@ -7,7 +7,7 @@ type LinkButtonVariant = "primary" | "outline";
 const variants: Record<LinkButtonVariant, string> = {
   primary:
     "bg-brand-600 text-white border border-brand-600 hover:bg-brand-700 hover:border-brand-700 " +
-    "dark:bg-brand-400 dark:border-brand-400 dark:text-[#050810] dark:hover:bg-brand-300 dark:hover:border-brand-300 " +
+    "dark:bg-brand-400 dark:border-brand-400 dark:text-brand-950 dark:hover:bg-brand-300 dark:hover:border-brand-300 " +
     "focus-visible:ring-brand-600",
   outline:
     "bg-transparent text-[var(--color-text2)] border border-[var(--color-border)] " +

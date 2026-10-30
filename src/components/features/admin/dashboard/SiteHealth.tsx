@@ -16,7 +16,7 @@ const STATUS_DOT: Record<HealthStatus, string> = {
   good: 'bg-green-500',
   warning: 'bg-amber-500',
   error: 'bg-red-500',
-  neutral: 'bg-gray-400',
+  neutral: 'bg-[var(--color-border-strong)]',
 };
 
 const STATUS_WORD: Record<HealthStatus, string> = { good: 'OK', warning: 'Needs a look', error: 'Problem', neutral: '' };

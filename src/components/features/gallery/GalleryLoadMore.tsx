@@ -79,7 +79,7 @@ export function GalleryLoadMore({
 
   if (!hasNextPage && totalLoaded > 0) {
     return (
-      <div className="mt-16 flex flex-col items-center justify-center gap-2 text-center" role="status">
+      <div className="mt-8 flex flex-col items-center justify-center gap-2 text-center sm:mt-16" role="status">
         <span className="scrapbook-sticker scrapbook-sticker-gold text-[10px] uppercase">
           Archive End
         </span>

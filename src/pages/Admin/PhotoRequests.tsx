@@ -1,4 +1,5 @@
 import { PageTitle } from '../../components/common/PageTitle';
+import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
 import PhotoRequestsTab from '../../components/features/admin/PhotoRequestsTab';
 
 export default function AdminPhotoRequests() {
@@ -6,14 +7,12 @@ export default function AdminPhotoRequests() {
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="Photo Requests" />
 
-      <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Photo Requests</h1>
-        <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>
-          Review member profile photo submissions. Approved photos are published as small public thumbnails; pending photos stay private.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Photo Requests"
+        description="Review member profile photo submissions. Approved photos are published as small public thumbnails; pending photos stay private."
+      />
 
-      <div style={{ padding: '24px 28px' }}>
+      <div className="px-5 py-6 sm:px-8">
         <PhotoRequestsTab />
       </div>
     </div>

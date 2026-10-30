@@ -1,5 +1,6 @@
 // Merge Suggestions on the shared identity evidence. Synthetic members only.
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import AdminMergeSuggestions from './MergeSuggestions';
 import { supabaseMock } from '../../test-utils/supabaseMock';
 
@@ -24,7 +25,7 @@ it('suggests a pair that shares a confirmed address and shows every email on bot
     error: null,
   });
   supabaseMock.setDefault('member_identity_emails', { data: [{ id: 'e1', member_id: 'b', email: 'alex@gmail.com' }], error: null });
-  render(<AdminMergeSuggestions />);
+  render(<MemoryRouter initialEntries={['/admin/merge-suggestions']}><AdminMergeSuggestions /></MemoryRouter>);
   expect(await screen.findByText('Same email on file')).toBeInTheDocument();
   expect(screen.getByText('anguyen@ucsd.edu, alex@gmail.com')).toBeInTheDocument();
 
@@ -35,20 +36,20 @@ it('suggests a pair that shares a confirmed address and shows every email on bot
 
 it('shows an error instead of "All clean" when the roster cannot be read', async () => {
   supabaseMock.queueResult('members', { data: null, error: { message: 'permission denied', code: '42501' } });
-  render(<AdminMergeSuggestions />);
+  render(<MemoryRouter initialEntries={['/admin/merge-suggestions']}><AdminMergeSuggestions /></MemoryRouter>);
   expect(await screen.findByText('Suggestions could not be loaded.')).toBeInTheDocument();
   expect(screen.queryByText('All clean.')).not.toBeInTheDocument();
 });
 
 it('does not suggest merely similar names', async () => {
   supabaseMock.setDefault('members', { data: [member('a', 'An', 'Nguyen'), member('b', 'Anh', 'Nguyen')], error: null });
-  render(<AdminMergeSuggestions />);
+  render(<MemoryRouter initialEntries={['/admin/merge-suggestions']}><AdminMergeSuggestions /></MemoryRouter>);
   expect(await screen.findByText('All clean.')).toBeInTheDocument();
 });
 
 it('never reads the identity tables while the identity rollout is off', async () => {
   supabaseMock.setDefault('members', { data: [member('a', 'Ryan', 'Le'), member('b', 'Ryan', 'Le')], error: null });
-  render(<AdminMergeSuggestions />);
+  render(<MemoryRouter initialEntries={['/admin/merge-suggestions']}><AdminMergeSuggestions /></MemoryRouter>);
   expect(await screen.findByText('Same name')).toBeInTheDocument();
   expect(supabaseMock.queriesFor('member_identity_emails')).toEqual([]);
   expect(supabaseMock.queriesFor('member_year_observations')).toEqual([]);

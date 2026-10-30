@@ -29,6 +29,7 @@ import {
 } from '../../lib/houseAssignmentImport';
 import { supabase } from '../../lib/supabase';
 import { HousePageAsset } from '../../types';
+import { TOAST_OPTIONS } from '../../lib/toastOptions';
 
 type Member = HouseImportMember;
 
@@ -293,7 +294,7 @@ export default function AdminHouses() {
   return (
     <>
       <PageTitle title="House Assignments" />
-      <Toaster position="top-right" />
+      <Toaster position="top-right" toastOptions={TOAST_OPTIONS} />
 
       <AdminPageHeader
         title="Houses"

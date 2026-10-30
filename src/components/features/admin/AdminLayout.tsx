@@ -33,9 +33,9 @@ const AdminLayout: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex flex-col md:flex-row" style={{ minHeight: 'calc(100vh - 60px)', background: 'var(--color-bg)' }}>
+    <div className="flex min-h-[calc(100vh-60px)] flex-col bg-[var(--color-bg)] md:flex-row">
       {/* Mobile top bar: menu, where you are, and search, all one tap away. */}
-      <div className="sticky top-[60px] z-30 flex items-center gap-2 border-b border-[var(--color-border)] bg-surface px-3 py-2 md:hidden">
+      <div className="vsa-ribbon-bottom sticky top-[60px] z-30 flex items-center gap-2 border-b border-[var(--color-border)] bg-[var(--color-sidebar)] px-3 py-2 md:hidden">
         <button
           type="button"
           onClick={() => setMobileNavOpen(true)}
@@ -47,7 +47,7 @@ const AdminLayout: React.FC = () => {
           <FiMenu aria-hidden className="h-5 w-5" />
           <span aria-hidden>Admin menu</span>
         </button>
-        <p className="min-w-0 flex-1 truncate text-right font-sans text-sm font-semibold text-text-primary">{pageLabel}</p>
+        <p className="min-w-0 flex-1 truncate text-right font-display text-[18px] leading-none text-text-primary">{pageLabel}</p>
         <button type="button" onClick={() => setSearchOpen(true)} className={`${BAR_BUTTON} w-10`} aria-label="Search admin">
           <FiSearch aria-hidden className="h-5 w-5" />
         </button>

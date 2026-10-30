@@ -2,6 +2,9 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAnalyticsConsent } from '../../context/AnalyticsConsentContext';
 import { FOOTER_GROUPS, FOOTER_LEGAL_LINKS } from './navigation/footerLinks';
+import { useSiteSettings } from '../../context/SiteSettingsContext';
+import { getSupabaseImageUrl } from '../../lib/supabaseImages';
+import { OFFICIAL_LOGO } from '../../config/brandAssets';
 
 const socialLinks = [
   {
@@ -21,72 +24,77 @@ const socialLinks = [
   },
 ];
 
-const Footer: React.FC = () => {
+const editorialLink =
+  'block w-fit py-1 text-[13px] text-ed-ink underline-offset-4 transition-opacity duration-150 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ed-ink touch:flex touch:min-h-11 touch:items-center';
+const editorialLabel = 'mb-3 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-ed-muted';
+
+/** Figma footer: periwinkle field, large serif wordmark | mono-labelled link columns. */
+function EditorialFooter() {
   const { isConfigured, openPreferences } = useAnalyticsConsent();
+  const { settings } = useSiteSettings();
+  const logoSrc = settings.logoUrl || OFFICIAL_LOGO.small.src;
 
   return (
-    <footer className="scrapbook-board border-t" style={{ borderColor: 'var(--border)' }}>
-      <div className="vsa-container py-12 sm:py-14">
-        <div className="scrapbook-paper p-6 sm:p-8">
-        <div className="grid gap-10 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
-          <div className="min-w-0">
-            <span className="scrapbook-pin" aria-hidden />
-            <div className="font-serif text-[22px]" style={{ color: 'var(--text)' }}>
-              <span className="italic" style={{ color: 'var(--brand)' }}>VSA</span> at UCSD
-            </div>
-            <p className="mt-3 max-w-sm font-sans text-[13px] leading-[1.7]" style={{ color: 'var(--text3)' }}>
-              Vietnamese Student Association at UC San Diego. Sharing Vietnamese culture, building community, and welcoming all students since 1977.
-            </p>
-            <div className="mt-5 flex gap-2">
-              {socialLinks.map((link) => (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  target={link.href.startsWith('mailto') ? undefined : '_blank'}
-                  rel={link.href.startsWith('mailto') ? undefined : 'noopener noreferrer'}
-                  aria-label={link.label}
-                  className="inline-flex h-[38px] w-[38px] touch:h-11 touch:w-11 items-center justify-center rounded-lg border bg-[var(--surface2)] text-[var(--text3)] transition-colors duration-150 hover:border-[var(--brand)] hover:text-[var(--brand)]"
-                  style={{ borderColor: 'var(--border)' }}
-                >
-                  {link.icon}
-                </a>
-              ))}
-            </div>
+    <footer className="editorial-footer border-t border-ed-line bg-surface2 text-ed-ink">
+      <div className="mx-auto grid max-w-[1600px] gap-12 px-5 pb-8 pt-16 sm:px-[6vw] sm:pt-20 lg:grid-cols-2 lg:gap-16">
+        <div className="min-w-0">
+          <img
+            src={getSupabaseImageUrl(logoSrc, { width: 180, height: 180, resize: 'contain', quality: 80 })}
+            alt=""
+            className="h-[72px] w-[72px] object-contain sm:h-[90px] sm:w-[90px]"
+            loading="lazy"
+            decoding="async"
+          />
+          <p className="my-4 font-display text-[3.3rem] leading-none tracking-[-0.035em] sm:text-[4rem]">
+            VSA <em className="font-normal text-ed-accent">at</em> UCSD
+          </p>
+          <p className="max-w-sm text-[13px] leading-[1.7] text-text-secondary">
+            Vietnamese Student Association at UC San Diego. Sharing Vietnamese culture, building community, and
+            welcoming all students since 1977.
+          </p>
+          <div className="mt-6 flex gap-2">
+            {socialLinks.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={link.label}
+                className="inline-flex h-10 w-10 items-center justify-center border border-ed-line text-ed-ink transition-colors duration-150 hover:border-ed-ink touch:h-11 touch:w-11"
+              >
+                {link.icon}
+              </a>
+            ))}
           </div>
+        </div>
 
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:pt-6">
           {FOOTER_GROUPS.map((group) => (
             <nav key={group.title} aria-labelledby={`footer-nav-${group.title.toLowerCase()}`}>
-              <h2 id={`footer-nav-${group.title.toLowerCase()}`} className="mb-4 font-sans text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--text3)' }}>
+              <h2 id={`footer-nav-${group.title.toLowerCase()}`} className={editorialLabel}>
                 {group.title}
               </h2>
               {group.links.map((link) => (
-                <Link
-                  key={link.label}
-                  to={link.to}
-                  className="mb-2.5 block touch:mb-0 touch:flex touch:min-h-11 touch:items-center font-sans text-[13.5px] text-[var(--text2)] transition-colors duration-150 hover:text-[var(--brand)]"
-                >
+                <Link key={link.label} to={link.to} className={editorialLink}>
                   {link.label}
                 </Link>
               ))}
             </nav>
           ))}
-
           <nav aria-labelledby="footer-nav-connect">
-            <h2 id="footer-nav-connect" className="mb-4 font-sans text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--text3)' }}>
+            <h2 id="footer-nav-connect" className={editorialLabel}>
               Connect
             </h2>
-            <a className="mb-2.5 block touch:mb-0 touch:flex touch:min-h-11 touch:items-center font-sans text-[13.5px] text-[var(--text2)] transition-colors duration-150 hover:text-[var(--brand)]" href="https://instagram.com/vsaatucsd" target="_blank" rel="noopener noreferrer">@vsaatucsd</a>
-            <a className="mb-2.5 block touch:mb-0 touch:flex touch:min-h-11 touch:items-center font-sans text-[13.5px] text-[var(--text2)] transition-colors duration-150 hover:text-[var(--brand)]" href="https://discord.gg/cSb6Q4gnW8" target="_blank" rel="noopener noreferrer">Discord Server</a>
+            <a className={editorialLink} href="https://instagram.com/vsaatucsd" target="_blank" rel="noopener noreferrer">@vsaatucsd</a>
+            <a className={editorialLink} href="https://discord.gg/cSb6Q4gnW8" target="_blank" rel="noopener noreferrer">Discord Server</a>
           </nav>
         </div>
 
-        <div className="mt-10 flex flex-col gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: 'var(--border)' }}>
-          <span className="font-sans text-xs" style={{ color: 'var(--text3)' }}>
-            Copyright {new Date().getFullYear()} VSA at UCSD. Est. 1977.
-          </span>
-          <div className="flex flex-wrap gap-x-4 gap-y-2 font-sans text-xs">
+        <div className="flex flex-col gap-3 border-t border-ed-line pt-6 font-mono text-[10px] uppercase tracking-[0.08em] text-ed-muted sm:flex-row sm:items-center sm:justify-between lg:col-span-2">
+          <span>© {new Date().getFullYear()} VSA at UCSD · Est. 1977</span>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
             {FOOTER_LEGAL_LINKS.map((link) => (
-              <Link key={link.to} to={link.to} className="inline-flex touch:min-h-11 items-center text-[var(--text2)] underline-offset-2 hover:text-[var(--brand)] hover:underline">
+              <Link key={link.to} to={link.to} className="inline-flex items-center text-ed-ink underline-offset-4 hover:underline touch:min-h-11">
                 {link.label}
               </Link>
             ))}
@@ -94,17 +102,19 @@ const Footer: React.FC = () => {
               <button
                 type="button"
                 onClick={openPreferences}
-                className="inline-flex touch:min-h-11 items-center text-[var(--text2)] underline-offset-2 hover:text-[var(--brand)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+                className="inline-flex items-center uppercase tracking-[0.08em] text-ed-ink underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-ed-ink touch:min-h-11"
               >
                 Analytics preferences
               </button>
             )}
           </div>
         </div>
-        </div>
       </div>
     </footer>
   );
-};
+}
+
+/** Shared chrome on every route: the editorial footer, themed by tokens. */
+const Footer: React.FC = () => <EditorialFooter />;
 
 export default Footer;
