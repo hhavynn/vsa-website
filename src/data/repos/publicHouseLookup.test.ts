@@ -6,19 +6,19 @@ jest.mock('../../lib/supabase', () => ({
 beforeEach(() => supabaseMock.reset());
 
 it('checks a single row from the existing published, score-free House view for one academic year', async () => {
-  supabaseMock.queueResult('public_house_memberships', { data: [{ member_id: 'one-revealed-id' }], error: null });
+  supabaseMock.queueResult('public_house_memberships', { data: null, count: 1, error: null });
   expect(await hasRevealedHouseMemberships(2026)).toBe(true);
   const queries = supabaseMock.queries();
   expect(queries).toHaveLength(1);
   expect(queries[0].table).toBe('public_house_memberships');
   const calls = queries[0].calls;
-  expect(calls.some((c) => c.method === 'select' && c.args[0] === 'member_id')).toBe(true);
+  expect(calls.some((c) => c.method === 'select' && c.args[0] === 'member_id' && c.args[1]?.head === true && c.args[1]?.count === 'exact')).toBe(true);
   expect(calls.some((c) => c.method === 'eq' && c.args[0] === 'academic_year_start' && c.args[1] === 2026)).toBe(true);
-  expect(calls.some((c) => c.method === 'limit' && c.args[0] === 1)).toBe(true);
+  expect(calls.some((c) => c.method === 'limit')).toBe(false);
   expect(JSON.stringify(calls)).not.toMatch(/house_yearly_points|house_member|points|email|draft|review_note|\*/);
 });
 it('hides the action before Reveal, not even treating zero returned memberships as an assignment', async () => {
-  supabaseMock.queueResult('public_house_memberships', { data: [], error: null });
+  supabaseMock.queueResult('public_house_memberships', { data: null, count: 0, error: null });
   await expect(hasRevealedHouseMemberships(2026)).resolves.toBe(false);
 });
 it('does not disguise a denied public view read as approved Reveal', async () => {
