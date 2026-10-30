@@ -264,13 +264,57 @@ Opened with live data, nothing saved or submitted:
 | 5 | Public interactive experiences and hidden overlays checked | Met (B7, B8) |
 | 6 | Light/dark and mobile consistent | Met for every page in the harness; live dark/mobile on a representative subset |
 | 7 | Functional behavior intact | Met: protected files proven string-only per batch; 4198/4198 Jest on every batch |
-| 8 | Tests, accessibility checks and builds pass | Tests/typecheck/lint/build pass on every batch. **Lighthouse/axe were not re-run** in this campaign |
+| 8 | Tests, accessibility checks and builds pass | Tests/typecheck/lint/build pass on every batch. Lighthouse/axe re-run on 8 public routes on 2026-10-30 (see "Accessibility and performance audit"); **admin routes were not measured** |
 | 9 | Completed batches pushed and documented | Met: PRs #778–#784 + this PR |
 | 10 | No known old-design holdouts without a documented reason | Met: remaining literals are listed as intentional (data, medals, camera chrome) |
 
-**Still open:** a Lighthouse/axe pass on public and admin surfaces, and
-populated states that need specific data (an Applications window in every
-state, a pending photo request, an import preview).
+**Still open:** a Lighthouse/axe pass on admin surfaces, and populated states
+that need specific data (an Applications window in every state, a pending
+photo request, an import preview).
+
+## Accessibility and performance audit (2026-10-30)
+
+Production builds of `452f62d13` (#761 head) and this campaign, measured the
+same day against production Supabase reads with
+`scripts/measure-public-quality.mjs`: Lighthouse mobile (5 runs, median) in
+light and dark, axe and touch targets at 390px in both themes, on `/`,
+`/events`, `/calendar`, `/leaderboard`, `/gallery`, `/ace`, `/points`,
+`/cabinet`. Medians below span both themes.
+
+| Metric | #761 head | This campaign |
+|---|---|---|
+| Lighthouse Performance | 73–80 | 74–80 |
+| Lighthouse Accessibility | 95–100 | 95–100 |
+| LCP | 4.65–7.41 s | 4.65–7.40 s |
+| CLS, highest route | 0.183 (`/calendar`) | 0.183 (`/calendar`) |
+| axe critical, all routes | 0 | 0 |
+| axe serious nodes, light + dark | 153 | 153 |
+| Controls under 44px, per route | 3–4 | 3–4 |
+
+**One regression, fixed:** the selected Leaderboard chip fell from 4.83:1 to
+3.99:1 in light mode when `--color-on-accent` became `#16213f`. It is now
+`#0b1530` (4.53:1). That chip is the token's only consumer. axe could not see
+it (a `::before` makes the rule "incomplete"), so it was found by a separate
+scan that scored every text node against the rendered pixels behind it. That
+scan found no other regression, and `src/styles/ace.css` has no text below AA
+in either theme.
+
+**Failures carried over from #761, unchanged by this campaign:**
+
+- `/calendar` contrast: dimmed out-of-month cells, event chips and day badges
+  (axe 64 nodes light, 20 dark).
+- `/leaderboard` initials avatars (2.8–3.7:1) in both themes.
+- `/points` and `/cabinet` labels dimmed with opacity on top of `--color-text3`.
+- `/` hero text over the photo needs a closer look: white text samples as low
+  as 1.8:1 against the brightest pixels behind it.
+- `p-as-heading` on every route (17 nodes on `/cabinet`).
+- Footer links Home, ACE and VCN are 25–36px wide against the 44px floor.
+- CLS above 0.1 on `/calendar` and `/cabinet`, LCP above 2.5 s on every route.
+
+**Not covered:** admin routes, and states that need a click apart from the
+harness's own (menu, Ask VSA, day sheet, profile sheet, album preview, in
+light mode). After the fix, Lighthouse was re-run on `/leaderboard` only; axe,
+touch targets and the pixel scan were re-run on all 8 routes.
 
 ## Overlays and embedded workflows (non-route)
 
