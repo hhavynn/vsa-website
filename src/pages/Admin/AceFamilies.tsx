@@ -484,7 +484,7 @@ function TreePreview({
 export default function AdminAceFamilies() {
   const queryClient = useQueryClient();
   const { families, loading, error, refetch } = useAdminAceFamilies();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState<'families' | 'assignments'>(
     searchParams.get('view') === 'assignments' ? 'assignments' : 'families',
   );
