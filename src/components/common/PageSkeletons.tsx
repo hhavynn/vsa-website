@@ -157,7 +157,7 @@ export function EventsSkeleton() {
 
       <div className="vsa-container py-8 lg:py-10">
         <Skeleton className="mb-5 h-4 w-24" />
-        <div className="scrapbook-paper mb-9 flex flex-col overflow-hidden lg:grid lg:grid-cols-[minmax(0,0.92fr)_minmax(360px,1.08fr)]" style={{ borderColor: 'var(--color-border)' }}>
+        <div data-testid="events-featured-skeleton" className="scrapbook-paper mb-9 flex flex-col overflow-hidden lg:grid lg:grid-cols-[minmax(0,0.92fr)_minmax(360px,1.08fr)]" style={{ borderColor: 'var(--color-border)' }}>
           <div className="space-y-3 p-6 sm:p-8">
             <Skeleton className="h-6 w-32 rounded-full" />
             <Skeleton className="h-9 w-4/5" />
