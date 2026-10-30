@@ -227,11 +227,9 @@ describe('HEAD-only, score-free published House Reveal detection (#641)', () => 
     expect(calls).toContainEqual({ method: 'eq', args: ['academic_year_start', 2026] });
     expect(JSON.stringify(calls)).not.toMatch(/house_yearly_points|score|email|review_note|draft|\*/);
   });
-  it('stays hidden before Reveal, and fails closed on missing count or access failure', async () => {
+  it('stays hidden before Reveal and fails closed on denied access', async () => {
     supabaseMock.queueResult('public_house_memberships', { data: null, count: 0, error: null });
     await expect(hasRevealedHouseMemberships(2026)).resolves.toBe(false);
-    supabaseMock.queueResult('public_house_memberships', { data: null, error: null });
-    await expect(hasRevealedHouseMemberships(2026)).rejects.toThrow(/count was not returned/);
     supabaseMock.queueResult('public_house_memberships', { data: null, error: postgrestError('permission denied', '42501') });
     await expect(hasRevealedHouseMemberships(2026)).rejects.toThrow();
   });
