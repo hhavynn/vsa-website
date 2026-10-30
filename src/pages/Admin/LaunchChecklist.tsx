@@ -548,6 +548,21 @@ export default function LaunchChecklist() {
               link="/admin/ace"
               note="Only publish approved ACE members/lineages; do not reveal private matching drafts"
             />
+            <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
+              <p className="font-sans text-sm font-semibold text-[var(--color-text)]">House release rehearsal and privacy signoff</p>
+              <p className="mt-1 text-xs text-[var(--color-text2)]">
+                Manual staging evidence and independent approval are mandatory before the 2026–27 Reveal.
+                A green automated Launch Checklist is not approval to publish.
+              </p>
+              <a
+                href="https://github.com/hhavynn/vsa-website/blob/main/docs/house-release-rehearsal-2026-27.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex min-h-11 items-center font-sans text-xs font-semibold text-[var(--brand)] underline underline-offset-2"
+              >
+                Open House launch rehearsal instructions
+              </a>
+            </div>
           </Section>
 
           {/* ── Events & Gallery ── */}
