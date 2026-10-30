@@ -57,7 +57,7 @@ pages need an authorized session; anything verified only in the harness says so.
 | 5 Content | Gallery, Content, Calendar, VCN, Applications, Feedback, Resources, UVSA Schools, External Events | `design/sitewide-content-outreach` (stacked on 4) | implemented; real pages verified with empty data |
 | 6 Remaining admin | Analytics, Settings, AI ×3, Content Health, Launch Checklist, Recent Changes, Data Rights | `design/sitewide-remaining-admin` (stacked on 5) | implemented; real pages verified with empty data |
 | 7 Residual public | Legacy CSS in index.css, scrapbook stickers, public overlays | `design/sitewide-public-residuals` (stacked on 6) | implemented; ACE, overlays and snapshot PNG verified |
-| 8 Completion audit | Reconcile this ledger | — | not started |
+| 8 Completion audit | Live-data audit, unopened dialogs, reconcile this ledger | `design/sitewide-completion-audit` (stacked on 7) | complete (see Batch 8 section) |
 
 Protected areas (attendance import, House placement, member identity,
 applications, data rights) get an audit-first `vsa-change-control` review
@@ -121,39 +121,39 @@ counts (gray/zinc/slate/teal/coral/gold/hex) come from the Batch 1 holdout scan.
 
 | Route | Page file | Batch | Status | Known holdouts / notes |
 |---|---|---|---|---|
-| `/admin` | Overview | 3 | visually verified (harness, empty data) | Display-serif greeting, wash + sparkles, raised search |
-| `/admin/events` | Events | 3 | visually verified (harness, empty data) | String-only diff; recap editor and populated list unverified |
-| `/admin/import` | Import (+LegacyImport) | 3 | visually verified (harness, empty data) | 99 zinc classes → tokens; **string-only diff** (protected); review/preview tables need live data |
-| `/admin/members` | Members | 3 | visually verified (harness, empty data) | 46 → tokens; **string-only diff** (protected); edit/merge dialogs need live data |
-| `/admin/points` | Points | 3 | visually verified (harness, empty data) | Now uses AdminPageHeader; year select gained an accessible label |
-| `/admin/merge-suggestions` | MergeSuggestions | 3 | visually verified (harness, empty data) | Now uses AdminPageHeader; populated diff rows unverified |
-| `/admin/photo-requests` | PhotoRequests / `PhotoRequestsTab` | 3 | visually verified (harness, empty data) | Header + status badges/actions moved from inline hex to classes; request cards need live data |
-| `/admin/houses` | Houses | 4 | visually verified (harness, empty data) | All House panels **string-only**; placement/reveal/payments with data need a live session |
-| `/admin/ace` | AceFamilies | 4 | visually verified (harness, empty data) | Ink-fill actions → brand primary; warning list off teal-era gold; assignment panels string-only |
-| `/admin/interns` | Interns | 4 | visually verified (harness, empty data) | |
-| `/admin/cabinet` | Cabinet | 4 | visually verified (harness, empty data) | Edit-member modal: ink scrim; populated directory unverified |
-| `/admin/cabinet/rollover` | CabinetRollover | 4 | visually verified (harness, empty data) | |
-| `/admin/years` | YearsTerms | 4 | visually verified (harness, empty data) | Now uses AdminPageHeader; create actions → brand primary |
-| `/admin/year-setup` | YearSetup | 4 | visually verified (harness, empty data) | Custom header kept (embeds the year picker) with wash, ribbon and display title |
-| `/admin/content` | Content | 5 | visually verified (harness, empty data) | Header wash + display title; save action → brand primary (ProgramContentManager too) |
-| `/admin/content-calendar` | ContentCalendar | 5 | visually verified (harness, empty data) | Header wash; 'Later' chip on tokens |
-| `/admin/gallery` | Gallery | 5 | visually verified (harness, empty data) | Album modal on ink scrim; upload previews need data |
-| `/admin/vcn` | VcnArchives | 5 | visually verified (harness, empty data) | Inputs were black in light mode: now token inputs; header wash |
-| `/admin/feedback` | Feedback / `FeedbackTab` | 5 | visually verified (harness, empty data) | 30 light-only hexes (teal-era) → status tokens, string-only; populated chips need data |
-| `/admin/resources` | Resources | 5 | visually verified (harness, empty data) | Ink-fill action → brand primary; delete color → danger token |
-| `/admin/uvsa-schools` | UVSASchools | 5 | visually verified (harness, empty data) | |
-| `/admin/external-events` | ExternalEvents | 5 | visually verified (harness, empty data) | |
-| `/admin/applications` | Applications | 5 | visually verified (harness, empty data) | **Applications + ApplicationWindowCard string-only**; window states on status tokens |
-| `/admin/analytics` | Analytics | 6 | visually verified (harness, empty data) | Header wash; chart tooltip off gray-900; error state seen (no GA data offline) |
-| `/admin/settings` | Settings | 6 | visually verified (harness, empty data) | Header wash + display title |
-| `/admin/ai-knowledge` | AiKnowledge | 6 | visually verified (harness, empty data) | Status chip + checkbox on tokens; header wash |
-| `/admin/ai-feedback` | AiFeedback | 6 | visually verified (harness, empty data) | |
-| `/admin/ai-usage` | AiUsage | 6 | visually verified (harness, empty data) | |
-| `/admin/content-health` | ContentHealth | 6 | visually verified (harness, empty data) | |
-| `/admin/launch-checklist` | LaunchChecklist | 6 | visually verified (harness, empty data) | |
-| `/admin/recent-changes` | RecentChanges | 6 | visually verified (harness, empty data) | |
-| `/admin/data-rights` | DataRightsRequests | 6 | visually verified (harness, empty data) | **DataRightsRequestTracker string-only** (display title only); populated requests need data |
-| `/admin/login` | SignIn | 1 | visually verified | |
+| `/admin` | Overview | 3 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | Display-serif greeting, wash + sparkles, raised search |
+| `/admin/events` | Events | 3 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | String-only diff; recap editor and populated list unverified |
+| `/admin/import` | Import (+LegacyImport) | 3 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | 99 zinc classes → tokens; **string-only diff** (protected); review/preview tables need live data |
+| `/admin/members` | Members | 3 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | 46 → tokens; **string-only diff** (protected); edit/merge dialogs need live data |
+| `/admin/points` | Points | 3 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | Now uses AdminPageHeader; year select gained an accessible label |
+| `/admin/merge-suggestions` | MergeSuggestions | 3 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | Now uses AdminPageHeader; populated diff rows unverified |
+| `/admin/photo-requests` | PhotoRequests / `PhotoRequestsTab` | 3 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | Header + status badges/actions moved from inline hex to classes; request cards need live data |
+| `/admin/houses` | Houses | 4 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | All House panels **string-only**; placement/reveal/payments with data need a live session |
+| `/admin/ace` | AceFamilies | 4 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | Ink-fill actions → brand primary; warning list off teal-era gold; assignment panels string-only |
+| `/admin/interns` | Interns | 4 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | |
+| `/admin/cabinet` | Cabinet | 4 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | Edit-member modal: ink scrim; populated directory unverified |
+| `/admin/cabinet/rollover` | CabinetRollover | 4 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | |
+| `/admin/years` | YearsTerms | 4 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | Now uses AdminPageHeader; create actions → brand primary |
+| `/admin/year-setup` | YearSetup | 4 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | Custom header kept (embeds the year picker) with wash, ribbon and display title |
+| `/admin/content` | Content | 5 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | Header wash + display title; save action → brand primary (ProgramContentManager too) |
+| `/admin/content-calendar` | ContentCalendar | 5 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | Header wash; 'Later' chip on tokens |
+| `/admin/gallery` | Gallery | 5 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | Album modal on ink scrim; upload previews need data |
+| `/admin/vcn` | VcnArchives | 5 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | Inputs were black in light mode: now token inputs; header wash |
+| `/admin/feedback` | Feedback / `FeedbackTab` | 5 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | 30 light-only hexes (teal-era) → status tokens, string-only; populated chips need data |
+| `/admin/resources` | Resources | 5 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | Ink-fill action → brand primary; delete color → danger token |
+| `/admin/uvsa-schools` | UVSASchools | 5 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | |
+| `/admin/external-events` | ExternalEvents | 5 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | |
+| `/admin/applications` | Applications | 5 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | **Applications + ApplicationWindowCard string-only**; window states on status tokens |
+| `/admin/analytics` | Analytics | 6 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | Header wash; chart tooltip off gray-900; error state seen (no GA data offline) |
+| `/admin/settings` | Settings | 6 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | Header wash + display title |
+| `/admin/ai-knowledge` | AiKnowledge | 6 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | Status chip + checkbox on tokens; header wash |
+| `/admin/ai-feedback` | AiFeedback | 6 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | |
+| `/admin/ai-usage` | AiUsage | 6 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | |
+| `/admin/content-health` | ContentHealth | 6 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | |
+| `/admin/launch-checklist` | LaunchChecklist | 6 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | |
+| `/admin/recent-changes` | RecentChanges | 6 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | |
+| `/admin/data-rights` | DataRightsRequests | 6 | visually verified: live data 1440 light (B8) + harness 375/1440 light+dark | **DataRightsRequestTracker string-only** (display title only); populated requests need data |
+| `/admin/login` | SignIn | 1 | visually verified (375/1440 light+dark); live sign-in completed by owner in B8 | |
 
 ## Batch 3 notes
 
@@ -218,6 +218,104 @@ counts (gray/zinc/slate/teal/coral/gold/hex) come from the Batch 1 holdout scan.
 - **Every admin route now has its own design pass.** What remains for admin is
   live-data verification (Batch 8), not styling.
 
+## Batch 8: completion audit
+
+**Live-data audit (2026-10-30).** With the owner signed in to the local dev
+server (`localhost:3061`, branch `design/sitewide-public-residuals`, which
+contains Batches 1–7), every registered admin route was loaded with
+production data: all 32 at 1440 light; Members, Points, Cabinet and Events
+again at 1440 dark; Members and Houses at 375 light. Screenshots stayed in a
+local scratch folder (they contain member data) and are not committed.
+
+Opened with live data, nothing saved or submitted:
+- Top 3 / Top 10 story generator: real names, points, the existing boundary
+  tie rule ("2 tied members at rank 3 cross the cutoff"), T3/T5 tie labels,
+  real member photos; preview canvas 1080×1920 and `toDataURL` succeeds
+  (no CORS taint).
+- Member edit dialog (dark): token inputs, brand primary, ink scrim; closed
+  without saving.
+- Search dialog (⌘K, dark) with live results.
+- Public: calendar event detail (desktop board and mobile day → event sheet),
+  cabinet role modal, gallery album lightbox, ACE family sheet; 375/1440 in
+  both themes, live public data.
+
+**Design defects found: none.** Every route and dialog above renders in the
+#761 identity in the modes checked.
+
+**Observations outside design scope (follow-ups, not regressions):**
+1. `/admin/analytics` shows "Unexpected analytics response format" with live
+   data: the GA data source, not presentation (no data code changed in this
+   campaign).
+2. ⌘K on admin opens the public "Search VSA" dialog rather than the admin
+   palette; the public shortcut is registered globally. Pre-existing
+   behavior, untouched here.
+3. The ACE family sheet's tree opens with most of the viewport empty. The
+   campaign changed only the six accent color lines in `FamilyTree.tsx` and
+   nothing in `FamSheet`, so the initial fit predates it.
+4. Nine admin pages mount a second `<Toaster>` (noted in Batch 3).
+
+**Completion criteria.**
+| # | Criterion | Status |
+|---|---|---|
+| 1 | Every registered route has a recorded treatment and verification result | Met: 24 public patterns + 32 admin + login + 404 in the tables above |
+| 2 | Every admin page has the new identity | Met: verified with live data (B8) |
+| 3 | Major modals, drawers, dialogs and nested workflows match | Met for every dialog opened; destructive confirmations verified in the harness only (not triggered on live data, by design) |
+| 4 | Story editor and exported PNGs redesigned | Met (B2), verified live (B8) |
+| 5 | Public interactive experiences and hidden overlays checked | Met (B7, B8) |
+| 6 | Light/dark and mobile consistent | Met for every page in the harness; live dark/mobile on a representative subset |
+| 7 | Functional behavior intact | Met: protected files proven string-only per batch; 4198/4198 Jest on every batch |
+| 8 | Tests, accessibility checks and builds pass | Tests/typecheck/lint/build pass on every batch. Lighthouse/axe re-run on 8 public routes on 2026-10-30 (see "Accessibility and performance audit"); **admin routes were not measured** |
+| 9 | Completed batches pushed and documented | Met: PRs #778–#784 + this PR |
+| 10 | No known old-design holdouts without a documented reason | Met: remaining literals are listed as intentional (data, medals, camera chrome) |
+
+**Still open:** a Lighthouse/axe pass on admin surfaces, and populated states
+that need specific data (an Applications window in every state, a pending
+photo request, an import preview).
+
+## Accessibility and performance audit (2026-10-30)
+
+Production builds of `452f62d13` (#761 head) and this campaign, measured the
+same day against production Supabase reads with
+`scripts/measure-public-quality.mjs`: Lighthouse mobile (5 runs, median) in
+light and dark, axe and touch targets at 390px in both themes, on `/`,
+`/events`, `/calendar`, `/leaderboard`, `/gallery`, `/ace`, `/points`,
+`/cabinet`. Medians below span both themes.
+
+| Metric | #761 head | This campaign |
+|---|---|---|
+| Lighthouse Performance | 73–80 | 74–80 |
+| Lighthouse Accessibility | 95–100 | 95–100 |
+| LCP | 4.65–7.41 s | 4.65–7.40 s |
+| CLS, highest route | 0.183 (`/calendar`) | 0.183 (`/calendar`) |
+| axe critical, all routes | 0 | 0 |
+| axe serious nodes, light + dark | 153 | 153 |
+| Controls under 44px, per route | 3–4 | 3–4 |
+
+**One regression, fixed:** the selected Leaderboard chip fell from 4.83:1 to
+3.99:1 in light mode when `--color-on-accent` became `#16213f`. It is now
+`#0b1530` (4.53:1). That chip is the token's only consumer. axe could not see
+it (a `::before` makes the rule "incomplete"), so it was found by a separate
+scan that scored every text node against the rendered pixels behind it. That
+scan found no other regression, and `src/styles/ace.css` has no text below AA
+in either theme.
+
+**Failures carried over from #761, unchanged by this campaign:**
+
+- `/calendar` contrast: dimmed out-of-month cells, event chips and day badges
+  (axe 64 nodes light, 20 dark).
+- `/leaderboard` initials avatars (2.8–3.7:1) in both themes.
+- `/points` and `/cabinet` labels dimmed with opacity on top of `--color-text3`.
+- `/` hero text over the photo needs a closer look: white text samples as low
+  as 1.8:1 against the brightest pixels behind it.
+- `p-as-heading` on every route (17 nodes on `/cabinet`).
+- Footer links Home, ACE and VCN are 25–36px wide against the 44px floor.
+- CLS above 0.1 on `/calendar` and `/cabinet`, LCP above 2.5 s on every route.
+
+**Not covered:** admin routes, and states that need a click apart from the
+harness's own (menu, Ask VSA, day sheet, profile sheet, album preview, in
+light mode). After the fix, Lighthouse was re-run on `/leaderboard` only; axe,
+touch targets and the pixel scan were re-run on all 8 routes.
+
 ## Overlays and embedded workflows (non-route)
 
 | Item | Owner | Batch | Status |
@@ -229,11 +327,11 @@ counts (gray/zinc/slate/teal/coral/gold/hex) come from the Batch 1 holdout scan.
 | AceAssignmentsWorkspace | admin | 4 | tokens |
 | HouseRosterPanel, HousePaymentsPanel, HouseEventsManager/Dashboard, HouseDraftEditor, placement panels | admin | 4 | tokens; protected |
 | AttendanceReadinessPanel, ImportReviewPanel, ImportStepper | admin | 3 | tokens; protected |
-| Top3StoryDialog + StoryStudio + PNG export | admin / story / lib/story | 2 | visually verified (harness + real PNG export) |
+| Top3StoryDialog + StoryStudio + PNG export | admin / story / lib/story | 2/8 | functionally verified: live Top 3 and Top 10 with real names, points, ties (T3/T5) and real member photos; canvas 1080×1920 exports without CORS taint |
 | PhotoRequestSection | avatar | 7 | modal on ink scrim; not opened |
 | SessionExpiredDialog | auth | 1 | tokens (not screenshotted) |
 | PublicSearchDialog, VsaAiAssistant, MobileDrawer | public features | 7 | visually verified open (search 1440 light+dark, Ask VSA 1440 dark, drawer 375 light+dark) |
-| CalendarDetailModal, CabinetRoleModal, AlbumLightbox, FamSheet | public features | 7/8 | tokens + ink scrim; not opened (need data / interaction) |
+| CalendarDetailModal, CabinetRoleModal, AlbumLightbox, FamSheet | public features | 8 | visually verified open with live public data, 375/1440 light+dark (calendar mobile via day → event) |
 | Toasts | App | 1 | implemented |
 
 ## Batch 2: leaderboard story generator
@@ -279,6 +377,7 @@ checked against live CORS headers.
 
 | Date | Batch | Evidence |
 |---|---|---|
+| 2026-10-30 | 8 | Live-data audit of all 32 admin routes (owner session), live dark/mobile subset, story generator live (Top 3/Top 10, real photos, export check), member edit and search dialogs, four public dialogs with live data at 375/1440 both themes. No design defects found. |
 | 2026-10-30 | 7 | Public before/after /ace at 1440 light+dark; after at 375 light+dark; search dialog, Ask VSA panel and mobile drawer opened via real interactions; Find My Points 1440 light+dark; snapshot PNGs in all three formats. Gates: typecheck, lint (18 pre-existing warnings), 4198/4198 Jest, build, diff --check. |
 | 2026-10-30 | 6 | Real Batch 6 page components in the offline harness, 375/1440 light+dark (analytics, settings, AI knowledge/feedback/usage, content health, launch checklist, recent changes, data rights). Gates: typecheck, lint (18 pre-existing warnings), 4198/4198 Jest, build, diff --check. |
 | 2026-10-30 | 5 | Real Batch 5 page components in the offline harness, 375/1440 light+dark (gallery, content, calendar, vcn, applications, feedback, resources, uvsa schools, external events). Gates: typecheck, lint (18 pre-existing warnings), 4198/4198 Jest, build, diff --check. |

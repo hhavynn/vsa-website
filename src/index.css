@@ -61,7 +61,7 @@
   --color-on-brand:      #ffffff;
   --color-accent:        #9072b7;   /* lavender */
   --color-accent-text:   #69518d;
-  --color-on-accent:     #16213f;
+  --color-on-accent:     #0b1530;   /* ≥4.5:1 on --color-accent */
   --color-gold:          #9886c0;
   --color-gold-text:     #635187;
   --teal: #718bd4;
