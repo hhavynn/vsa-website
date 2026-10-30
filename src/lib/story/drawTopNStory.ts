@@ -17,6 +17,7 @@ export interface TopNStoryContent {
   asOfLabel: string;
   handle: string;
   theme: StoryTheme;
+  cohort?: 'members' | 'board';
 }
 
 export interface StoryRowBounds {
@@ -135,7 +136,7 @@ export function drawTopNStory(ctx: CanvasRenderingContext2D, content: TopNStoryC
   ctx.fillText(headline.text, STORY_WIDTH / 2, 459);
   setFont(ctx, 600, 23, STORY_FONTS.mono);
   ctx.fillStyle = p.accent;
-  ctx.fillText('PUBLIC MEMBER LEADERBOARD', STORY_WIDTH / 2, 533);
+  ctx.fillText(content.cohort === 'board' ? 'VERIFIED BOARD LEADERBOARD' : 'PUBLIC MEMBER LEADERBOARD', STORY_WIDTH / 2, 533);
 
   topNRowBounds(limit, entries.length).forEach((bounds, i) => row(ctx, entries[i], assets, bounds, limit, theme));
 
