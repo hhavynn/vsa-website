@@ -9,6 +9,11 @@ jest.mock('../hooks/useApplicationLinks', () => ({
   usePublicApplicationLinks: () => ({ links: mockLinks, loading: false, error: null }),
 }));
 
+// Hero photography is covered by ProgramPhotoStack.test.tsx.
+jest.mock('../components/features/gallery/ProgramPhotoStack', () => ({
+  useProgramHeroMedia: () => undefined,
+}));
+
 const OPEN_URL = 'https://forms.example.test/vcn-stage-ninja-open';
 
 function link(key: ApplicationKey, status: ApplicationStatus, targetUrl: string | null): PublicApplicationLink {

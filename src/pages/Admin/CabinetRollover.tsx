@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from 'react-query';
 import { cn } from '../../lib/utils';
@@ -657,7 +657,6 @@ export default function AdminCabinetRollover() {
   return (
     <>
       <PageTitle title="Cabinet Rollover" />
-      <Toaster position="top-right" />
       <datalist id="roster-year-options">{YEAR_OPTIONS.map((option) => <option key={option} value={option} />)}</datalist>
       <datalist id="roster-college-options">{COLLEGE_OPTIONS.map((option) => <option key={option} value={option} />)}</datalist>
 

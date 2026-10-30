@@ -420,8 +420,8 @@ export function House() {
   return (
     <>
       <PageTitle title={isArchive ? `House Archive ${activeYearLabel}` : 'House Program'} />
-      {isDegradedMode && <DegradedModeBanner sourceName="house" />}
       <PublicBreadcrumbs context={{ currentYear }} />
+      {isDegradedMode && <DegradedModeBanner sourceName="house" />}
 
       <div className="program-app">
 

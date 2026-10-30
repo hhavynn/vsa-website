@@ -2,6 +2,7 @@ import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
+import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
 import { academicTermsRepository } from '../../data/repos/academicTerms';
 import { cabinetYearsRepository } from '../../data/repos/cabinetYears';
 import { useAcademicTerms } from '../../hooks/useAcademicTerms';
@@ -123,20 +124,18 @@ function updateNewCabinetYearStartYear(current: CabinetYearForm, startYear: numb
 
 function Header() {
   return (
-    <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-      <h1 className="font-sans text-base font-semibold tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>
-        Years & Terms
-      </h1>
-      <p className="mt-0.5 font-sans text-xs" style={{ color: 'var(--color-text2)' }}>
-        Keep event archives and cabinet archives organized without changing code.
-      </p>
-      <Link
-        to="/admin/year-setup"
-        className="mt-2 inline-block rounded border border-[var(--color-border)] px-2.5 py-1 font-sans text-xs font-semibold text-brand-600 hover:bg-surface2 dark:text-brand-400"
-      >
-        Starting a new school year? Use New Year Setup →
-      </Link>
-    </div>
+    <AdminPageHeader
+      title="Years & Terms"
+      description="Keep event archives and cabinet archives organized without changing code."
+      actions={
+        <Link
+          to="/admin/year-setup"
+          className="inline-flex min-h-[32px] items-center rounded border border-[var(--color-border)] bg-surface px-3 py-1.5 font-sans text-xs font-semibold text-brand-700 transition-colors hover:border-brand-300 hover:bg-brand-50 dark:text-brand-200 dark:hover:border-brand-700 dark:hover:bg-brand-900/40"
+        >
+          Starting a new school year? Use New Year Setup →
+        </Link>
+      }
+    />
   );
 }
 
@@ -354,7 +353,7 @@ export default function AdminYearsTerms() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <button type="submit" disabled={savingTerm} className="rounded px-4 py-2 text-sm font-medium disabled:opacity-50" style={{ background: 'var(--color-text)', color: 'var(--color-bg)' }}>
+                <button type="submit" disabled={savingTerm} className="rounded px-4 py-2 text-sm font-medium disabled:opacity-50 border-transparent bg-brand-600 text-white transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 dark:bg-brand-300 dark:text-brand-950 dark:hover:bg-brand-200">
                   {savingTerm ? 'Saving...' : termForm.id ? 'Save Term' : 'Create Term'}
                 </button>
                 {termForm.id && (
@@ -454,7 +453,7 @@ export default function AdminYearsTerms() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <button type="submit" disabled={savingCabinetYear} className="rounded px-4 py-2 text-sm font-medium disabled:opacity-50" style={{ background: 'var(--color-text)', color: 'var(--color-bg)' }}>
+                <button type="submit" disabled={savingCabinetYear} className="rounded px-4 py-2 text-sm font-medium disabled:opacity-50 border-transparent bg-brand-600 text-white transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 dark:bg-brand-300 dark:text-brand-950 dark:hover:bg-brand-200">
                   {savingCabinetYear ? 'Saving...' : cabinetYearForm.id ? 'Save Cabinet Year' : 'Create Cabinet Year'}
                 </button>
                 {cabinetYearForm.id && (

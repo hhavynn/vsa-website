@@ -233,7 +233,7 @@ export function Calendar() {
       <PageTitle title="Calendar" />
 
       {/* Hero */}
-      <div className="vsa-page-hero">
+      <div className="vsa-page-hero vsa-page-hero--sky">
         <div className="vsa-container relative z-10">
           <span className="scrapbook-sticker scrapbook-sticker-teal mb-4">Planner Wall</span>
           <h1 className="vsa-page-title">Calendar</h1>

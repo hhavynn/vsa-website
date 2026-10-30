@@ -25,7 +25,7 @@ export function BackToTop() {
           whileTap={shouldReduceMotion ? undefined : { scale: 0.9 }}
           onClick={scrollToTop}
           aria-label="Back to top"
-          className="fixed bottom-5 right-5 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-glow transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-slate-950"
+          className="fixed bottom-5 right-5 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-brand-600 hover:bg-brand-700 text-white dark:bg-brand-300 dark:text-brand-950 dark:hover:bg-brand-200 shadow-glow transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-[var(--color-bg)]"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />

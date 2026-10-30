@@ -84,7 +84,7 @@ export function BulkConfirm<T>({
           disabled={busy || plan.eligible.length === 0}
           className={cn(
             'rounded border-0 px-3 py-1.5 font-sans text-xs font-semibold text-white disabled:opacity-50',
-            plan.destructive ? 'bg-red-700 dark:bg-red-500' : 'bg-brand-600 dark:bg-brand-400 dark:text-[#050810]',
+            plan.destructive ? 'bg-red-700 dark:bg-red-500' : 'bg-brand-600 dark:bg-brand-400 dark:text-brand-950',
           )}
         >
           {busy ? 'Working…' : `Confirm (${plan.eligible.length})`}

@@ -1,0 +1,933 @@
+/* Public editorial theme — ported from the Figma Make "Redesign VSA Homepage"
+   source (published at static-delay-59801931.figma.site). Scoped to
+   .vsa-editorial-shell, which Layout applies to public routes only
+   (see publicEditorialTheme.ts); admin and sign-in keep the teal system.
+   Like src/styles/ace.css, this lives outside index.css because it is a
+   route-scoped theme, not a global pattern. */
+
+/* ─── Homepage hero ─────────────────────────────────────────────────────
+   The Figma composition as first shipped in #761: blue→violet field with
+   community photography, two Polaroids, the glass logo tile, iridescent
+   bubbles and glowing stars. Kept as-is by the owner's direction. */
+.home-editorial-hero {
+  background:
+    /* Scrim behind the white text column: the pale blue highlight on the left
+       left small white text near 2:1; this keeps it readable without muting
+       the photos on the right. */
+    linear-gradient(
+      90deg,
+      rgba(20, 34, 96, 0.58) 0%,
+      rgba(20, 34, 96, 0.4) 38%,
+      transparent 62%
+    ),
+    radial-gradient(
+      circle at 15% 24%,
+      rgba(193, 221, 255, 0.9),
+      transparent 26%
+    ),
+    radial-gradient(
+      circle at 85% 9%,
+      rgba(201, 172, 244, 0.85),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 59% 91%,
+      rgba(239, 182, 225, 0.76),
+      transparent 34%
+    ),
+    linear-gradient(145deg, #326dbb 0%, #718bd4 47%, #8b72c4 100%);
+}
+
+.home-editorial-grain::after,
+.vsa-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.22;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.65'/%3E%3C/svg%3E");
+}
+
+.home-editorial-bubble {
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle at 30% 23%,
+      rgba(255, 255, 255, 0.9) 0 1.5%,
+      transparent 8%
+    ),
+    radial-gradient(
+      circle at 65% 72%,
+      rgba(244, 188, 238, 0.24),
+      transparent 48%
+    ),
+    linear-gradient(
+      135deg,
+      rgba(169, 229, 255, 0.11),
+      rgba(255, 255, 255, 0.05)
+    );
+  box-shadow:
+    inset 9px 9px 20px rgba(255, 255, 255, 0.25),
+    inset -12px -10px 28px rgba(90, 238, 229, 0.16),
+    0 0 28px rgba(255, 202, 249, 0.18);
+}
+
+.home-editorial-bubble::after {
+  content: "";
+  position: absolute;
+  inset: 7%;
+  border-top: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  transform: rotate(-28deg);
+}
+
+/* ─── Homepage bands, after VSA's own posts ───────────────────────────
+   About: a lavender wash with a pink halftone corner (Yogurtworld).
+   Recent photos: the Hu Tieu Huzz field — saturated blue→violet with a pink
+   bloom, grain and glowing four-point stars. Get Involved: the Senior Send
+   Off sky — luminous blue fading to lavender with soft cloud light and
+   bubbles. Each band uses its effect once; dark mode keeps the same hues at
+   night depth. */
+.home-about-field {
+  background: var(--ed-lavender-wash);
+  --vsa-halftone-color: rgba(214, 140, 190, 0.38);
+}
+
+.home-gallery-field {
+  /* Blooms sit low, behind the photos, so the heading and link stay ≥4.5:1. */
+  background:
+    radial-gradient(55% 50% at 94% 100%, rgba(244, 176, 222, 0.5), transparent 70%),
+    radial-gradient(50% 50% at 6% 100%, rgba(120, 190, 255, 0.45), transparent 70%),
+    linear-gradient(150deg, #2c4fbf 0%, #4f5ccb 50%, #6c5fc4 100%);
+}
+
+html.dark .home-gallery-field {
+  background:
+    radial-gradient(55% 50% at 94% 100%, rgba(190, 110, 180, 0.3), transparent 70%),
+    radial-gradient(50% 50% at 6% 100%, rgba(60, 120, 220, 0.35), transparent 70%),
+    linear-gradient(150deg, #18286e 0%, #2d2d78 48%, #452f7c 100%);
+}
+
+.home-involved-field {
+  background:
+    radial-gradient(40% 28% at 78% 18%, rgba(255, 255, 255, 0.85), transparent 70%),
+    radial-gradient(46% 30% at 14% 86%, rgba(255, 255, 255, 0.75), transparent 72%),
+    linear-gradient(180deg, #bfdcf7 0%, #d9e8fb 48%, #ece4f8 100%);
+}
+
+html.dark .home-involved-field {
+  background:
+    radial-gradient(40% 28% at 78% 18%, rgba(150, 170, 255, 0.16), transparent 70%),
+    radial-gradient(46% 30% at 14% 86%, rgba(200, 160, 240, 0.12), transparent 72%),
+    linear-gradient(180deg, #132a55 0%, #1a2652 48%, #26204d 100%);
+}
+
+/* The presidents' letter sits on a soft blush wash, like stationery. */
+.vsa-editorial-shell .vsa-message-section {
+  background: linear-gradient(180deg, #f6e6ef 0%, var(--ed-paper) 85%);
+}
+
+html.dark .vsa-editorial-shell .vsa-message-section {
+  background: linear-gradient(180deg, #2a1e3e 0%, var(--ed-paper) 85%);
+}
+
+/* Halftone: a corner of print dots, like VSA's poster overlays. The element
+   needs position + isolation; --vsa-halftone-color tints it. */
+.vsa-halftone::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 auto auto;
+  width: min(46vw, 560px);
+  aspect-ratio: 1;
+  background-image: radial-gradient(var(--vsa-halftone-color, rgba(113, 139, 212, 0.32)) 1.3px, transparent 1.9px);
+  background-size: 10px 10px;
+  -webkit-mask-image: radial-gradient(circle at 100% 0%, #000 0%, transparent 68%);
+  mask-image: radial-gradient(circle at 100% 0%, #000 0%, transparent 68%);
+  pointer-events: none;
+}
+
+.vsa-halftone--left::before {
+  inset: auto auto 0 0;
+  -webkit-mask-image: radial-gradient(circle at 0% 100%, #000 0%, transparent 68%);
+  mask-image: radial-gradient(circle at 0% 100%, #000 0%, transparent 68%);
+}
+
+html.dark .vsa-halftone::before {
+  --vsa-halftone-color: rgba(200, 184, 232, 0.16);
+}
+
+.home-editorial-polaroid {
+  background: #faf9f5;
+  color: #28354d;
+  box-shadow: 0 18px 55px rgba(25, 34, 75, 0.27);
+}
+
+/* Figma footer: periwinkle in light mode, deep navy in dark. */
+/* Unscoped: the footer is shared chrome on every route. */
+.editorial-footer {
+  background: var(--ed-footer);
+  /* Periwinkle is darker than cream: deepen secondary ink to keep 4.5:1. */
+  --ed-muted: #3e4a66;
+  --color-text2: #3e4a66;
+}
+
+html.dark .editorial-footer {
+  --ed-muted: #bfcbe4;
+  --color-text2: #d5dcf0;
+}
+
+/* Shared public visual language. The exact Figma homepage colors carry into
+   existing public routes through tokens, without touching admin workflows. */
+.vsa-editorial-shell {
+  /* Figma :root tokens */
+  --ed-ink: #28354d;
+  --ed-paper: #faf9f5;
+  --ed-line: rgba(40, 53, 77, 0.22);
+  --ed-muted: #4f5a74; /* ≥4.5:1 on cream and the lavender wash */
+  --ed-accent: #6c628d;
+  --ed-wordmark: #7a668e;
+  --ed-on-ink: #ffffff;
+  --ed-footer: #becbe9;
+  --ed-lavender-wash: #e7def3;
+  /* Pale sky field behind the light program heroes. */
+  --ed-sky-wash: #e2eefb;
+  /* The palette in one line: a signature edge under page heroes. */
+  --ed-ribbon: linear-gradient(90deg, #a8d9f0, #718bd4 34%, #c8b8e8 68%, #f0ccd9);
+  --vsa-serif-font: "Instrument Serif";
+  --color-bg: #faf9f5;
+  --color-surface: #ffffff;
+  --color-surface2: #f0eef9;
+  --color-surface3: #e7e9f6;
+  --color-border: #dcd9e9;
+  --color-border-strong: #bbb7d0;
+  --color-text: #28354d;
+  --color-text2: #4d5871;
+  --color-text3: #5c6680;
+  --color-nav: rgba(250, 249, 245, 0.86);
+  --color-nav-border: rgba(40, 53, 77, 0.16);
+  --color-input: #f0eef9;
+  --color-sidebar: #ffffff;
+  --color-sidebar-border: #dcd9e9;
+  --color-sidebar-active: #e7eafd;
+  --color-brand: #4356a1;
+  --color-on-brand: #ffffff;
+  --color-accent: #9072b7;
+  --color-accent-text: #69518d;
+  --color-gold: #9886c0;
+  --color-gold-text: #635187;
+  --teal: #718bd4;
+  --teal-l: #a8d9f0;
+  --teal-d: #4356a1;
+  --coral: #dba9cd;
+  --gold: #ad9bd7;
+  --bg: var(--color-bg);
+  --bg2: #f0eef9;
+  --bg3: #e7e9f6;
+  --surface: var(--color-surface);
+  --surface2: var(--color-surface2);
+  --surface3: var(--color-surface3);
+  --border: var(--color-border);
+  --border2: var(--color-border-strong);
+  --text: var(--color-text);
+  --text2: var(--color-text2);
+  --text3: var(--color-text3);
+  --brand: var(--color-brand);
+  --accent: var(--color-accent);
+  --gold-t: var(--color-gold);
+  --nav-bg: var(--color-nav);
+  --card-bg: var(--color-surface);
+  --glow: rgba(68, 86, 161, 0.13);
+  --glow-coral: rgba(219, 169, 205, 0.13);
+  --paper-edge: rgba(188, 188, 214, 0.72);
+  --paper-shadow: 0 10px 32px rgba(51, 65, 112, 0.07);
+  --paper-shadow-hover: 0 16px 40px rgba(51, 65, 112, 0.13);
+  --tape-teal: rgba(168, 217, 240, 0.5);
+  --tape-coral: rgba(240, 204, 217, 0.5);
+  --tape-gold: rgba(200, 184, 232, 0.5);
+  --vsa-brand-50: 245 246 255;
+  --vsa-brand-100: 229 233 253;
+  --vsa-brand-200: 206 214 249;
+  --vsa-brand-300: 180 194 245;
+  --vsa-brand-400: 163 178 236;
+  --vsa-brand-500: 119 139 214;
+  --vsa-brand-600: 67 86 161;
+  --vsa-brand-700: 54 71 138;
+  --vsa-brand-800: 44 58 113;
+  --vsa-brand-900: 31 42 82;
+  --vsa-brand-950: 22 30 61;
+}
+
+html.dark .vsa-editorial-shell {
+  --ed-ink: #f4f0fc;
+  --ed-paper: #101a31;
+  --ed-line: rgba(213, 220, 240, 0.2);
+  --ed-muted: #bfcbe4;
+  --ed-accent: #d3bff5;
+  --ed-wordmark: #c9b6ec;
+  --ed-on-ink: #16213f;
+  --ed-footer: #18244a;
+  --ed-lavender-wash: #251e48;
+  --ed-sky-wash: #10294a;
+  --color-bg: #101a31;
+  --color-surface: #1b2843;
+  --color-surface2: #243354;
+  --color-surface3: #2b395c;
+  --color-border: #3b4a6e;
+  --color-border-strong: #617091;
+  --color-text: #f4f0fc;
+  --color-text2: #d5dcf0;
+  --color-text3: #bfcbe4;
+  --color-nav: rgba(16, 26, 49, 0.88);
+  --color-nav-border: rgba(213, 220, 240, 0.16);
+  --color-input: #243354;
+  --color-sidebar: #1b2843;
+  --color-sidebar-border: #3b4a6e;
+  --color-sidebar-active: #30426c;
+  --color-brand: #c7d1ff;
+  --color-on-brand: #16213f;
+  --color-accent: #d3b8f1;
+  --color-accent-text: #dfc5ff;
+  --color-gold: #dac8f3;
+  --color-gold-text: #dac8f3;
+  --teal: #aeb9eb;
+  --teal-d: #b9c7ff;
+  --coral: #ebc7e5;
+  --gold: #cbb4ec;
+  --bg2: #1b2843;
+  --bg3: #243354;
+  --glow: rgba(171, 185, 239, 0.18);
+  --glow-coral: rgba(228, 185, 232, 0.15);
+  --paper-edge: #3b4a6e;
+  --paper-shadow: 0 10px 32px rgba(0, 0, 0, 0.19);
+  --paper-shadow-hover: 0 16px 40px rgba(0, 0, 0, 0.3);
+  /* Brand ramp is shared with light mode (monotonic, like the original teal):
+     dark-mode components already pick brand-400/300 via dark: variants, and
+     dark:bg-brand-950 / dark:text-brand-950 must stay dark. */
+}
+
+/* ─── Shared page hero ──────────────────────────────────────────────────
+   Public pages share .vsa-page-hero; each picks a tone by purpose, after
+   VSA's own posts, and the ribbon underneath is the common signature:
+   - sky (Leaderboard, Points, Calendar, Feedback): a calm sky gradient and
+     nothing else, so the data reads first.
+   - default (Events): periwinkle into pink with a flyer-style halftone.
+   - lavender (Gallery, Get Involved): lavender into pink with one bubble.
+   - blush (Cabinet, House pages): the Cabinet-reveal treatment — two
+     glowing four-point stars over a blue→pink sweep.
+   Inner controls keep the page's light/dark tokens on every tone. */
+.vsa-editorial-shell .vsa-page-hero {
+  padding-block: clamp(48px, 6.5vw, 96px) clamp(36px, 4.5vw, 64px);
+  isolation: isolate;
+  border-bottom: 0;
+  background: var(--vsa-hero-bg);
+  --vsa-hero-bg: linear-gradient(115deg, #dfe7fb 0%, #e7e1f8 55%, #f4e3ef 100%);
+}
+
+html.dark .vsa-editorial-shell .vsa-page-hero {
+  --vsa-hero-bg: linear-gradient(115deg, #1f3175 0%, #2c286c 55%, #3b2558 100%);
+}
+
+.vsa-editorial-shell .vsa-page-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 5px;
+  background: var(--ed-ribbon);
+  pointer-events: none;
+}
+
+.vsa-editorial-shell .vsa-page-hero--sky {
+  --vsa-hero-bg: linear-gradient(180deg, #d9eafa 0%, #e6ebfb 100%);
+}
+
+html.dark .vsa-editorial-shell .vsa-page-hero--sky {
+  --vsa-hero-bg: linear-gradient(180deg, #16336a 0%, #1d2c66 100%);
+}
+
+.vsa-editorial-shell .vsa-page-hero--lavender {
+  --vsa-hero-bg: linear-gradient(120deg, #e4ddf8 0%, #eee1f5 55%, #f7e4ee 100%);
+}
+
+html.dark .vsa-editorial-shell .vsa-page-hero--lavender {
+  --vsa-hero-bg: linear-gradient(120deg, #2d2868 0%, #3a2862 55%, #48285a 100%);
+}
+
+.vsa-editorial-shell .vsa-page-hero--lavender::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: -120px;
+  right: -80px;
+  width: min(40vw, 400px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 23%, rgba(255, 255, 255, 0.85) 0 1.5%, transparent 8%),
+    radial-gradient(circle at 65% 72%, rgba(244, 188, 238, 0.28), transparent 48%);
+  box-shadow: inset 12px 10px 30px rgba(255, 255, 255, 0.35), inset -12px -10px 28px rgba(150, 200, 255, 0.2);
+  pointer-events: none;
+}
+
+html.dark .vsa-editorial-shell .vsa-page-hero--lavender::before {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: radial-gradient(circle at 30% 23%, rgba(255, 255, 255, 0.3) 0 1.5%, transparent 8%);
+  box-shadow: inset 12px 10px 30px rgba(255, 255, 255, 0.06);
+}
+
+.vsa-editorial-shell .vsa-page-hero--blush {
+  --vsa-hero-bg: linear-gradient(125deg, #dde4fb 0%, #e9dff8 45%, #f6e1ec 100%);
+}
+
+html.dark .vsa-editorial-shell .vsa-page-hero--blush {
+  --vsa-hero-bg: linear-gradient(125deg, #233a86 0%, #3a2c7a 45%, #4c2a66 100%);
+}
+
+.vsa-editorial-shell .vsa-page-hero--blush::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='white' d='M50 0C52 34 66 48 100 50 66 52 52 66 50 100 48 66 34 52 0 50 34 48 48 34 50 0Z'/%3E%3C/svg%3E") no-repeat right 9% top 22% / clamp(34px, 4vw, 54px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='white' d='M50 0C52 34 66 48 100 50 66 52 52 66 50 100 48 66 34 52 0 50 34 48 48 34 50 0Z'/%3E%3C/svg%3E") no-repeat right 22% bottom 18% / clamp(18px, 2vw, 26px);
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.9));
+  pointer-events: none;
+}
+
+/* Leaderboard and Find My Points wrap their hero copy in a paper card; on the
+   wash it is a card inside a band, so the hero text sits on the band itself. */
+.vsa-editorial-shell .vsa-page-hero > .vsa-container > .scrapbook-paper {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.vsa-editorial-shell .vsa-page-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.vsa-editorial-shell .vsa-page-title,
+.vsa-editorial-shell .vsa-section-title {
+  color: var(--ed-ink);
+  font-family: "Instrument Serif", Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.035em;
+}
+
+.vsa-editorial-shell .vsa-page-title {
+  font-size: clamp(52px, 7.5vw, 100px);
+  line-height: 0.88;
+  text-wrap: balance;
+}
+
+.vsa-editorial-shell .vsa-section-title {
+  font-size: clamp(36px, 4.6vw, 60px);
+  line-height: 0.92;
+  text-wrap: balance;
+}
+
+.vsa-editorial-shell :is(.vsa-page-title, .vsa-section-title) :is(em, span) {
+  color: var(--ed-accent) !important;
+  font-weight: 400;
+}
+
+/* Figma .eyebrow: JetBrains Mono, 0.14em, no decorative rule. */
+.vsa-editorial-shell .vsa-section-label {
+  color: var(--ed-muted);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+}
+
+.vsa-editorial-shell .vsa-section-label::after {
+  display: none;
+}
+
+.vsa-editorial-shell .vsa-section-sub {
+  color: var(--color-text2);
+}
+
+/* ─── Buttons: Figma .button.primary / .text-link ───────────────────── */
+.vsa-editorial-shell .vsa-btn-primary,
+.vsa-editorial-shell .vsa-btn-ghost {
+  min-height: 48px;
+  border-radius: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.vsa-editorial-shell .vsa-btn-primary {
+  border-color: var(--ed-ink);
+  background: var(--ed-ink);
+  color: var(--ed-on-ink);
+}
+
+.vsa-editorial-shell .vsa-btn-primary:hover {
+  filter: none;
+  box-shadow: 0 10px 28px rgba(21, 34, 74, 0.18);
+}
+
+.vsa-editorial-shell .vsa-btn-ghost {
+  border: 1px solid var(--ed-line);
+  color: var(--ed-ink);
+}
+
+.vsa-editorial-shell .vsa-btn-ghost:hover {
+  border-color: var(--ed-ink);
+  background: transparent;
+}
+
+.vsa-editorial-shell .vsa-btn-primary::before,
+.vsa-editorial-shell .vsa-btn-primary::after,
+.vsa-editorial-shell .vsa-btn-ghost::before,
+.vsa-editorial-shell .vsa-btn-ghost::after {
+  display: none;
+}
+
+/* ─── Paper → editorial sheet ───────────────────────────────────────────
+   The scrapbook board/paper/sticker classes are the shared card system
+   across Events, Houses, Leaderboard, Cabinet, Points and the homepage
+   sections. In the public shell they become flat cream sheets with hairline
+   ink borders (Figma event rows/program list), no tape, pins or tilt.
+   .scrapbook-photo keeps its Polaroid padding — Figma's photo language. */
+.vsa-editorial-shell .scrapbook-board {
+  background: var(--color-bg);
+}
+
+.vsa-editorial-shell :is(.scrapbook-paper, .scrapbook-note, .scrapbook-score, .scrapbook-yearbook) {
+  border-color: var(--ed-line);
+  border-radius: 2px;
+  background: var(--color-surface);
+  box-shadow: none;
+}
+
+.vsa-editorial-shell .scrapbook-photo {
+  border-color: transparent;
+  border-radius: 0;
+  background: var(--ed-paper);
+  box-shadow: 0 18px 50px rgba(25, 34, 75, 0.18);
+}
+
+/* Dark mode keeps the index.css surface Polaroid: children read --text etc.,
+   which stay light in dark mode, so a white card would hide them. */
+html.dark .vsa-editorial-shell .scrapbook-photo {
+  background: var(--color-surface);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
+}
+
+.vsa-editorial-shell :is(.scrapbook-paper, .scrapbook-note, .scrapbook-photo)::before,
+.vsa-editorial-shell .scrapbook-pin,
+.vsa-editorial-shell .scrapbook-tape-strip {
+  display: none;
+}
+
+.vsa-editorial-shell :is(.scrapbook-paper, .scrapbook-note, .scrapbook-score, .scrapbook-yearbook):is(
+    .scrapbook-rotate-sm-left,
+    .scrapbook-rotate-sm-right,
+    .scrapbook-rotate-md-left,
+    .scrapbook-rotate-md-right
+  ) {
+  transform: none;
+}
+
+.vsa-editorial-shell .scrapbook-hover-tilt:hover {
+  box-shadow: 0 16px 40px rgba(25, 34, 75, 0.12);
+}
+
+.vsa-editorial-shell .scrapbook-score::after,
+.vsa-editorial-shell .scrapbook-rule {
+  border-color: var(--ed-line);
+}
+
+.vsa-editorial-shell .scrapbook-sticker {
+  border-color: var(--ed-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ed-muted);
+  letter-spacing: 0.12em;
+}
+
+.vsa-editorial-shell .scrapbook-sticker-teal {
+  border-color: rgba(108, 140, 214, 0.45);
+  background: rgba(168, 217, 240, 0.28);
+  color: #34508f;
+}
+
+.vsa-editorial-shell .scrapbook-sticker-coral {
+  border-color: rgba(206, 140, 172, 0.5);
+  background: rgba(240, 204, 217, 0.4);
+  color: #7a4466;
+}
+
+.vsa-editorial-shell .scrapbook-sticker-gold {
+  border-color: rgba(150, 128, 196, 0.45);
+  background: rgba(200, 184, 232, 0.34);
+  color: #5a4a86;
+}
+
+html.dark .vsa-editorial-shell .scrapbook-sticker-teal {
+  background: rgba(168, 217, 240, 0.12);
+  color: #bfe3f6;
+}
+
+html.dark .vsa-editorial-shell .scrapbook-sticker-coral {
+  background: rgba(240, 204, 217, 0.12);
+  color: #f3cfe0;
+}
+
+html.dark .vsa-editorial-shell .scrapbook-sticker-gold {
+  background: rgba(200, 184, 232, 0.14);
+  color: #dccdf6;
+}
+
+.vsa-editorial-shell .scrapbook-empty {
+  border: 1px dashed var(--ed-line);
+  border-radius: 0;
+}
+
+/* ─── Point-and-shoot camera finishes (gallery/CameraFrame.tsx) ───────────
+   A pearl body with a faint lavender/pink sheen, a glossy black bezel, glass
+   glare on the screen, and brushed-metal controls. The camera is a physical
+   object, so it keeps these finishes in dark mode. */
+.vsa-camera-body {
+  background:
+    radial-gradient(120% 70% at 15% 0%, rgba(255, 255, 255, 0.95), transparent 55%),
+    radial-gradient(90% 80% at 100% 100%, rgba(240, 204, 217, 0.45), transparent 60%),
+    linear-gradient(150deg, #ffffff 0%, #f2f1f9 38%, #e5e7f6 72%, #ece4f3 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -5px 10px rgba(78, 86, 150, 0.14),
+    inset -4px 0 8px rgba(78, 86, 150, 0.08),
+    0 1px 0 rgba(255, 255, 255, 0.6),
+    0 10px 20px rgba(28, 30, 90, 0.16),
+    0 34px 70px -12px rgba(28, 30, 90, 0.42);
+}
+
+html.dark .vsa-camera-body {
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -5px 10px rgba(78, 86, 150, 0.18),
+    0 10px 20px rgba(0, 0, 0, 0.3),
+    0 34px 70px -12px rgba(0, 0, 0, 0.6);
+}
+
+.vsa-camera-bezel {
+  background: linear-gradient(160deg, #2c3148 0%, #161a2a 55%, #0f1220 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.35),
+    0 1px 0 rgba(255, 255, 255, 0.9),
+    0 -1px 0 rgba(78, 86, 150, 0.18);
+}
+
+/* Glass: a diagonal reflection across the upper screen. */
+.vsa-camera-glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 34%, transparent 34.5%);
+  pointer-events: none;
+}
+
+.vsa-camera-button {
+  background: radial-gradient(circle at 35% 28%, #ffffff 0%, #ebebf3 45%, #cfd0dd 100%);
+  box-shadow:
+    inset 0 -1px 2px rgba(40, 44, 90, 0.18),
+    0 1px 1.5px rgba(40, 44, 90, 0.28),
+    0 0 0 0.5px rgba(40, 44, 90, 0.12);
+}
+
+.vsa-camera-wheel {
+  background:
+    radial-gradient(circle, transparent 62%, rgba(40, 44, 90, 0.1) 63%, transparent 66%),
+    conic-gradient(from 210deg, #d7d8e4, #fafafe, #c8c9d7, #f4f4fa, #cfd0dd, #fafafe, #d7d8e4);
+  box-shadow:
+    inset 0 1px 2px rgba(40, 44, 90, 0.2),
+    0 1px 0 rgba(255, 255, 255, 0.95),
+    0 0 0 1px rgba(40, 44, 90, 0.1);
+}
+
+.vsa-camera-rec {
+  background: radial-gradient(circle at 38% 32%, #ff8b96 0%, #e2475a 48%, #a8192e 100%);
+  box-shadow:
+    0 0 0 2px #e9e9f1,
+    0 0 0 2.5px rgba(40, 44, 90, 0.18),
+    0 1px 2px 2px rgba(40, 44, 90, 0.18);
+}
+
+/* Speaker grille: a short field of punched holes. */
+.vsa-camera-grille {
+  background-image: radial-gradient(circle, rgba(60, 64, 110, 0.38) 0.9px, transparent 1.3px);
+  background-size: 4px 4px;
+}
+
+/* The shutter: a polished button set in a slightly darker zoom collar. */
+.vsa-camera-shutter {
+  background:
+    radial-gradient(60% 120% at 50% 100%, #fbfbff 0 38%, transparent 40%),
+    linear-gradient(180deg, #e4e4ee 0%, #c9cad8 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 -1px 2px rgba(40, 44, 90, 0.12);
+}
+
+/* ─── Gallery album wall: a camera roll of photo objects ─────────────────
+   Gallery.tsx deals each album one of three objects in a fixed rhythm —
+   Polaroid, stacked print, point-and-shoot camera — tilted by the wall's
+   existing --album-rotate. They are physical objects, so they stay light in
+   dark mode and carry their own ink. Each photo gets a film-camera date
+   imprint (decorative; the caption has the readable date). The `html`
+   prefix outranks index.css's `.dark .gallery-memory-card` surface. */
+html .vsa-editorial-shell .gallery-memory-card {
+  --text: #28354d;
+  --text2: #4f5a74;
+  --text3: #4f5a74;
+  border: 0;
+  border-radius: 0;
+  background: #faf9f5;
+  box-shadow: 0 18px 46px rgba(25, 34, 75, 0.16);
+}
+
+html.dark .vsa-editorial-shell .gallery-memory-card {
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.4);
+}
+
+.vsa-editorial-shell .gallery-memory-card::before {
+  display: none;
+}
+
+.vsa-editorial-shell .gallery-memory-image {
+  border-radius: 0;
+  background: #e7e9f6;
+}
+
+.vsa-editorial-shell .gallery-memory-title {
+  color: #28354d;
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 1.4rem;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.gallery-date-stamp {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  z-index: 1;
+  color: #ffb45e;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 6px rgba(255, 140, 50, 0.75), 0 1px 2px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+/* Polaroid: a deep bottom mat for the handwritten-style title. */
+html .vsa-editorial-shell .gallery-memory-card--polaroid {
+  padding: 10px 10px 20px;
+}
+
+/* Stacked print: a thin white border over a lavender print peeking out. */
+html .vsa-editorial-shell .gallery-memory-card--print {
+  padding: 7px 7px 14px;
+  background: #ffffff;
+  box-shadow:
+    9px 10px 0 -2px #e7def3,
+    9px 10px 0 -1px rgba(40, 53, 77, 0.12),
+    0 16px 40px rgba(25, 34, 75, 0.15);
+}
+
+html.dark .vsa-editorial-shell .gallery-memory-card--print {
+  box-shadow:
+    9px 10px 0 -2px #4a3f78,
+    0 16px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Camera: light plastic body, dark-bezelled screen, button rail. */
+html .vsa-editorial-shell .gallery-memory-card--camera {
+  padding: 16px 58px 16px 16px;
+  border-radius: 26px;
+  background:
+    radial-gradient(120% 70% at 15% 0%, rgba(255, 255, 255, 0.95), transparent 55%),
+    radial-gradient(90% 80% at 100% 100%, rgba(240, 204, 217, 0.45), transparent 60%),
+    linear-gradient(150deg, #ffffff 0%, #f2f1f9 38%, #e5e7f6 72%, #ece4f3 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -5px 10px rgba(78, 86, 150, 0.14),
+    0 10px 20px rgba(28, 30, 90, 0.14),
+    0 30px 60px -12px rgba(28, 30, 90, 0.38);
+}
+
+/* The photo sits in a glossy black bezel with glass glare. */
+.vsa-editorial-shell .gallery-memory-card--camera .gallery-memory-image {
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 6px #171b2b,
+    0 0 0 7px rgba(255, 255, 255, 0.12),
+    0 1px 0 7px rgba(255, 255, 255, 0.9);
+}
+
+.vsa-editorial-shell .gallery-memory-card--camera .gallery-memory-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 34%, transparent 34.5%);
+  pointer-events: none;
+}
+
+.vsa-editorial-shell .gallery-memory-card--camera .gallery-memory-caption {
+  padding-top: 18px;
+}
+
+/* Shutter in its zoom collar on the top plate. */
+.vsa-editorial-shell .gallery-memory-card--camera::before {
+  display: block;
+  top: -10px;
+  left: auto;
+  right: 16%;
+  width: 64px;
+  height: 12px;
+  border-radius: 999px 999px 0 0;
+  background:
+    radial-gradient(60% 120% at 50% 100%, #fbfbff 0 38%, transparent 40%),
+    linear-gradient(180deg, #e4e4ee 0%, #c9cad8 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 -1px 2px rgba(40, 44, 90, 0.12);
+  transform: none;
+}
+
+/* Program landing pages and ACE reuse EditorialHero (ACE keeps its bespoke
+   layout and watermark, in the same palette). The default program hero takes a flat sky wash and the ribbon; the stage
+   tone (VCN, Wild N' Culture) is a blue→violet field like the homepage
+   hero, with every text, button and border token re-pointed to read on it. */
+.vsa-editorial-shell :is(.program-app, .ace-app) .editorial-hero {
+  background: linear-gradient(180deg, var(--ed-sky-wash) 0%, var(--ed-lavender-wash) 100%);
+  border-bottom: 0;
+}
+
+.vsa-editorial-shell :is(.program-app, .ace-app) .editorial-hero::after {
+  inset: auto 0 0;
+  top: auto;
+  height: 5px;
+  border-radius: 0;
+  background: var(--ed-ribbon);
+  transform: none;
+  opacity: 1;
+}
+
+.vsa-editorial-shell :is(.program-app, .ace-app) .editorial-hero-grain {
+  display: none;
+}
+
+.vsa-editorial-shell :is(.program-app, .ace-app) .editorial-hero-title,
+.vsa-editorial-shell :is(.program-app, .ace-app) .editorial-hero-watermark {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-weight: 400;
+}
+
+.vsa-editorial-shell .program-app .editorial-hero--stage {
+  --eh-text: #ffffff;
+  --eh-text-2: #e9edfd;
+  --eh-accent: #f0ccd9;
+  --eh-accent-strong: #f0ccd9;
+  --eh-watermark: rgba(255, 255, 255, 0.07);
+  --ed-ink: #ffffff;
+  --ed-on-ink: #28354d;
+  --ed-line: rgba(255, 255, 255, 0.45);
+  --ed-muted: #e9edfd;
+  /* Page copy inside the hero (dates, the Instagram link) reads these. */
+  --color-text2: #e9edfd;
+  --color-text3: #e9edfd;
+  --vsa-brand-600: 255 224 236;
+  --vsa-brand-400: 255 224 236;
+  color: #ffffff;
+  background:
+    radial-gradient(70% 70% at 100% 0%, rgba(240, 204, 217, 0.16), transparent 60%),
+    linear-gradient(160deg, #3557b0 0%, #4c58b4 55%, #5a4fae 100%);
+}
+
+/* The VCN Archive skeleton stands in for a stage hero while it loads. */
+.vsa-editorial-shell .vsa-page-hero--stage {
+  --vsa-hero-bg: linear-gradient(160deg, #3557b0 0%, #4c58b4 55%, #5a4fae 100%);
+}
+
+html.dark .vsa-editorial-shell .vsa-page-hero--stage {
+  --vsa-hero-bg: linear-gradient(160deg, #1d2c66 0%, #2c2f72 55%, #3d2d74 100%);
+}
+
+html.dark .vsa-editorial-shell .program-app .editorial-hero--stage {
+  background:
+    radial-gradient(70% 70% at 100% 0%, rgba(240, 204, 217, 0.08), transparent 60%),
+    linear-gradient(160deg, #1d2c66 0%, #2c2f72 55%, #3d2d74 100%);
+}
+
+/* Stage heroes get the Hu Tieu Huzz finish: film grain and glowing stars. */
+.vsa-editorial-shell .program-app .editorial-hero--stage .editorial-hero-grain {
+  display: block;
+  opacity: 0.2;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.65'/%3E%3C/svg%3E");
+  background-size: auto;
+}
+
+.vsa-editorial-shell .program-app .editorial-hero--stage::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='white' d='M50 0C52 34 66 48 100 50 66 52 52 66 50 100 48 66 34 52 0 50 34 48 48 34 50 0Z'/%3E%3C/svg%3E") no-repeat left 46% top 16% / clamp(30px, 3.4vw, 48px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='white' d='M50 0C52 34 66 48 100 50 66 52 52 66 50 100 48 66 34 52 0 50 34 48 48 34 50 0Z'/%3E%3C/svg%3E") no-repeat left 6% bottom 14% / clamp(16px, 1.6vw, 22px);
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.9));
+  pointer-events: none;
+}
+
+/* On phones the title fills the width: keep one star, low on the right. */
+@media (max-width: 759px) {
+  .vsa-editorial-shell .program-app .editorial-hero--stage::before {
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='white' d='M50 0C52 34 66 48 100 50 66 52 52 66 50 100 48 66 34 52 0 50 34 48 48 34 50 0Z'/%3E%3C/svg%3E") no-repeat right 7% bottom 10% / 22px;
+  }
+}
+
+.vsa-editorial-shell .editorial-hero--stage .scrapbook-sticker {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+/* ─── Quick-dock clearance ─────────────────────────────────────────────
+   Below lg the MobileQuickDock floats at top: 68px (to ~130px), over the
+   first ~78px of <main>. Whatever opens a page — a breadcrumb, a page
+   hero, a program hero, or a bespoke top (.vsa-dock-clear) — starts below
+   it. A hero that follows a breadcrumb drops its own clearance so the gap
+   isn't doubled (even with a degraded-mode banner between them). */
+@media (max-width: 1023px) {
+  .vsa-editorial-shell {
+    --vsa-dock-clearance: 92px;
+  }
+
+  .vsa-editorial-shell .vsa-page-hero,
+  .vsa-editorial-shell .editorial-hero-inner,
+  .vsa-editorial-shell .vsa-dock-clear {
+    padding-top: var(--vsa-dock-clearance);
+  }
+
+  .vsa-editorial-shell nav[aria-label="Breadcrumb"] {
+    padding-top: calc(var(--vsa-dock-clearance) - 12px);
+  }
+
+  .vsa-editorial-shell nav[aria-label="Breadcrumb"] ~ .vsa-page-hero {
+    padding-top: 40px;
+  }
+
+  .vsa-editorial-shell nav[aria-label="Breadcrumb"] ~ .program-app .editorial-hero-inner {
+    padding-top: 32px;
+  }
+}

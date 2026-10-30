@@ -8,7 +8,7 @@ import { useQueryClient } from 'react-query';
 import { useDropzone } from 'react-dropzone';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { OFFICIAL_YEARS } from '../../lib/yearNormalizer';
 import { usePagination } from '../../hooks/usePagination';
 import { PaginationControls } from '../../components/common/PaginationControls';
@@ -85,11 +85,11 @@ function getMemberEditForm(m: Member) {
 
 function yearBadgeCls(year: string | null) {
   const y = (year ?? '').toLowerCase();
-  if (y.includes('fresh')) return 'bg-zinc-100 text-zinc-600 border-zinc-300 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-600';
+  if (y.includes('fresh')) return 'bg-surface2 text-text-secondary border-[var(--color-border)]';
   if (y.includes('soph')) return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800';
   if (y.includes('junior')) return 'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-800';
   if (y.includes('senior')) return 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800';
-  return 'bg-zinc-100 text-zinc-500 border-zinc-300 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-600';
+  return 'bg-surface2 text-text-muted border-[var(--color-border)]';
 }
 
 function initials(first: string, last: string) {
@@ -468,8 +468,6 @@ export default function AdminMembers() {
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
     <>
-      <Toaster position="top-right" />
-
       {/* PAGE HEADER */}
       <AdminPageHeader
         related={['/admin/merge-suggestions', '/admin/import', '/admin/points', '/admin/photo-requests']}
@@ -709,7 +707,6 @@ export default function AdminMembers() {
                 page={page} totalPages={totalPages}
                 rowsPerPage={rowsPerPage} onPageChange={setCurrentPage} onRowsPerPageChange={setRowsPerPage}
                 pageStartLabel={pageStartLabel} pageEndLabel={pageEndLabel} totalCount={filtered.length}
-                theme="zinc"
               />
             )}
           </div>
@@ -719,8 +716,8 @@ export default function AdminMembers() {
       {editing && (
         <Modal onClose={requestCloseEdit} wide>
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-[16px] font-bold text-zinc-900 dark:text-zinc-50">Edit Member</h2>
-            <button onClick={requestCloseEdit} disabled={saving !== null} aria-label="Close" className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-xl leading-none disabled:opacity-40">×</button>
+            <h2 className="text-[16px] font-bold text-text-primary">Edit Member</h2>
+            <button onClick={requestCloseEdit} disabled={saving !== null} aria-label="Close" className="text-text-muted hover:text-text-primary text-xl leading-none disabled:opacity-40">×</button>
           </div>
           <div className="space-y-4">
             <Field label="Photo">
@@ -822,14 +819,14 @@ export default function AdminMembers() {
                 </select>
               </Field>
             </div>
-            <div className="grid grid-cols-2 gap-3 rounded-md bg-zinc-50 dark:bg-zinc-900/50 px-4 py-3 border border-zinc-200 dark:border-[#27272a]">
+            <div className="grid grid-cols-2 gap-3 rounded-md bg-surface2 px-4 py-3 border border-[var(--color-border)]">
               <div>
-                <p className="text-[11px] text-zinc-400 mb-0.5">Points (computed)</p>
+                <p className="text-[11px] text-text-muted mb-0.5">Points (computed)</p>
                 <p className="text-[13px] font-semibold text-indigo-600 dark:text-indigo-400">{editing.points}</p>
               </div>
               <div>
-                <p className="text-[11px] text-zinc-400 mb-0.5">Events attended (computed)</p>
-                <p className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-200">{editing.events_attended}</p>
+                <p className="text-[11px] text-text-muted mb-0.5">Events attended (computed)</p>
+                <p className="text-[13px] font-semibold text-text-primary">{editing.events_attended}</p>
               </div>
             </div>
           </div>
@@ -868,10 +865,10 @@ export default function AdminMembers() {
           {!mergeConfirming ? (
             <>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-[16px] font-bold text-zinc-900 dark:text-zinc-50">Merge Member</h2>
-                <button onClick={() => setMergingSource(null)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-xl leading-none">×</button>
+                <h2 className="text-[16px] font-bold text-text-primary">Merge Member</h2>
+                <button onClick={() => setMergingSource(null)} className="text-text-muted hover:text-text-primary text-xl leading-none">×</button>
               </div>
-              <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mb-4">
+              <p className="text-[13px] text-text-muted mb-4">
                 Move all attendance records from{' '}
                 <strong className="text-red-600 dark:text-red-400">{mergingSource.first_name} {mergingSource.last_name}</strong>
                 {' '}into another member. The source will be deleted.
@@ -880,7 +877,7 @@ export default function AdminMembers() {
                 placeholder="Search for the member to merge INTO…"
                 className={inputCls + ' mb-3'}
                 autoFocus />
-              <div className="overflow-y-auto max-h-64 rounded-md border border-zinc-200 dark:border-[#27272a] divide-y divide-zinc-100 dark:divide-[#27272a]">
+              <div className="overflow-y-auto max-h-64 rounded-md border border-[var(--color-border)] divide-y divide-[var(--color-border)]">
                 {members
                   .filter(m =>
                     m.id !== mergingSource.id &&
@@ -891,12 +888,12 @@ export default function AdminMembers() {
                       onClick={() => { setMergeTarget(m); setMergeConfirming(true); }}
                       className="w-full flex items-center justify-between px-4 py-3 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 text-left transition-colors">
                       <div>
-                        <span className="text-[13px] font-medium text-zinc-900 dark:text-zinc-100">
+                        <span className="text-[13px] font-medium text-text-primary">
                           {m.first_name} {m.last_name}
                         </span>
-                        {m.email && <span className="ml-2 text-[11px] text-zinc-400">{m.email}</span>}
+                        {m.email && <span className="ml-2 text-[11px] text-text-muted">{m.email}</span>}
                       </div>
-                      <span className="text-[11px] text-zinc-400 shrink-0 ml-3">
+                      <span className="text-[11px] text-text-muted shrink-0 ml-3">
                         {m.points} pts · {m.events_attended} events
                       </span>
                     </button>
@@ -905,13 +902,13 @@ export default function AdminMembers() {
             </>
           ) : (
             <>
-              <h2 className="text-[16px] font-bold text-zinc-900 dark:text-zinc-50 mb-2">Confirm merge?</h2>
-              <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mb-1">
+              <h2 className="text-[16px] font-bold text-text-primary mb-2">Confirm merge?</h2>
+              <p className="text-[13px] text-text-muted mb-1">
                 <strong className="text-red-600 dark:text-red-400">{mergingSource.first_name} {mergingSource.last_name}</strong>
                 {' '}({mergingSource.events_attended} record{mergingSource.events_attended !== 1 ? 's' : ''}) will be merged into{' '}
                 <strong className="text-indigo-600 dark:text-indigo-400">{mergeTarget!.first_name} {mergeTarget!.last_name}</strong>.
               </p>
-              <p className="text-[11px] text-zinc-400 mb-5">
+              <p className="text-[11px] text-text-muted mb-5">
                 Duplicate events are skipped. The source member is permanently deleted.
               </p>
               <div className="flex gap-3">
@@ -937,7 +934,7 @@ const inputCls = `mt-1 block w-full rounded border px-3 py-2.5 text-[15px] sm:py
 
 function Modal({ children, onClose, wide }: { children: React.ReactNode; onClose: () => void; wide?: boolean }) {
   return (
-    <div data-testid="modal-backdrop" className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
+    <div data-testid="modal-backdrop" className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-scrim backdrop-blur-sm overflow-y-auto" onClick={onClose}>
       <div
         className={`scrapbook-paper rounded-lg shadow-xl p-6 sm:p-8 w-full my-8 sm:my-0 ${wide ? 'max-w-lg' : 'max-w-sm'}`}
         style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
