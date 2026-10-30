@@ -24,6 +24,16 @@ describe('VCN role CSV intake preview (#683)',()=>{
     expect(reviewVcnRoleCsv(csv,directory).rows.map(r=>r.state))
       .toEqual(['ambiguous-identity','duplicate','tentative','invalid-role']);
   });
+  it('rejects prototype property names masquerading as allowlisted roles',()=>{
+    expect(normalizeVcnRole('constructor')).toBeNull();
+    expect(normalizeVcnRole('toString')).toBeNull();
+    expect(reviewVcnRoleCsv('name,role,status\\nDang Anh,constructor,verified',directory).rows[0].state)
+      .toBe('invalid-role');
+  });
+  it('preserves actual source line numbers across empty rows and quoted multiline fields',()=>{
+    const csv='name,role,status\\n\\n"Dang Anh",Dancer,verified\\n"Alex\\nLee",Props Member,verified\\n\\nDang Anh,Choreographer,verified';
+    expect(reviewVcnRoleCsv(csv,directory).rows.map(row=>row.sourceLine)).toEqual([3,4,7]);
+  });
   it('fails closed when required evidence headers are missing or CSV is malformed',()=>{
     expect(()=>reviewVcnRoleCsv('name,role\nFoo,Dancer',directory)).toThrow(/verification/);
     expect(()=>reviewVcnRoleCsv('name,role,status\n"Foo,Dancer,verified',directory)).toThrow(/Unclosed/);
