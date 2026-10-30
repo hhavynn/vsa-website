@@ -80,7 +80,7 @@ export function VcnRoleRosterReview({ editionYear }: { editionYear: number | nul
               <ul className="max-h-[32rem] space-y-2 overflow-y-auto">
                 {result.rows.slice(0,100).map(row=>(
                   <li key={row.sourceLine} className="rounded border border-[var(--color-border)] p-3 text-sm">
-                    <p className="font-semibold text-[var(--color-text)]">Row {row.sourceLine}: {row.name || 'Missing name'} · {row.role ?? row.originalRole || 'Unknown role'}</p>
+                    <p className="font-semibold text-[var(--color-text)]">Row {row.sourceLine}: {row.name || 'Missing name'} · {(row.role ?? row.originalRole) || 'Unknown role'}</p>
                     <p className="text-xs text-[var(--color-text2)]">CSV status: {row.verification || 'missing'} · {row.state.replaceAll('-',' ')}</p>
                     {row.state === 'ready-for-human-review' || row.state === 'ambiguous-identity' ? (
                       <div className="mt-2">
