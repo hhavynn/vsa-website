@@ -76,7 +76,7 @@ export default function AdminMemberRoles() {
   const readsFailed = !!yearsError || !!directory.error || sourcesError || !year;
 
   const reviews = rows.map((row) => {
-    const selectedMemberId = memberIds[row.index] || null;
+    const selectedMemberId = directory.byId.has(memberIds[row.index]) ? memberIds[row.index] : null;
     const source = sourceById.get(sourceIds[row.index]) ?? null;
     const status = getRoleReviewStatus(row, selectedMemberId, source, role, year?.id ?? '', selectedSources);
     return { row, status, source };
@@ -184,6 +184,8 @@ export default function AdminMemberRoles() {
                 <button type="button" onClick={() => { void directory.refetch(); void refreshSources(); }} className={'ml-2 ' + actionCls}>Retry sources</button>
               </div>
             )}
+            <button type="button" onClick={() => { void directory.refetch(); void refreshSources(); }} className={actionCls}>Refresh identities and Cabinet records</button>
+            <p className="mt-2 text-xs text-text-muted">Cabinet editor links open in a separate tab so your review selections stay here.</p>
             <label className="mb-3 block max-w-xs text-xs font-semibold text-text-secondary">
               Show review rows
               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)} className={'mt-1 ' + fieldCls}>
@@ -240,7 +242,7 @@ export default function AdminMemberRoles() {
                     </div>
                     <div className="mt-3 flex flex-wrap items-center gap-3">
                       {source ? (
-                        <Link className={actionCls} to={'/admin/cabinet?member=' + encodeURIComponent(source.id)}>
+                        <Link className={actionCls} to={'/admin/cabinet?member=' + encodeURIComponent(source.id)} target="_blank" rel="noopener noreferrer">
                           Open exact Cabinet record for final review
                         </Link>
                       ) : (
