@@ -149,9 +149,9 @@ export default function AdminAnalytics() {
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="Website Analytics" />
 
-      <div className="border-b px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+      <div className="vsa-admin-field vsa-ribbon-bottom border-[var(--color-border)] border-b px-5 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-7">
         <div className="mb-4 sm:mb-0">
-          <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>
+          <h1 className="font-display text-[2rem] font-normal leading-[1.05] tracking-[-0.02em] text-text-primary sm:text-[2.6rem]" style={{ color: 'var(--color-text)' }}>
             Analytics
           </h1>
           <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
@@ -247,7 +247,7 @@ export default function AdminAnalytics() {
                       className="flex-1 bg-brand-500 dark:bg-brand-600 rounded-t-sm transition-all group relative"
                       style={{ height: `${(d.pageViews / maxTrendValue) * 100}%` }}
                     >
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-gray-900 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap z-10">
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-brand-950 text-white dark:bg-brand-100 dark:text-brand-950 text-[10px] px-2 py-1 rounded whitespace-nowrap z-10">
                         {d.date}: {d.pageViews} views
                       </div>
                     </div>

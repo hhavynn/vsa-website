@@ -153,7 +153,7 @@ export function MobileQuickDock() {
       style={{ pointerEvents: hidden ? "none" : "auto" }}
       aria-hidden={hidden}
     >
-      <div className="mx-auto grid max-w-[284px] grid-cols-4 gap-1 rounded-full border border-border-strong/70 bg-surface/90 p-1.5 shadow-[0_14px_36px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+      <div className="mx-auto grid max-w-[284px] grid-cols-4 gap-1 rounded-full border border-[color-mix(in_srgb,var(--color-border-strong)_70%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_90%,transparent)] p-1.5 shadow-[0_14px_36px_rgba(0,0,0,0.24)] backdrop-blur-xl">
         {dockItems.map(({ label, to, icon: Icon }) => (
           <NavLink
             key={to}
@@ -163,7 +163,7 @@ export function MobileQuickDock() {
               cn(
                 "group relative flex h-12 min-w-0 flex-col items-center justify-center rounded-full px-1 text-[10px] font-bold leading-none transition-all duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400",
                 isActive
-                  ? "bg-brand-500 text-[var(--color-on-brand)] shadow-[0_10px_24px_rgba(59,189,181,0.3)] dark:bg-brand-400"
+                  ? "bg-brand-600 text-[var(--color-on-brand)] shadow-[0_10px_24px_rgba(67,86,161,0.35)] dark:bg-brand-400"
                   : "text-text-secondary hover:bg-surface2 hover:text-text-primary",
               )
             }

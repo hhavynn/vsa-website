@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import AdminHouses from './Houses';
 
-jest.mock('react-hot-toast', () => ({ __esModule: true, default: { error: jest.fn(), success: jest.fn() }, Toaster: () => null }));
+jest.mock('react-hot-toast', () => ({ __esModule: true, default: { error: jest.fn(), success: jest.fn() } }));
 jest.mock('../../hooks/useAcademicTerms', () => ({ useAcademicTerms: () => ({ terms: [] }) }));
 jest.mock('../../data/repos/memberLookup', () => ({ memberLookupRepository: { listHouseImportMembers: jest.fn().mockResolvedValue([]) } }));
 jest.mock('../../lib/supabase', () => {

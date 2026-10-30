@@ -12,14 +12,14 @@ const buttonVariants: Record<NonNullable<ButtonProps['variant']>, string> = {
   primary:
     'bg-brand-600 text-white border border-brand-600 ' +
     'hover:bg-brand-700 hover:border-brand-700 ' +
-    'dark:bg-brand-400 dark:border-brand-400 dark:text-[#050810] ' +
-    'dark:hover:bg-brand-300 dark:hover:border-brand-300 ' +
+    'dark:bg-brand-300 dark:border-brand-300 dark:text-brand-950 ' +
+    'dark:hover:bg-brand-200 dark:hover:border-brand-200 ' +
     'focus-visible:ring-brand-600',
   secondary:
-    'bg-brand-100 text-brand-600 border border-[#b8cce8] ' +
-    'hover:bg-brand-200 ' +
-    'dark:bg-brand-600/10 dark:text-brand-400 dark:border-[#2a3f6e] ' +
-    'dark:hover:bg-brand-600/20 ' +
+    'bg-brand-50 text-brand-700 border border-brand-200 ' +
+    'hover:bg-brand-100 hover:border-brand-300 ' +
+    'dark:bg-brand-400/10 dark:text-brand-200 dark:border-brand-700 ' +
+    'dark:hover:bg-brand-400/20 ' +
     'focus-visible:ring-brand-400',
   outline:
     'bg-transparent text-[var(--color-text2)] border border-[var(--color-border)] ' +

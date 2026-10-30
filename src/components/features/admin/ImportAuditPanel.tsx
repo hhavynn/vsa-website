@@ -41,7 +41,7 @@ function decisionClass(decision: ImportRowDecision): string {
   const classes: Record<ImportRowDecision, string> = {
     matched: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
     created: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-    skipped_duplicate: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300',
+    skipped_duplicate: 'bg-surface2 text-text-secondary',
     review: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
     error: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
   };
@@ -193,7 +193,7 @@ export function ImportAuditPanel() {
                     ) : rows.length === 0 ? (
                       <div className="px-3 py-6 text-sm text-[var(--color-text3)]">No row details recorded.</div>
                     ) : (
-                      <table className="min-w-full divide-y divide-zinc-100 text-sm dark:divide-zinc-800">
+                      <table className="min-w-full divide-y divide-[var(--color-border)] text-sm">
                         <thead className="bg-[var(--color-surface)]">
                           <tr>
                             {['Row', 'Name', 'Decision', 'Points', 'Match'].map(header => (
@@ -203,7 +203,7 @@ export function ImportAuditPanel() {
                             ))}
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                        <tbody className="divide-y divide-[var(--color-border)]">
                           {rows.map(row => (
                             <tr key={row.id}>
                               <td className="whitespace-nowrap px-3 py-2 text-xs text-[var(--color-text3)]">

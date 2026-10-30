@@ -44,7 +44,7 @@ export function PublicSearchButton({ compact = false, className }: { compact?: b
       onClick={search.open}
       aria-label="Search the site"
       aria-haspopup="dialog"
-      aria-keyshortcuts="Control+K Meta+K /"
+      aria-keyshortcuts={search.shortcutsEnabled ? 'Control+K Meta+K /' : undefined}
       className={cn(
         'flex items-center gap-2 rounded-full border border-[var(--border2)] px-3 py-1.5 font-sans text-[12.5px] font-bold text-[var(--text2)] transition-colors duration-150 hover:border-[var(--brand)] hover:text-[var(--brand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600',
         className,
@@ -52,7 +52,9 @@ export function PublicSearchButton({ compact = false, className }: { compact?: b
     >
       <SearchIcon className="h-3.5 w-3.5 shrink-0" />
       <span className="hidden lg:inline">Search</span>
-      <kbd className="hidden font-mono text-[10px] font-normal text-[var(--color-text3)] xl:inline">{isMac() ? '⌘K' : 'Ctrl K'}</kbd>
+      {search.shortcutsEnabled && (
+        <kbd className="hidden font-mono text-[10px] font-normal text-[var(--color-text3)] xl:inline">{isMac() ? '⌘K' : 'Ctrl K'}</kbd>
+      )}
     </button>
   );
 }

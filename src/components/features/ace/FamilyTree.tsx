@@ -28,14 +28,15 @@ interface AccentPalette {
 
 const ACCENTS: Record<'light' | 'dark', Record<FamAccent, AccentPalette>> = {
   light: {
-    teal:  { fill: '#1e8878', dark: '#0f5a4f', ring: 'rgba(30,136,120,0.18)', edge: '#c4b8a8', label: '#142028', sub: '#4a6b68', node2bg: '#ffffff' },
-    coral: { fill: '#e8623a', dark: '#a83a18', ring: 'rgba(232,98,58,0.18)', edge: '#c4b8a8', label: '#142028', sub: '#4a6b68', node2bg: '#ffffff' },
-    gold:  { fill: '#d4841a', dark: '#7a4806', ring: 'rgba(212,132,26,0.18)', edge: '#c4b8a8', label: '#142028', sub: '#4a6b68', node2bg: '#ffffff' },
+    // Accent keys are stored per fam; only their colors follow the #761 palette.
+    teal:  { fill: '#4356a1', dark: '#2c3a71', ring: 'rgba(67,86,161,0.18)', edge: '#bbb7d0', label: '#28354d', sub: '#4d5871', node2bg: '#ffffff' },
+    coral: { fill: '#a94d8a', dark: '#73305c', ring: 'rgba(169,77,138,0.18)', edge: '#bbb7d0', label: '#28354d', sub: '#4d5871', node2bg: '#ffffff' },
+    gold:  { fill: '#7a5fc0', dark: '#4f3a8a', ring: 'rgba(122,95,192,0.18)', edge: '#bbb7d0', label: '#28354d', sub: '#4d5871', node2bg: '#ffffff' },
   },
   dark: {
-    teal:  { fill: '#3bbdb5', dark: '#0d6a62', ring: 'rgba(59,189,181,0.22)', edge: '#1a3038', label: '#e4d8c8', sub: '#6a9a94', node2bg: '#0d1a20' },
-    coral: { fill: '#f07858', dark: '#a83a18', ring: 'rgba(240,120,88,0.22)', edge: '#1a3038', label: '#e4d8c8', sub: '#6a9a94', node2bg: '#0d1a20' },
-    gold:  { fill: '#e8a838', dark: '#7a4806', ring: 'rgba(232,168,56,0.22)', edge: '#1a3038', label: '#e4d8c8', sub: '#6a9a94', node2bg: '#0d1a20' },
+    teal:  { fill: '#a3b2ec', dark: '#36478a', ring: 'rgba(163,178,236,0.22)', edge: '#3b4a6e', label: '#f4f0fc', sub: '#c6cee6', node2bg: '#1b2843' },
+    coral: { fill: '#ebb4da', dark: '#8a3a6c', ring: 'rgba(235,180,218,0.22)', edge: '#3b4a6e', label: '#f4f0fc', sub: '#c6cee6', node2bg: '#1b2843' },
+    gold:  { fill: '#c9b6f0', dark: '#4f3a8a', ring: 'rgba(201,182,240,0.22)', edge: '#3b4a6e', label: '#f4f0fc', sub: '#c6cee6', node2bg: '#1b2843' },
   },
 };
 
