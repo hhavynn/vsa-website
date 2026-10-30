@@ -61,8 +61,8 @@ export function shouldUseTopNList(limit: StoryLimit, entries: readonly TopNStory
   return limit !== 3 || entries.some((entry) => (entry.tiedCount ?? 1) > 1);
 }
 
-export function formatTopNFileName(year: number, limit: StoryLimit, preset: Top3StoryPreset['id'], theme: StoryTheme): string {
-  return `vsa-public-leaderboard-top${limit}-${year}-${String(year + 1).slice(-2)}-${preset}-${theme}.png`;
+export function formatTopNFileName(year: number, limit: StoryLimit, preset: Top3StoryPreset['id'], theme: StoryTheme, cohort: 'members' | 'board' = 'members'): string {
+  return `vsa-${cohort === 'board' ? 'board' : 'public'}-leaderboard-top${limit}-${year}-${String(year + 1).slice(-2)}-${preset}-${theme}.png`;
 }
 
 export function storyPresetForLimit(preset: Top3StoryPreset, limit: StoryLimit): Top3StoryPreset {
