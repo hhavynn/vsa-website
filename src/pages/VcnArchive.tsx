@@ -8,7 +8,7 @@ import { PageError } from '../components/common/PageError';
 import { usePublishedVcnArchives } from '../hooks/useVcnArchives';
 import { VCNArchive as VCNArchiveEntry } from '../types';
 import { formatDateOnly } from '../lib/dateOnly';
-import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
+import { OptimizedImage } from '../components/common/OptimizedImage';
 
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
@@ -25,31 +25,32 @@ function ArchiveCard({ entry }: { entry: VCNArchiveEntry }) {
     <article className="program-poster-card overflow-hidden p-0">
       <div className="grid gap-0 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
         <div className="relative min-h-[220px] border-b lg:border-b-0 lg:border-r" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
-          {coverUrl ? (
-            <img
-              src={getSupabaseImageUrl(coverUrl, { width: 640, height: 420, resize: 'cover', quality: 72 })}
-              srcSet={getSupabaseImageSrcSet(coverUrl, [360, 640, 820], { resize: 'cover', quality: 72 })}
-              sizes="(min-width: 1024px) 45vw, 100vw"
-              alt={`${title} cover`}
-              className="h-full min-h-[220px] w-full object-cover"
-              loading="lazy"
-              decoding="async"
-            />
-          ) : (
-            <div className="flex h-full min-h-[220px] flex-col justify-between p-6">
-              <div className="font-mono text-[11px] uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
-                UCSD VSA
-              </div>
-              <div>
-                <div className="font-serif text-[58px] italic leading-none tracking-[-0.04em]" style={{ color: 'var(--color-text)' }}>
-                  {entry.year}
+          <OptimizedImage
+            src={coverUrl}
+            alt={`${title} cover`}
+            width={640}
+            height={420}
+            widths={[360, 640, 820]}
+            resize="cover"
+            quality={72}
+            sizes="(min-width: 1024px) 45vw, 100vw"
+            className="h-full min-h-[220px] w-full object-cover"
+            fallback={
+              <div className="flex h-full min-h-[220px] flex-col justify-between p-6">
+                <div className="font-mono text-[11px] uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
+                  UCSD VSA
                 </div>
-                <div className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
-                  Vietnamese Culture Night
+                <div>
+                  <div className="font-serif text-[58px] italic leading-none tracking-[-0.04em]" style={{ color: 'var(--color-text)' }}>
+                    {entry.year}
+                  </div>
+                  <div className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
+                    Vietnamese Culture Night
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            }
+          />
         </div>
 
         <div className="flex min-w-0 flex-col p-5 sm:p-6">
