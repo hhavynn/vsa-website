@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { PageTitle } from '../../components/common/PageTitle';
@@ -591,8 +591,6 @@ export default function AdminInterns() {
   return (
     <>
       <PageTitle title="Intern Cohort" />
-      <Toaster position="top-right" />
-
       <AdminPageHeader
         description={
           <>

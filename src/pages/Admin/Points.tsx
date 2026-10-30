@@ -4,7 +4,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { PageTitle } from '../../components/common/PageTitle';
 import { useAcademicTerms } from '../../hooks/useAcademicTerms';
 import { leaderboardRepository } from '../../data/repos/leaderboard';
@@ -171,8 +171,6 @@ export default function AdminPoints() {
   return (
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="Points" />
-      <Toaster position="top-right" />
-
       <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

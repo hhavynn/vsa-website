@@ -10,7 +10,7 @@ import { identityImportEnabled } from '../../lib/identityRollout';
 import { ImportReviewPanel } from '../../components/features/admin/ops';
 import { reviewAttendanceRows } from '../../lib/adminImportReview';
 import { supabase } from '../../lib/supabase';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { useQueryClient } from 'react-query';
 import { parseCsvTable } from '../../lib/csvParse';
 import {
@@ -641,8 +641,6 @@ export function IdentityAdminImport() {
   return (
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="Import Attendance" />
-      <Toaster position="top-right" />
-
       <AdminPageHeader
         title="Import Attendance"
         related={['/admin/events', '/admin/members', '/admin/merge-suggestions', '/admin/points']}

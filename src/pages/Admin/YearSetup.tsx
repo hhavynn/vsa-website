@@ -1,5 +1,5 @@
 import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from 'react-query';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
@@ -223,8 +223,6 @@ export default function AdminYearSetup() {
   return (
     <>
       <PageTitle title="New Year Setup" />
-      <Toaster position="top-right" />
-
       <div className="border-b px-6 py-6 sm:px-8 sm:py-8 border-[var(--color-border)] bg-surface">
         <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl text-text-primary">Start {yearLabel}</h1>
         <YearContextBadge context={describeYearContext(targetYear, operatingYear)} className="mt-2" />

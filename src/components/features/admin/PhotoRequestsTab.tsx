@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useUrlFilter } from '../../../hooks/useUrlFilter';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { useQueryClient } from 'react-query';
 import {
@@ -64,8 +64,6 @@ export default function PhotoRequestsTab() {
 
   return (
     <div>
-      <Toaster position="top-right" />
-
       <div className="mb-4 flex gap-2">
         {(['pending', 'all'] as StatusFilter[]).map(value => (
           <button

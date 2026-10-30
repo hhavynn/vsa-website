@@ -5,7 +5,7 @@ import { DUPLICATE_REASON_LABEL, DuplicateCandidateMember, DuplicatePair, findDu
 import type { IdentityAlias } from '../../lib/identityResolution';
 import type { YearObservation } from '../../lib/yearStanding';
 import { EvidenceList } from '../../components/features/admin/AttendanceRowDecision';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { usePagination } from '../../hooks/usePagination';
 import { PaginationControls } from '../../components/common/PaginationControls';
 import { PageTitle } from '../../components/common/PageTitle';
@@ -136,8 +136,6 @@ export default function AdminMergeSuggestions() {
   return (
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="Merge Suggestions" />
-      <Toaster position="top-right" />
-
       <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
         <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Merge Suggestions</h1>
         <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>

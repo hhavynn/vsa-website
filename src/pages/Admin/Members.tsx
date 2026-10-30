@@ -8,7 +8,7 @@ import { useQueryClient } from 'react-query';
 import { useDropzone } from 'react-dropzone';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { OFFICIAL_YEARS } from '../../lib/yearNormalizer';
 import { usePagination } from '../../hooks/usePagination';
 import { PaginationControls } from '../../components/common/PaginationControls';
@@ -468,8 +468,6 @@ export default function AdminMembers() {
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
     <>
-      <Toaster position="top-right" />
-
       {/* PAGE HEADER */}
       <AdminPageHeader
         related={['/admin/merge-suggestions', '/admin/import', '/admin/points', '/admin/photo-requests']}
