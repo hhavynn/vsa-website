@@ -53,7 +53,7 @@ pages need an authorized session; anything verified only in the harness says so.
 | 1 Foundation | Root tokens, nav/footer chrome, admin shell, page header, quick search, sign-in, common dialogs, primitives | `design/sitewide-admin-foundation` | implemented; harness-verified |
 | 2 Story generator | StoryStudio editor + Top 3/5/10 PNG templates | `design/sitewide-story-generator` (stacked on 1) | implemented; exported PNGs verified |
 | 3 Core admin ops | Dashboard, Events, Import, Members, Points, Merge, Photo Requests | `design/sitewide-core-admin-ops` (stacked on 2) | implemented; real pages verified with empty data |
-| 4 Programs | Houses, ACE, Interns, Cabinet, Rollover, Years, Year Setup | — | not started |
+| 4 Programs | Houses, ACE, Interns, Cabinet, Rollover, Years, Year Setup | `design/sitewide-programs-leadership` (stacked on 3) | implemented; real pages verified with empty data |
 | 5 Content | Gallery, Content, Calendar, VCN, Applications, Feedback, Resources, UVSA Schools, External Events | — | not started |
 | 6 Remaining admin | Analytics, Settings, AI ×3, Content Health, Launch Checklist, Recent Changes, Data Rights | — | not started |
 | 7 Residual public | Legacy CSS in index.css, scrapbook stickers, public overlays | — | not started |
@@ -128,13 +128,13 @@ counts (gray/zinc/slate/teal/coral/gold/hex) come from the Batch 1 holdout scan.
 | `/admin/points` | Points | 3 | visually verified (harness, empty data) | Now uses AdminPageHeader; year select gained an accessible label |
 | `/admin/merge-suggestions` | MergeSuggestions | 3 | visually verified (harness, empty data) | Now uses AdminPageHeader; populated diff rows unverified |
 | `/admin/photo-requests` | PhotoRequests / `PhotoRequestsTab` | 3 | visually verified (harness, empty data) | Header + status badges/actions moved from inline hex to classes; request cards need live data |
-| `/admin/houses` | Houses | 4 | tokens | Placement/reveal/payments panels; protected |
-| `/admin/ace` | AceFamilies | 4 | tokens | 7 legacy classes; assignment imports |
-| `/admin/interns` | Interns | 4 | tokens | |
-| `/admin/cabinet` | Cabinet | 4 | tokens | |
-| `/admin/cabinet/rollover` | CabinetRollover | 4 | tokens | |
-| `/admin/years` | YearsTerms | 4 | tokens | |
-| `/admin/year-setup` | YearSetup | 4 | tokens | |
+| `/admin/houses` | Houses | 4 | visually verified (harness, empty data) | All House panels **string-only**; placement/reveal/payments with data need a live session |
+| `/admin/ace` | AceFamilies | 4 | visually verified (harness, empty data) | Ink-fill actions → brand primary; warning list off teal-era gold; assignment panels string-only |
+| `/admin/interns` | Interns | 4 | visually verified (harness, empty data) | |
+| `/admin/cabinet` | Cabinet | 4 | visually verified (harness, empty data) | Edit-member modal: ink scrim; populated directory unverified |
+| `/admin/cabinet/rollover` | CabinetRollover | 4 | visually verified (harness, empty data) | |
+| `/admin/years` | YearsTerms | 4 | visually verified (harness, empty data) | Now uses AdminPageHeader; create actions → brand primary |
+| `/admin/year-setup` | YearSetup | 4 | visually verified (harness, empty data) | Custom header kept (embeds the year picker) with wash, ribbon and display title |
 | `/admin/content` | Content | 5 | tokens | |
 | `/admin/content-calendar` | ContentCalendar | 5 | tokens | 4 legacy classes |
 | `/admin/gallery` | Gallery | 5 | tokens | Upload/preview tools |
@@ -176,6 +176,20 @@ counts (gray/zinc/slate/teal/coral/gold/hex) come from the Batch 1 holdout scan.
   an offline Supabase stand-in returning empty results (no network, no auth
   bypass against real data) at 375 and 1440, light and dark. Populated tables,
   dialogs with data and import previews still need an authorized session.
+
+## Batch 4 notes
+
+- **Change control:** House UI styling is exempt from reveal freezes; House
+  data and reveal content were not touched. Every House component changed
+  (HouseDraftEditor, HouseImagesManager, HousePlacementResults,
+  HousePlacementReviewPanel) and the ACE assignment panels and Cabinet are
+  **string-only** against the Batch 3 base. Structural edits: YearsTerms'
+  header swap and inline ink-button styles → classes in AceFamilies/YearsTerms.
+- **Primary actions:** the inverted ink-fill buttons (white in dark mode) in
+  Batch 4 surfaces now use the brand primary. Three remain in Batch 5
+  (Content, Resources, ProgramContentManager).
+- Remaining data hexes (`#10b981` House accent fallback, `#000000` color-input
+  default, `#E07856` placeholder) are data, not styling.
 
 ## Overlays and embedded workflows (non-route)
 
@@ -232,6 +246,7 @@ initials. `StoryStudio` uses coral/gold (Batch 2).
 
 | Date | Batch | Evidence |
 |---|---|---|
+| 2026-10-30 | 4 | Real Batch 4 page components in the offline harness, 375/1440 light+dark (houses, ace, interns, cabinet, rollover, years, year setup). Gates: typecheck, lint (18 pre-existing warnings), 4198/4198 Jest, build, diff --check. |
 | 2026-10-30 | 3 | Real Batch 3 page components in the offline harness, 375/1440 light+dark (dashboard, events, import, members, points, merge, photo requests); public /cabinet and /get-involved re-checked. Gates: typecheck, lint (18 pre-existing warnings), 4198/4198 Jest, build, diff --check. |
 | 2026-10-29 | 2 | Real 1080×1920 PNG exports for every template/theme/state listed above; editor harness 375/1440 light+dark. Gates: typecheck, lint (18 pre-existing warnings, none in touched files), 4198/4198 Jest, build. |
 | 2026-10-29 | 1 | Before/after `/admin/login` at 375/1440 light+dark; harness: shell, header, table, filters, buttons, pagination, empty/error states, ConfirmDialog, quick search, mobile drawer at 375/1440 light+dark. Gates: typecheck, lint, full Jest suite, build (see PR). Live admin pages not yet screenshotted (no authorized session in the browser). |

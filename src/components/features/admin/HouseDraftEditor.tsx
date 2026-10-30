@@ -200,7 +200,7 @@ function OverrideForm({
 function statusTone(status: string) {
   if (status === 'match' || status === 'manual') return 'text-emerald-700 dark:text-emerald-400';
   if (status === 'review') return 'text-amber-700 dark:text-amber-400';
-  if (status === 'unmatched') return 'text-zinc-500 dark:text-zinc-400';
+  if (status === 'unmatched') return 'text-text-muted';
   return 'text-red-600 dark:text-red-400';
 }
 
