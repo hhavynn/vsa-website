@@ -11,6 +11,9 @@ jest.mock('../../lib/supabase', () => {
   chain.then = (resolve: (value: unknown) => void) => resolve({ data: [], error: null });
   return { supabase: { from: () => chain } };
 });
+jest.mock('../../components/features/admin/HouseAssignmentCoveragePanel', () => ({
+  HouseAssignmentCoveragePanel: () => require('react').createElement('div', null, 'coverage review mock'),
+}));
 jest.mock('../../components/features/admin/HouseDraftWorkflow', () => {
   const { createElement } = require('react');
   const { useLocation } = require('react-router-dom');

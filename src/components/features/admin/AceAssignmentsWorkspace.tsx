@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useQueryClient } from 'react-query';
 import { aceAssignmentsRepository, AceAssignmentDraftPatch } from '../../../data/repos/aceAssignments';
+import { AceParticipationReview } from './AceParticipationReview';
 import { logAdminActivity } from '../../../data/repos/adminActivity';
 import { toUserMessage } from '../../../data/errors';
 import {
@@ -490,6 +491,9 @@ export function AceAssignmentsWorkspace() {
       <NextStepBanner step={nextStep} onFilter={setFilter} onDismiss={() => setNextStep(null)} />
 
       {preflight && <WorkflowProgress title={`${formatAcademicYear(cycle.academic_year_start)} ACE`} steps={progress} />}
+      {cycle.status === 'published' && (
+        <AceParticipationReview key={cycle.id} cycleId={cycle.id} year={cycle.academic_year_start} />
+      )}
 
       {preflight && (
         <div className="grid grid-cols-2 gap-4 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:grid-cols-4">

@@ -94,22 +94,22 @@ export function ExternalEventFacts({
         <p
           className={
             large
-              ? "flex items-center gap-2 font-sans text-base font-semibold text-text-primary"
-              : "flex items-center gap-2 font-sans text-sm font-semibold text-text-primary"
+              ? "flex items-start gap-2 font-sans text-base font-semibold leading-snug text-text-primary"
+              : "flex items-start gap-2 font-sans text-sm font-semibold leading-snug text-text-primary"
           }
         >
           <CalendarIcon
             size={13}
             aria-hidden
-            className="shrink-0 text-brand-600 dark:text-brand-400"
+            className="mt-0.5 shrink-0 text-brand-600 dark:text-brand-400"
           />
-          {when}
+          <span className="min-w-0 break-words">{when}</span>
         </p>
       )}
       {event.location && (
-        <p className="flex items-center gap-2 font-sans text-sm text-text-secondary">
-          <MapPinIcon size={12} aria-hidden className="shrink-0" />
-          {event.location}
+        <p className="flex items-start gap-2 font-sans text-sm leading-snug text-text-secondary">
+          <MapPinIcon size={12} aria-hidden className="mt-0.5 shrink-0" />
+          <span className="min-w-0 break-words">{event.location}</span>
         </p>
       )}
       {event.points > 0 && (
@@ -138,7 +138,7 @@ export function ExternalEventCard({ event }: { event: ExternalEvent }) {
         <div>
           <h3
             id={titleId}
-            className="font-serif text-xl leading-tight text-text-primary"
+            className="break-words font-serif text-xl leading-tight text-text-primary"
           >
             {event.title}
           </h3>
@@ -157,7 +157,7 @@ export function ExternalEventCard({ event }: { event: ExternalEvent }) {
           </p>
         )}
         {event.ride_info && (
-          <p className="font-sans text-xs text-text-secondary">
+          <p className="break-words font-sans text-xs text-text-secondary">
             <span className="font-semibold text-text-primary">Rides: </span>
             {event.ride_info}
           </p>

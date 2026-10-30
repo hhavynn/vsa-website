@@ -67,6 +67,18 @@ it('does not query members when there are no emails to match', async () => {
   expect(supabaseMock.queriesFor('members')).toHaveLength(0);
 });
 
+it('reads every canonical member past the 1,000-row public directory limit for bulk role review', async () => {
+  const person = (index: number) => row(`id-${String(index).padStart(5, '0')}`, `First${index}`, 'Example');
+  supabaseMock.queueResult('public_members', { data: Array.from({ length: 1000 }, (_, i) => person(i)), error: null });
+  supabaseMock.queueResult('public_members', { data: [person(1000), person(1001)], error: null });
+  const result = await memberLookupRepository.listMemberDirectory();
+  expect(result).toHaveLength(1002);
+  expect(result[1001]).toEqual(expect.objectContaining({ fullName: 'First1001 Example' }));
+  const ranges = supabaseMock.queriesFor('public_members').flatMap((q) => q.calls).filter((call) => call.method === 'range');
+  expect(ranges).toEqual([{ method: 'range', args: [0, 999] }, { method: 'range', args: [1000, 1999] }]);
+  expect(supabaseMock.queriesFor('members')).toHaveLength(0);
+});
+
 it('pages the House import member list past the 1,000-row cap', async () => {
   const member = (index: number) => ({ id: `m${String(index).padStart(5, '0')}`, first_name: `F${index}`, last_name: 'L', college: null, year: null, house: null, email: null, points: 0, events_attended: 0 });
   supabaseMock.queueResult('members', { data: Array.from({ length: 1000 }, (_, index) => member(index)), error: null });

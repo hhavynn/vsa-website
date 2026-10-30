@@ -17,6 +17,7 @@ import { memberLookupRepository } from '../../data/repos/memberLookup';
 import { useAcademicTerms } from '../../hooks/useAcademicTerms';
 import { formatAcademicYear, getAcademicTermMeta } from '../../lib/academicTerms';
 import { HouseDraftWorkflow } from '../../components/features/admin/HouseDraftWorkflow';
+import { HouseAssignmentCoveragePanel } from '../../components/features/admin/HouseAssignmentCoveragePanel';
 import { HousePaymentsPanel } from '../../components/features/admin/HousePaymentsPanel';
 import { AttendanceReadinessPanel } from '../../components/features/admin/AttendanceReadinessPanel';
 import { HouseOverviewPanel } from '../../components/features/admin/HouseOverviewPanel';
@@ -465,6 +466,7 @@ export default function AdminHouses() {
       )}
 
       {activeTab === 'assignments' ? (
+        <>
         <HouseDraftWorkflow
           selectedYear={selectedYear}
           onYearChange={setSelectedYear}
@@ -477,6 +479,8 @@ export default function AdminHouses() {
           loadingMembers={loadingMembers}
           onMembershipsPublished={() => { loadMembers(); loadHouseProfiles(selectedYear); }}
         />
+        <HouseAssignmentCoveragePanel selectedYear={selectedYear} />
+        </>
       ) : activeTab === 'overview' ? (
         <HouseOverviewPanel selectedYear={selectedYear} />
       ) : activeTab === 'payments' ? (

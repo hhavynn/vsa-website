@@ -33,18 +33,20 @@ function renderQueue(signals: AttentionSignals | null, loading = false) {
 describe('AttentionQueue', () => {
   it('shows a genuine caught-up state when every source loaded and nothing is waiting', () => {
     renderQueue(CLEAR);
-    expect(screen.getByText('You’re all caught up')).toBeInTheDocument();
-    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.getByText('No counted items need attention')).toBeInTheDocument();
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', {name:'Review merge suggestions'})).toHaveAttribute('href','/admin/merge-suggestions');
+    expect(screen.getByRole('link', {name:'Check launch readiness'})).toHaveAttribute('href','/admin/launch-checklist');
   });
 
   it('does not claim to be caught up while loading or when a source could not be checked', () => {
     const { unmount } = renderQueue(null, true);
     expect(screen.getByText(/Checking what needs attention/)).toBeInTheDocument();
-    expect(screen.queryByText('You’re all caught up')).not.toBeInTheDocument();
+    expect(screen.queryByText('No counted items need attention')).not.toBeInTheDocument();
     unmount();
 
     renderQueue({ ...CLEAR, photoRequestsPending: null });
-    expect(screen.queryByText('You’re all caught up')).not.toBeInTheDocument();
+    expect(screen.queryByText('No counted items need attention')).not.toBeInTheDocument();
     expect(screen.getByText(/Could not check: photo requests/)).toBeInTheDocument();
   });
 
@@ -55,7 +57,7 @@ describe('AttentionQueue', () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole('alert')).toHaveTextContent('Could not check what needs attention');
-    expect(screen.queryByText('You’re all caught up')).not.toBeInTheDocument();
+    expect(screen.queryByText('No counted items need attention')).not.toBeInTheDocument();
   });
 
   it('links each count to the page and filter that resolves it', () => {
@@ -64,7 +66,7 @@ describe('AttentionQueue', () => {
     expect(screen.getByRole('link', { name: /3 photo requests waiting for review/ })).toHaveAttribute('href', '/admin/photo-requests?filter=pending');
     expect(screen.getByRole('link', { name: /2 Ask VSA responses need review/ })).toHaveAttribute('href', '/admin/ai-feedback?filter=unresolved');
     expect(screen.getByRole('link', { name: /1 open data-rights request to work through/ })).toHaveAttribute('href', '/admin/data-rights?filter=open');
-    expect(screen.queryByText('You’re all caught up')).not.toBeInTheDocument();
+    expect(screen.queryByText('No counted items need attention')).not.toBeInTheDocument();
   });
 
   it('renders counts and generic labels only: no names, emails, or request details', () => {
@@ -134,13 +136,14 @@ describe('AttentionQueue', () => {
     it('shows the first few items, urgent ones first, and reveals the rest on request', () => {
       renderQueue(MANY);
       const list = screen.getByRole('region', { name: 'Needs attention' });
-      expect(within(list).getAllByRole('link')).toHaveLength(4);
+      const itemList=within(list).getByRole('list');
+      expect(within(itemList).getAllByRole('link')).toHaveLength(4);
       // Data-rights requests are the urgent kind, so they lead even though they were not first in the source order.
-      expect(within(list).getAllByRole('link')[0]).toHaveTextContent('open data-rights request');
-      expect(within(list).getAllByRole('link')[0]).toHaveTextContent('Urgent');
+      expect(within(itemList).getAllByRole('link')[0]).toHaveTextContent('open data-rights request');
+      expect(within(itemList).getAllByRole('link')[0]).toHaveTextContent('Urgent');
 
       fireEvent.click(within(list).getByRole('button', { name: 'Show 2 more' }));
-      expect(within(list).getAllByRole('link')).toHaveLength(6);
+      expect(within(itemList).getAllByRole('link')).toHaveLength(6);
       expect(within(list).getByRole('button', { name: 'Show fewer' })).toHaveAttribute('aria-expanded', 'true');
     });
 
