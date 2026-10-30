@@ -117,6 +117,17 @@ describe('initMonitoring', () => {
     expect(options.integrations([{ name: 'Console' }, { name: 'Breadcrumbs' }])).toEqual([{ name: 'Breadcrumbs' }]);
   });
 
+  it('ignores errors thrown by scripts that in-app browsers inject', async () => {
+    const monitoring = loadWithEnv({ REACT_APP_SENTRY_DSN: DSN, NODE_ENV: 'production' });
+    await monitoring.initMonitoring();
+
+    const { ignoreErrors } = (Sentry.init as jest.Mock).mock.calls[0][0];
+    const isIgnored = (message: string) => ignoreErrors.some((pattern: RegExp) => pattern.test(message));
+    expect(isIgnored("undefined is not an object (evaluating 'window._META.IABInnerFrame')")).toBe(true);
+    expect(isIgnored('ResizeObserver loop completed with undelivered notifications.')).toBe(true);
+    expect(isIgnored("undefined is not an object (evaluating 'event.target.value')")).toBe(false);
+  });
+
   it('sends errors raised before the SDK loaded once it is ready', async () => {
     const monitoring = loadWithEnv({ REACT_APP_SENTRY_DSN: DSN, NODE_ENV: 'production' });
     const early = new Error('early');
