@@ -18,14 +18,15 @@ jest.mock('../hooks/useLeaderboardYears', () => ({
 jest.mock('../hooks/useMemberAvatars', () => ({
   useMemberAvatars: () => new Map(),
 }));
-jest.mock('../hooks/useIndividualLeaderboard', () => ({
-  useIndividualLeaderboard: () => ({
-    data: [
+const mockLeaderboardMembers = [
       { id: 'one', first_name: 'Ada', last_name: 'One', college: null, year: null, points: 40, events_attended: 4 },
       { id: 'two', first_name: 'Bao', last_name: 'Two', college: null, year: null, points: 30, events_attended: 3 },
       { id: 'three', first_name: 'Cai', last_name: 'Three', college: null, year: null, points: 20, events_attended: 2 },
       { id: 'four', first_name: 'Cam', last_name: 'Four', college: null, year: null, points: 10, events_attended: 1 },
-    ],
+];
+jest.mock('../hooks/useIndividualLeaderboard', () => ({
+  useIndividualLeaderboard: () => ({
+    data: mockLeaderboardMembers,
     isLoading: false,
     error: null,
   }),
