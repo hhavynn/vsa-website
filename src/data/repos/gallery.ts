@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase';
 import { withErrorHandling } from '../errors';
+import type { SiteEventType } from '../../types/database';
 
 export interface RelatedEvent {
   id: string;
@@ -20,6 +21,16 @@ export interface GalleryAlbum {
   cover_thumbnail_url: string | null;
   event_id: string | null;
   event: RelatedEvent | null;
+}
+
+/** A public album with a cover, as shown on a program page. */
+export interface ProgramAlbum {
+  id: string;
+  title: string;
+  date: string;
+  google_photos_url: string;
+  cover_image_url: string;
+  cover_thumbnail_url: string | null;
 }
 
 export interface GalleryFilters {
@@ -228,6 +239,36 @@ export class GalleryRepository {
         event: Array.isArray(row.event) ? (row.event[0] ?? null) : (row.event ?? null),
       })) as GalleryAlbum[];
     }, 'Failed to fetch gallery albums');
+  }
+
+  /**
+   * The newest public albums with a cover, linked to a published event of one
+   * of these types: a program page's photography (VCN, Wild N' Culture) comes
+   * from what admins filed under that kind of event, never a hardcoded file.
+   */
+  async getProgramAlbums(eventTypes: SiteEventType[], limit = 2): Promise<ProgramAlbum[]> {
+    return withErrorHandling(async () => {
+      if (eventTypes.length === 0) return [];
+      const { data, error } = await supabase
+        .from('gallery_events')
+        .select('id, title, date, google_photos_url, cover_image_url, cover_thumbnail_url, event:events!inner(event_type, is_published)')
+        .not('google_photos_url', 'is', null)
+        .not('cover_image_url', 'is', null)
+        .in('event.event_type', eventTypes)
+        .eq('event.is_published', true)
+        .order('date', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return (data ?? []).map((row) => ({
+        id: row.id,
+        title: row.title ?? 'Photo album',
+        date: row.date,
+        google_photos_url: row.google_photos_url,
+        cover_image_url: row.cover_image_url,
+        cover_thumbnail_url: row.cover_thumbnail_url ?? null,
+      }));
+    }, 'Failed to fetch program photos');
   }
 
   /**

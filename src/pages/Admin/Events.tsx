@@ -154,7 +154,7 @@ function AcademicTermSelect({
     >
       {termOptions}
     </select>,
-    <p key="helper" className="mt-1 text-xs text-zinc-500">
+    <p key="helper" className="mt-1 text-xs text-text-muted">
       {helperText}
     </p>,
   ];
@@ -879,7 +879,7 @@ export default function AdminEvents() {
               onClick={() => setActiveTab('create')}
               aria-pressed={activeTab === 'create'}
               className={`min-h-[44px] rounded-md border px-4 font-sans text-[13px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:focus-visible:outline-brand-400 sm:text-sm ${
-                activeTab === 'create' ? 'border-brand-600 bg-brand-600 text-white dark:border-brand-400 dark:bg-brand-400 dark:text-zinc-900' : 'border-brand-600 text-brand-700 hover:bg-brand-50 dark:border-brand-400 dark:text-brand-300 dark:hover:bg-brand-900/30'
+                activeTab === 'create' ? 'border-brand-600 bg-brand-600 text-white dark:border-brand-400 dark:bg-brand-400 dark:text-brand-950' : 'border-brand-600 text-brand-700 hover:bg-brand-50 dark:border-brand-400 dark:text-brand-300 dark:hover:bg-brand-900/30'
               }`}
             >
               + Create Event
@@ -1134,7 +1134,7 @@ export default function AdminEvents() {
 
         {/* Edit Modal */}
         {selectedEvent && (
-          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:p-6 lg:p-8">
+          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-scrim p-4 backdrop-blur-sm sm:p-6 lg:p-8">
             <div className="scrapbook-paper my-8 w-full max-w-5xl" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
               <div className="flex items-center justify-between border-b px-6 py-5" style={{ borderColor: 'var(--color-border)' }}>
                 <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Edit Event</h2>

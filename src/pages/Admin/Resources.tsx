@@ -643,8 +643,7 @@ export default function AdminResources() {
               <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex items-center gap-2 rounded px-4 py-2 font-sans text-sm font-medium transition-colors disabled:opacity-50"
-                style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}
+                className="inline-flex items-center gap-2 rounded px-4 py-2 font-sans text-sm font-medium transition-colors disabled:opacity-50 border-transparent bg-brand-600 text-white transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 dark:bg-brand-300 dark:text-brand-950 dark:hover:bg-brand-200"
               >
                 {saving ? 'Saving...' : selectedResource ? 'Save Changes' : 'Create Resource'}
               </button>
@@ -905,7 +904,7 @@ function ResourceActions({
         {resource.is_archived ? <UndoIcon className="h-3 w-3" aria-hidden /> : <ArchiveIcon className="h-3 w-3" aria-hidden />}
         {!compact && <span>{resource.is_archived ? 'Unarchive' : 'Archive'}</span>}
       </button>
-      <button type="button" onClick={() => onDelete(resource)} className={buttonClass} style={{ borderColor: 'var(--color-border)', color: '#dc2626', background: 'transparent' }} title="Delete resource">
+      <button type="button" onClick={() => onDelete(resource)} className={buttonClass} style={{ borderColor: 'var(--color-border)', color: 'var(--status-danger-text)', background: 'transparent' }} title="Delete resource">
         <TrashIcon className="h-3 w-3" aria-hidden />
         {!compact && <span>Delete</span>}
       </button>

@@ -94,12 +94,12 @@ export function getSchoolInitials(label: string) {
  * generated marks follow the site's brand/accent colors in both themes.
  */
 const FALLBACK_PALETTES = [
-  "bg-brand-600 text-white dark:bg-brand-400 dark:text-[#050810]",
-  "bg-coral-500 text-white dark:bg-coral-400 dark:text-[#050810]",
-  "bg-gold-500 text-white dark:bg-gold-400 dark:text-[#050810]",
-  "bg-brand-800 text-white dark:bg-brand-300 dark:text-[#050810]",
-  "bg-coral-600 text-white dark:bg-coral-500 dark:text-[#050810]",
-  "bg-gold-600 text-white dark:bg-gold-500 dark:text-[#050810]",
+  "bg-brand-600 text-white dark:bg-brand-400 dark:text-brand-950",
+  "bg-coral-500 text-white dark:bg-coral-400 dark:text-brand-950",
+  "bg-gold-500 text-white dark:bg-gold-400 dark:text-brand-950",
+  "bg-brand-800 text-white dark:bg-brand-300 dark:text-brand-950",
+  "bg-coral-600 text-white dark:bg-coral-500 dark:text-brand-950",
+  "bg-gold-600 text-white dark:bg-gold-500 dark:text-brand-950",
 ] as const;
 
 export function getFallbackPaletteClass(

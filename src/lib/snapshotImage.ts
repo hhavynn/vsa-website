@@ -3,6 +3,8 @@
 // drawn on a canvas rather than rasterised from the DOM so the output doesn't
 // depend on theme variables, animated counters, or cross-origin stylesheets.
 
+import { drawRibbon, drawStar, withAlpha } from './story/storyCanvas';
+
 export const SNAPSHOT_WIDTH = 1080;
 export const SNAPSHOT_HEIGHT = 1350;
 
@@ -14,23 +16,30 @@ export const SNAPSHOT_SIZES: Record<SnapshotFormat, { width: number; height: num
 };
 
 const FONTS = {
-  serif: '"DM Serif Display", Georgia, serif',
+  serif: '"Instrument Serif", "DM Serif Display", Georgia, serif',
   sans: '"DM Sans", "Helvetica Neue", Arial, sans-serif',
   mono: '"JetBrains Mono", ui-monospace, Menlo, monospace',
 } as const;
 
-// Always the light palette (index.css light tokens) so a shared image looks the
-// same no matter which theme the sender uses.
-const INK = '#142028';
-const INK_MUTED = '#4a6b68';
-const PAPER = ['#fdf7f0', '#f5f1ea', '#efe5d6'] as const;
-const BRAND = '#1e8878';
+// Always the light "daydream" palette from the #761 story templates, so a shared
+// image looks the same no matter which theme the sender uses.
+const INK = '#24305a';
+const INK_MUTED = '#4f5a7e';
+const PAPER = ['#d4e5fb', '#dcdff7', '#efe2f5'] as const;
+const BRAND = '#4356a1';
+const BLOOMS = [
+  { x: 0.08, y: 0.06, r: 560, color: '#ffffff', alpha: 0.85 },
+  { x: 0.96, y: 0.16, r: 480, color: '#c9b6f0', alpha: 0.38 },
+  { x: 0.02, y: 0.94, r: 620, color: '#a8d0ff', alpha: 0.4 },
+  { x: 1.0, y: 1.0, r: 700, color: '#f6c2df', alpha: 0.6 },
+] as const;
 
+// Badge keys are stored on the data; only their colors follow the #761 palette.
 const BADGE_COLORS: Record<string, { bg: string; fg: string }> = {
-  teal: { bg: '#d6efec', fg: '#17635a' },
-  coral: { bg: '#fbdccf', fg: '#a8401c' },
-  gold: { bg: '#f8e6c0', fg: '#8a4d06' },
-  purple: { bg: '#e6dcf3', fg: '#5b3a8c' },
+  teal: { bg: '#e1e7fb', fg: '#36478a' },
+  coral: { bg: '#f6dcec', fg: '#8a3a6c' },
+  gold: { bg: '#f8e9c6', fg: '#7a4f06' },
+  purple: { bg: '#e8def8', fg: '#5b3a8c' },
 };
 
 export interface SnapshotBadge {
@@ -103,6 +112,7 @@ async function ensureFonts() {
   if (!fonts?.load) return;
   const loads = [
     `400 120px ${FONTS.serif}`,
+    `italic 400 120px ${FONTS.serif}`,
     `500 40px ${FONTS.sans}`,
     `700 40px ${FONTS.sans}`,
     `700 40px ${FONTS.mono}`,
@@ -164,7 +174,7 @@ function drawAvatar(ctx: Ctx, image: HTMLImageElement | null, name: string, cx: 
 
 function drawStat(ctx: Ctx, x: number, y: number, w: number, label: string, value: string, accent: string) {
   roundRect(ctx, x, y, w, 150, 26);
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = 'rgba(255,255,255,0.72)';
   ctx.fill();
   ctx.lineWidth = 4;
   ctx.strokeStyle = `${accent}55`;
@@ -185,17 +195,34 @@ export function drawSnapshot(ctx: Ctx, data: SnapshotData, avatar: HTMLImageElem
   const H = SNAPSHOT_HEIGHT;
   const accent = data.houseColor ?? BRAND;
 
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  const bg = ctx.createLinearGradient(0, 0, W * 0.55, H);
   bg.addColorStop(0, PAPER[0]);
-  bg.addColorStop(0.55, PAPER[1]);
+  bg.addColorStop(0.5, PAPER[1]);
   bg.addColorStop(1, PAPER[2]);
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
+  for (const bloom of BLOOMS) {
+    const cx = bloom.x * W;
+    const cy = bloom.y * H;
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, bloom.r);
+    g.addColorStop(0, withAlpha(bloom.color, bloom.alpha));
+    g.addColorStop(1, withAlpha(bloom.color, 0));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+  // Four-point stars in the margins, as on VSA's posts.
+  drawStar(ctx, W - 132, 150, 54, '#ffffff', 'rgba(140,120,230,0.55)');
+  drawStar(ctx, W - 92, 228, 22, '#ffffff', 'rgba(140,120,230,0.55)');
+  drawStar(ctx, 70, H - 210, 30, '#ffffff', 'rgba(140,120,230,0.55)');
 
-  // House-coloured frame
+  // House-coloured frame with a white inner rule, like a print border.
   roundRect(ctx, 28, 28, W - 56, H - 56, 56);
   ctx.lineWidth = 14;
   ctx.strokeStyle = accent;
+  ctx.stroke();
+  roundRect(ctx, 44, 44, W - 88, H - 88, 44);
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(255,255,255,0.8)';
   ctx.stroke();
 
   const left = 96;
@@ -207,6 +234,7 @@ export function drawSnapshot(ctx: Ctx, data: SnapshotData, avatar: HTMLImageElem
   ctx.fillStyle = INK_MUTED;
   font(ctx, 700, 26, FONTS.mono);
   ctx.fillText('VSA AT UCSD  ·  MY SNAPSHOT', left, 120);
+  drawRibbon(ctx, left, 146, right - left - 120);
 
   // Identity
   drawAvatar(ctx, avatar, data.name, left + 92, 262, 92, accent);
@@ -244,11 +272,17 @@ export function drawSnapshot(ctx: Ctx, data: SnapshotData, avatar: HTMLImageElem
   ctx.textAlign = 'left';
   const pointsText = data.points.toLocaleString('en-US');
   ctx.fillStyle = INK;
-  const hero = fitText(ctx, pointsText, W - left * 2, 260, 120, 400, FONTS.serif);
+  const hero = fitText(ctx, pointsText, W - left * 2, 230, 120, 400, FONTS.serif);
+  const heroFill = ctx.createLinearGradient(left, 0, left + 640, 0);
+  heroFill.addColorStop(0, '#3d5bc4');
+  heroFill.addColorStop(0.55, '#7a5fc0');
+  heroFill.addColorStop(1, '#c25f9f');
+  ctx.fillStyle = heroFill;
   ctx.fillText(hero, left, y);
   ctx.fillStyle = INK_MUTED;
   font(ctx, 700, 30, FONTS.mono);
-  ctx.fillText(`${data.periodLabel.toUpperCase()}`, left, y + 64);
+  // Instrument Serif's comma descends further than DM Serif's; keep clear of it.
+  ctx.fillText(`${data.periodLabel.toUpperCase()}`, left, y + 80);
 
   // Stats row
   const gap = 24;
@@ -321,7 +355,11 @@ export function drawSnapshotForFormat(
   const { width, height } = SNAPSHOT_SIZES[format];
   const scale = Math.min(width / SNAPSHOT_WIDTH, height / SNAPSHOT_HEIGHT);
   ctx.save();
-  ctx.fillStyle = PAPER[0];
+  // The margin continues the card's field so the 9:16 and 1:1 cuts never band.
+  const field = ctx.createLinearGradient(0, 0, 0, height);
+  field.addColorStop(0, PAPER[0]);
+  field.addColorStop(1, PAPER[2]);
+  ctx.fillStyle = field;
   ctx.fillRect(0, 0, width, height);
   ctx.translate((width - SNAPSHOT_WIDTH * scale) / 2, (height - SNAPSHOT_HEIGHT * scale) / 2);
   ctx.scale(scale, scale);

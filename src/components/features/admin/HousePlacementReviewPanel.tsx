@@ -37,7 +37,7 @@ function statusText(row: ReviewedApplicant) {
 
 function statusTone(row: ReviewedApplicant) {
   if (row.status === 'invalid') return 'text-red-600 dark:text-red-400';
-  if (row.status === 'excluded' || row.status === 'duplicate') return 'text-zinc-500 dark:text-zinc-400';
+  if (row.status === 'excluded' || row.status === 'duplicate') return 'text-text-muted';
   return 'text-emerald-700 dark:text-emerald-400';
 }
 

@@ -35,14 +35,14 @@ const selectCls =
 
 function badgeTone(value?: string) {
   const tones: Record<string, { color: string; borderColor: string; background: string }> = {
-    pending: { color: '#8c6a14', borderColor: '#e6d39b', background: '#fff7df' },
-    in_progress: { color: '#1e8878', borderColor: '#a6deda', background: '#eef8f7' },
-    resolved: { color: '#0f7a52', borderColor: '#bfe3d4', background: '#eefaf4' },
+    pending: { color: 'var(--status-warning-text)', borderColor: 'var(--status-warning-border)', background: 'var(--status-warning-bg)' },
+    in_progress: { color: 'var(--status-info-text)', borderColor: 'var(--status-info-border)', background: 'var(--status-info-bg)' },
+    resolved: { color: 'var(--status-success-text)', borderColor: 'var(--status-success-border)', background: 'var(--status-success-bg)' },
     closed: { color: 'var(--color-text3)', borderColor: 'var(--color-border)', background: 'var(--color-surface2)' },
-    bug: { color: '#b42318', borderColor: '#f2c7c3', background: '#fff1f0' },
-    feature: { color: '#6a3fc7', borderColor: '#dccffc', background: '#f6f1ff' },
-    improvement: { color: '#1e8878', borderColor: '#a6deda', background: '#eef8f7' },
-    event: { color: '#8c6a14', borderColor: '#e6d39b', background: '#fff7df' },
+    bug: { color: 'var(--status-danger-text)', borderColor: 'var(--status-danger-border)', background: 'var(--status-danger-bg)' },
+    feature: { color: 'var(--status-accent-text)', borderColor: 'var(--status-accent-border)', background: 'var(--status-accent-bg)' },
+    improvement: { color: 'var(--status-info-text)', borderColor: 'var(--status-info-border)', background: 'var(--status-info-bg)' },
+    event: { color: 'var(--status-warning-text)', borderColor: 'var(--status-warning-border)', background: 'var(--status-warning-bg)' },
     other: { color: 'var(--color-text3)', borderColor: 'var(--color-border)', background: 'var(--color-surface2)' },
   };
 
@@ -65,19 +65,19 @@ function ActionButton({
       background: 'transparent',
     },
     blue: {
-      color: '#1e8878',
-      borderColor: '#a6deda',
-      background: '#eef8f7',
+      color: 'var(--status-info-text)',
+      borderColor: 'var(--status-info-border)',
+      background: 'var(--status-info-bg)',
     },
     green: {
-      color: '#0f7a52',
-      borderColor: '#bfe3d4',
-      background: '#eefaf4',
+      color: 'var(--status-success-text)',
+      borderColor: 'var(--status-success-border)',
+      background: 'var(--status-success-bg)',
     },
     amber: {
-      color: '#8c6a14',
-      borderColor: '#e6d39b',
-      background: '#fff7df',
+      color: 'var(--status-warning-text)',
+      borderColor: 'var(--status-warning-border)',
+      background: 'var(--status-warning-bg)',
     },
   } as const;
 

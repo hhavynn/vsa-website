@@ -67,7 +67,9 @@ are covered by `src/pages/Gallery.lightbox.test.tsx`. Pinch-zoom is not implemen
 ## Site search
 
 A global entry point (header button on desktop and mobile, `Ctrl/Cmd+K`, and `/`
-outside text fields) opens a dialog; the 404 page embeds the same box.
+outside text fields) opens a dialog; the 404 page embeds the same box. Under
+`/admin` the header button still works, but the keyboard shortcuts are off so
+`Ctrl/Cmd+K` opens only the admin Quick Search.
 
 - **Static pages** come from `publicDestinations.ts`, which reads `navConfig.ts`,
   `footerLinks.ts` and the inventory. Aliases (`/house-system`), redirects,

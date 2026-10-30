@@ -379,7 +379,7 @@ export function ProgramContentManager() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <button type="submit" disabled={saving || loading} className="rounded px-5 py-2 text-sm font-medium disabled:opacity-50" style={{ background: 'var(--color-text)', color: 'var(--color-bg)' }}>
+              <button type="submit" disabled={saving || loading} className="rounded px-5 py-2 text-sm font-medium disabled:opacity-50 border-transparent bg-brand-600 text-white transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 dark:bg-brand-300 dark:text-brand-950 dark:hover:bg-brand-200">
                 {saving ? 'Saving...' : 'Save Program Content'}
               </button>
               <PreviewAsPublicButton

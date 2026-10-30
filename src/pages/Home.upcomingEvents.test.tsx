@@ -1,8 +1,9 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { Home } from './Home';
 import { eventsRepository, PublicEventPreview } from '../data/repos/events';
+import { galleryRepository } from '../data/repos/gallery';
 import { losAngelesDateTimeToIso } from '../utils/losAngelesDate';
 
 jest.mock('../lib/supabase', () => ({
@@ -55,6 +56,7 @@ describe('Home.tsx Upcoming Events section', () => {
     });
     jest.useFakeTimers();
     jest.setSystemTime(new Date(losAngelesDateTimeToIso('2026-10-20', '12:00')));
+    jest.spyOn(galleryRepository, 'getAlbums').mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -69,6 +71,48 @@ describe('Home.tsx Upcoming Events section', () => {
 
     expect(await screen.findByText('No upcoming events posted yet.')).toBeInTheDocument();
     expect(screen.getByText('View past events')).toBeInTheDocument();
+  });
+
+  it('shows an accessible loading state while upcoming events are pending', () => {
+    jest.spyOn(eventsRepository, 'getPublicUpcomingPreview').mockReturnValue(new Promise(() => undefined));
+
+    renderHome(queryClient);
+
+    expect(screen.getByText('Loading upcoming events…')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Upcoming events' })).toBeInTheDocument();
+  });
+
+  it('degrades to fallback links when the events query fails', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    jest.spyOn(eventsRepository, 'getPublicUpcomingPreview').mockRejectedValue(new Error('offline'));
+    jest.spyOn(galleryRepository, 'getAlbums').mockRejectedValue(new Error('offline'));
+
+    renderHome(queryClient);
+    // Home's queries retry once; let the retry delay elapse.
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      await act(async () => {
+        jest.advanceTimersByTime(1500);
+      });
+    }
+
+    expect(await screen.findByText('Events are temporarily unavailable')).toBeInTheDocument();
+    // The section fallback and the degraded-mode banner both point to Instagram.
+    for (const link of screen.getAllByRole('link', { name: 'Instagram' })) {
+      expect(link).toHaveAttribute('target', '_blank');
+    }
+    expect(await screen.findByText('Recent photos are temporarily unavailable.')).toBeInTheDocument();
+  });
+
+  it('keeps the Figma program list pointing at real program routes', async () => {
+    jest.spyOn(eventsRepository, 'getPublicUpcomingPreview').mockResolvedValue([]);
+
+    renderHome(queryClient);
+
+    const programs = await screen.findByRole('navigation', { name: 'VSA programs' });
+    const hrefs = within(programs).getAllByRole('link').map((link) => link.getAttribute('href'));
+    expect(hrefs).toEqual(['/house', '/ace', '/intern-program', '/vcn', '/wild-n-culture']);
+    expect(screen.getByRole('heading', { level: 2, name: /There’s more\s*to explore\./ })).toBeInTheDocument();
   });
 
   it('renders upcoming event cards with details and interest buttons', async () => {
@@ -98,9 +142,71 @@ describe('Home.tsx Upcoming Events section', () => {
 
     renderHome(queryClient);
 
-    expect(await screen.findByText('Future Social')).toBeInTheDocument();
-    expect(screen.getByText('Price Center Ballroom')).toBeInTheDocument();
-    expect(screen.getByText('2 points')).toBeInTheDocument();
+    const section = await screen.findByRole('region', { name: 'Upcoming events' });
+    expect(await within(section).findByText('Future Social')).toBeInTheDocument();
+    expect(within(section).getByText('Price Center Ballroom')).toBeInTheDocument();
+    expect(within(section).getByText('2 points')).toBeInTheDocument();
+    // The date block reads the event's San Diego calendar day.
+    expect(within(section).getByText('25')).toBeInTheDocument();
+    expect(within(section).getByText('Sun')).toBeInTheDocument();
+  });
+
+  it('links recent photos to actual public gallery albums instead of hardcoded examples', async () => {
+    jest.spyOn(eventsRepository, 'getPublicUpcomingPreview').mockResolvedValue([]);
+    jest.spyOn(galleryRepository, 'getAlbums').mockResolvedValue([
+      {
+        id: 'public-album-1',
+        title: 'Fall General Body Meeting',
+        date: '2026-10-01',
+        description: null,
+        google_photos_url: 'https://photos.google.com/share/public-album-1',
+        cover_image_url: '/images/gallery/fall-26-gbm-1_2026-09-30.webp',
+        cover_thumbnail_url: null,
+        event_id: null,
+        event: null,
+      },
+    ]);
+
+    renderHome(queryClient);
+
+    const albumLink = await screen.findByRole('link', {
+      name: 'Open Fall General Body Meeting photo album',
+    });
+    expect(albumLink).toHaveAttribute('href', 'https://photos.google.com/share/public-album-1');
+    expect(albumLink).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(galleryRepository.getAlbums).toHaveBeenCalledWith({ limit: 12 });
+    expect(screen.queryByText('La Jolla S’mores')).not.toBeInTheDocument();
+  });
+
+  it('skips albums without a cover before capping at five, so the collage never has a gap', async () => {
+    jest.spyOn(eventsRepository, 'getPublicUpcomingPreview').mockResolvedValue([]);
+    const album = (n: number, cover: string | null) => ({
+      id: `album-${n}`,
+      title: `Album ${n}`,
+      date: '2026-10-01',
+      description: null,
+      google_photos_url: `https://photos.google.com/share/album-${n}`,
+      cover_image_url: cover,
+      cover_thumbnail_url: null,
+      event_id: null,
+      event: null,
+    });
+    jest.spyOn(galleryRepository, 'getAlbums').mockResolvedValue([
+      album(1, null),
+      album(2, '/images/gallery/fall-26-gbm-1_2026-09-30.webp'),
+      album(3, '/images/gallery/fall-26-gbm-1_2026-09-30.webp'),
+      album(4, '/images/gallery/fall-26-gbm-1_2026-09-30.webp'),
+      album(5, '/images/gallery/fall-26-gbm-1_2026-09-30.webp'),
+      album(6, '/images/gallery/fall-26-gbm-1_2026-09-30.webp'),
+      album(7, '/images/gallery/fall-26-gbm-1_2026-09-30.webp'),
+    ]);
+
+    renderHome(queryClient);
+
+    expect(await screen.findByRole('link', { name: 'Open Album 6 photo album' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open Album 1 photo album' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open Album 7 photo album' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /photo album$/ })).toHaveLength(5);
   });
 
   it('disappears an event in real-time when the homepage remains open past its scheduled end', async () => {
