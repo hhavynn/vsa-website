@@ -8,7 +8,7 @@ Route: /admin/member-roles (AdminRoute). Navigation: Programs & People → Role 
 2. Paste comma-, semicolon- or newline-separated names. Explicit Last, First mode treats each line as one name. Limit: 150 names and 16,000 characters. Raw names remain in temporary tab state, not logs or persistent storage.
 3. The existing useMemberDirectory/memberLookupRepository loads the complete safe directory in 1,000-row pages. Exact accent-insensitive matches are suggestions only. Even a unique match requires explicit human selection.
 4. Select a real canonical member and existing year-matched Cabinet record. Missing source records cannot be fabricated here. Use manual search for differing names and resolve conflicts in Cabinet or Merge Review.
-5. Open the exact Cabinet entry. In the Cabinet editor from PR #767, verify the person, academic year and original position, then save the member link. Verify the matching-year leaderboard from PR #766 after both PRs merge.
+5. Open the exact Cabinet entry in a separate browser tab so the review stays open. After saving, return to the review and choose Refresh identities and Cabinet records. In the Cabinet editor from PR #767, verify the person, academic year and original position, then save the member link. Verify the matching-year leaderboard from PR #766 after both PRs merge.
 
 All sample names are fictional. Input “Ada Example, Bea Sample; Cai Example” yields three ordered rows. Duplicate “ada example” remains visible for review. Two exact “Bea Sample” candidates require an explicit choice. A source linked to somebody else is a conflict, not an invitation to overwrite. A missing official Board source requires Cabinet Rollover, not an invented Board credential.
 
