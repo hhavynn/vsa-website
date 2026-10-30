@@ -55,7 +55,7 @@ pages need an authorized session; anything verified only in the harness says so.
 | 3 Core admin ops | Dashboard, Events, Import, Members, Points, Merge, Photo Requests | `design/sitewide-core-admin-ops` (stacked on 2) | implemented; real pages verified with empty data |
 | 4 Programs | Houses, ACE, Interns, Cabinet, Rollover, Years, Year Setup | `design/sitewide-programs-leadership` (stacked on 3) | implemented; real pages verified with empty data |
 | 5 Content | Gallery, Content, Calendar, VCN, Applications, Feedback, Resources, UVSA Schools, External Events | `design/sitewide-content-outreach` (stacked on 4) | implemented; real pages verified with empty data |
-| 6 Remaining admin | Analytics, Settings, AI ×3, Content Health, Launch Checklist, Recent Changes, Data Rights | — | not started |
+| 6 Remaining admin | Analytics, Settings, AI ×3, Content Health, Launch Checklist, Recent Changes, Data Rights | `design/sitewide-remaining-admin` (stacked on 5) | implemented; real pages verified with empty data |
 | 7 Residual public | Legacy CSS in index.css, scrapbook stickers, public overlays | — | not started |
 | 8 Completion audit | Reconcile this ledger | — | not started |
 
@@ -144,15 +144,15 @@ counts (gray/zinc/slate/teal/coral/gold/hex) come from the Batch 1 holdout scan.
 | `/admin/uvsa-schools` | UVSASchools | 5 | visually verified (harness, empty data) | |
 | `/admin/external-events` | ExternalEvents | 5 | visually verified (harness, empty data) | |
 | `/admin/applications` | Applications | 5 | visually verified (harness, empty data) | **Applications + ApplicationWindowCard string-only**; window states on status tokens |
-| `/admin/analytics` | Analytics | 6 | tokens | |
-| `/admin/settings` | Settings | 6 | tokens | |
-| `/admin/ai-knowledge` | AiKnowledge | 6 | tokens | 7 legacy classes |
-| `/admin/ai-feedback` | AiFeedback | 6 | tokens | |
-| `/admin/ai-usage` | AiUsage | 6 | tokens | |
-| `/admin/content-health` | ContentHealth | 6 | tokens | |
-| `/admin/launch-checklist` | LaunchChecklist | 6 | tokens | |
-| `/admin/recent-changes` | RecentChanges | 6 | tokens | |
-| `/admin/data-rights` | DataRightsRequests | 6 | tokens | protected |
+| `/admin/analytics` | Analytics | 6 | visually verified (harness, empty data) | Header wash; chart tooltip off gray-900; error state seen (no GA data offline) |
+| `/admin/settings` | Settings | 6 | visually verified (harness, empty data) | Header wash + display title |
+| `/admin/ai-knowledge` | AiKnowledge | 6 | visually verified (harness, empty data) | Status chip + checkbox on tokens; header wash |
+| `/admin/ai-feedback` | AiFeedback | 6 | visually verified (harness, empty data) | |
+| `/admin/ai-usage` | AiUsage | 6 | visually verified (harness, empty data) | |
+| `/admin/content-health` | ContentHealth | 6 | visually verified (harness, empty data) | |
+| `/admin/launch-checklist` | LaunchChecklist | 6 | visually verified (harness, empty data) | |
+| `/admin/recent-changes` | RecentChanges | 6 | visually verified (harness, empty data) | |
+| `/admin/data-rights` | DataRightsRequests | 6 | visually verified (harness, empty data) | **DataRightsRequestTracker string-only** (display title only); populated requests need data |
 | `/admin/login` | SignIn | 1 | visually verified | |
 
 ## Batch 3 notes
@@ -205,6 +205,18 @@ counts (gray/zinc/slate/teal/coral/gold/hex) come from the Batch 1 holdout scan.
   ProgramContentManager) → brand primary; VCN inputs (black in light mode) →
   token inputs. No handler, data or gating change. Application link
   visibility and window logic are untouched.
+
+## Batch 6 notes
+
+- **Data Rights** renders its header inside `DataRightsRequestTracker`
+  (protected); only its class strings changed (display title), proven
+  **string-only** against the Batch 5 base.
+- Analytics, Settings, Ask VSA Knowledge/Feedback/Usage, Launch Checklist and
+  Recent Changes headers gain the shared wash, ribbon and display title
+  (inline `style` removed from four containers). AiUsage, RecentChanges and
+  ContentHealth are string-only.
+- **Every admin route now has its own design pass.** What remains for admin is
+  live-data verification (Batch 8), not styling.
 
 ## Overlays and embedded workflows (non-route)
 
@@ -261,6 +273,7 @@ initials. `StoryStudio` uses coral/gold (Batch 2).
 
 | Date | Batch | Evidence |
 |---|---|---|
+| 2026-10-30 | 6 | Real Batch 6 page components in the offline harness, 375/1440 light+dark (analytics, settings, AI knowledge/feedback/usage, content health, launch checklist, recent changes, data rights). Gates: typecheck, lint (18 pre-existing warnings), 4198/4198 Jest, build, diff --check. |
 | 2026-10-30 | 5 | Real Batch 5 page components in the offline harness, 375/1440 light+dark (gallery, content, calendar, vcn, applications, feedback, resources, uvsa schools, external events). Gates: typecheck, lint (18 pre-existing warnings), 4198/4198 Jest, build, diff --check. |
 | 2026-10-30 | 4 | Real Batch 4 page components in the offline harness, 375/1440 light+dark (houses, ace, interns, cabinet, rollover, years, year setup). Gates: typecheck, lint (18 pre-existing warnings), 4198/4198 Jest, build, diff --check. |
 | 2026-10-30 | 3 | Real Batch 3 page components in the offline harness, 375/1440 light+dark (dashboard, events, import, members, points, merge, photo requests); public /cabinet and /get-involved re-checked. Gates: typecheck, lint (18 pre-existing warnings), 4198/4198 Jest, build, diff --check. |
