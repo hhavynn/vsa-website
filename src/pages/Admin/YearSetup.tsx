@@ -27,6 +27,7 @@ import {
   defaultSetupOptions,
   planApplicationReset,
 } from '../../lib/yearSetup';
+import { TOAST_OPTIONS } from '../../lib/toastOptions';
 
 const fieldCls =
   'w-full rounded border bg-[var(--color-surface2)] px-3 py-2 text-sm text-[var(--color-text)] focus:border-[var(--brand)] focus:outline-none focus:ring-1 focus:ring-[var(--brand)] disabled:opacity-60';
@@ -223,7 +224,7 @@ export default function AdminYearSetup() {
   return (
     <>
       <PageTitle title="New Year Setup" />
-      <Toaster position="top-right" />
+      <Toaster position="top-right" toastOptions={TOAST_OPTIONS} />
 
       <div className="border-b px-6 py-6 sm:px-8 sm:py-8 border-[var(--color-border)] bg-surface">
         <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl text-text-primary">Start {yearLabel}</h1>

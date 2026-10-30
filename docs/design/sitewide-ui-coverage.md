@@ -52,7 +52,7 @@ pages need an authorized session; anything verified only in the harness says so.
 |---|---|---|---|
 | 1 Foundation | Root tokens, nav/footer chrome, admin shell, page header, quick search, sign-in, common dialogs, primitives | `design/sitewide-admin-foundation` | implemented; harness-verified |
 | 2 Story generator | StoryStudio editor + Top 3/5/10 PNG templates | `design/sitewide-story-generator` (stacked on 1) | implemented; exported PNGs verified |
-| 3 Core admin ops | Dashboard, Events, Import, Members, Points, Merge, Photo Requests | — | not started |
+| 3 Core admin ops | Dashboard, Events, Import, Members, Points, Merge, Photo Requests | `design/sitewide-core-admin-ops` (stacked on 2) | implemented; real pages verified with empty data |
 | 4 Programs | Houses, ACE, Interns, Cabinet, Rollover, Years, Year Setup | — | not started |
 | 5 Content | Gallery, Content, Calendar, VCN, Applications, Feedback, Resources, UVSA Schools, External Events | — | not started |
 | 6 Remaining admin | Analytics, Settings, AI ×3, Content Health, Launch Checklist, Recent Changes, Data Rights | — | not started |
@@ -121,13 +121,13 @@ counts (gray/zinc/slate/teal/coral/gold/hex) come from the Batch 1 holdout scan.
 
 | Route | Page file | Batch | Status | Known holdouts / notes |
 |---|---|---|---|---|
-| `/admin` | Overview | 3 | tokens | |
-| `/admin/events` | Events | 3 | tokens | 3 legacy classes; event recap editor |
-| `/admin/import` | Import (+LegacyImport) | 3 | tokens | **47 + 52 legacy classes**: heaviest holdout; protected (attendance) |
-| `/admin/members` | Members | 3 | tokens | **46 legacy classes**; protected (identity) |
-| `/admin/points` | Points | 3 | tokens | Hosts the story generator (Batch 2) |
-| `/admin/merge-suggestions` | MergeSuggestions | 3 | tokens | |
-| `/admin/photo-requests` | PhotoRequests / `PhotoRequestsTab` | 3 | tokens | 9 legacy classes |
+| `/admin` | Overview | 3 | visually verified (harness, empty data) | Display-serif greeting, wash + sparkles, raised search |
+| `/admin/events` | Events | 3 | visually verified (harness, empty data) | String-only diff; recap editor and populated list unverified |
+| `/admin/import` | Import (+LegacyImport) | 3 | visually verified (harness, empty data) | 99 zinc classes → tokens; **string-only diff** (protected); review/preview tables need live data |
+| `/admin/members` | Members | 3 | visually verified (harness, empty data) | 46 → tokens; **string-only diff** (protected); edit/merge dialogs need live data |
+| `/admin/points` | Points | 3 | visually verified (harness, empty data) | Now uses AdminPageHeader; year select gained an accessible label |
+| `/admin/merge-suggestions` | MergeSuggestions | 3 | visually verified (harness, empty data) | Now uses AdminPageHeader; populated diff rows unverified |
+| `/admin/photo-requests` | PhotoRequests / `PhotoRequestsTab` | 3 | visually verified (harness, empty data) | Header + status badges/actions moved from inline hex to classes; request cards need live data |
 | `/admin/houses` | Houses | 4 | tokens | Placement/reveal/payments panels; protected |
 | `/admin/ace` | AceFamilies | 4 | tokens | 7 legacy classes; assignment imports |
 | `/admin/interns` | Interns | 4 | tokens | |
@@ -154,6 +154,28 @@ counts (gray/zinc/slate/teal/coral/gold/hex) come from the Batch 1 holdout scan.
 | `/admin/recent-changes` | RecentChanges | 6 | tokens | |
 | `/admin/data-rights` | DataRightsRequests | 6 | tokens | protected |
 | `/admin/login` | SignIn | 1 | visually verified | |
+
+## Batch 3 notes
+
+- **Change control:** gated tier (displays protected-domain data). Every
+  protected file (Import, LegacyImport, Members, ImportAuditPanel, recovery/*,
+  Events, Houses) was proven **string-only** by normalizing away string
+  literals and comparing token streams against the Batch 2 base. Structural
+  edits are limited to headers (Points, MergeSuggestions, PhotoRequests,
+  Overview), PhotoRequestsTab inline-hex → classes, and toast wiring.
+- **Shared fixes that reach every later batch:** `src/lib/toastOptions.ts`
+  themes the app Toaster and the 9 admin pages that mount their own;
+  `scrapbook-paper` / `scrapbook-note` render as calm cards (no tape, no paper
+  shadow) outside the public shell (~45 admin call sites); the no-faux-bold
+  and scrapbook rules key off `.vsa-editorial-shell` ancestry so public pages
+  are correct from the first paint.
+- **Follow-up (behavior, not design):** those 9 pages mount a second
+  `<Toaster>` beside App's, so react-hot-toast may draw each toast twice. Left
+  unchanged here; worth a separate fix.
+- **Verification method:** real page components rendered in the harness with
+  an offline Supabase stand-in returning empty results (no network, no auth
+  bypass against real data) at 375 and 1440, light and dark. Populated tables,
+  dialogs with data and import previews still need an authorized session.
 
 ## Overlays and embedded workflows (non-route)
 
@@ -210,5 +232,6 @@ initials. `StoryStudio` uses coral/gold (Batch 2).
 
 | Date | Batch | Evidence |
 |---|---|---|
+| 2026-10-30 | 3 | Real Batch 3 page components in the offline harness, 375/1440 light+dark (dashboard, events, import, members, points, merge, photo requests); public /cabinet and /get-involved re-checked. Gates: typecheck, lint (18 pre-existing warnings), 4198/4198 Jest, build, diff --check. |
 | 2026-10-29 | 2 | Real 1080×1920 PNG exports for every template/theme/state listed above; editor harness 375/1440 light+dark. Gates: typecheck, lint (18 pre-existing warnings, none in touched files), 4198/4198 Jest, build. |
 | 2026-10-29 | 1 | Before/after `/admin/login` at 375/1440 light+dark; harness: shell, header, table, filters, buttons, pagination, empty/error states, ConfirmDialog, quick search, mobile drawer at 375/1440 light+dark. Gates: typecheck, lint, full Jest suite, build (see PR). Live admin pages not yet screenshotted (no authorized session in the browser). |

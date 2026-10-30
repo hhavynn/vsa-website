@@ -1743,9 +1743,26 @@ html.dark {
    photo fields here; those stay on public storytelling pages. */
 /* Instrument Serif ships one weight. Admin markup asks for font-serif
    font-bold in many places; render the true face instead of a smeared faux
-   bold. Public pages (body.vsa-editorial-shell) keep their #761 rendering. */
-body:not(.vsa-editorial-shell) {
+   bold. Public pages (.vsa-editorial-shell, set on Layout's wrapper from the
+   first render) keep their #761 rendering. */
+html {
   font-synthesis-weight: none;
+}
+
+.vsa-editorial-shell {
+  font-synthesis-weight: auto;
+}
+
+/* Admin cards stay calm: scrapbook paper and notes (used by ~45 admin panels)
+   render as plain operational cards outside the public shell. No tape strips,
+   no paper shadow; public storytelling pages keep the scrapbook voice. */
+:is(.scrapbook-paper, .scrapbook-note):not(.vsa-editorial-shell *)::before {
+  content: none;
+}
+
+:is(.scrapbook-paper, .scrapbook-note):not(.vsa-editorial-shell *) {
+  border-color: var(--color-border);
+  box-shadow: 0 1px 2px rgba(40, 53, 77, 0.05);
 }
 
 @layer components {

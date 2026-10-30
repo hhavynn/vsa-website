@@ -51,6 +51,7 @@ import {
   planAttendanceMemberEnrichments,
   matchAttendanceImportRows,
 } from '../../lib/legacyAttendanceMatching';
+import { TOAST_OPTIONS } from '../../lib/toastOptions';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -702,7 +703,7 @@ export default function LegacyAdminImport() {
   return (
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="Import Attendance" />
-      <Toaster position="top-right" />
+      <Toaster position="top-right" toastOptions={TOAST_OPTIONS} />
 
       <AdminPageHeader
         title="Import Attendance"
@@ -727,8 +728,8 @@ export default function LegacyAdminImport() {
               <div>
                 <label htmlFor="import-event" className="block text-xs font-medium text-[var(--color-text3)] uppercase tracking-label mb-1.5">Event *</label>
                 <select id="import-event" disabled={fetchingCsv} value={selectedEventId} onChange={e => setSelectedEventId(e.target.value)}
-                  className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900
-                    text-[var(--color-text)] px-3 py-2.5 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500">
+                  className="w-full rounded border border-[var(--color-border)] bg-[var(--color-input)]
+                    text-[var(--color-text)] px-3 py-2.5 text-sm focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/30 dark:focus:border-brand-300 dark:focus:ring-brand-300/30">
                   <option value="">— Select an event —</option>
                   {events.map(ev => (
                     <option key={ev.id} value={ev.id}>
@@ -795,7 +796,7 @@ export default function LegacyAdminImport() {
           {step === 'preview' && (
             <div className="space-y-6">
               {/* Column mapping */}
-              <div className="bg-zinc-50 dark:bg-zinc-900/60 rounded-md p-5 border border-[var(--color-border)]">
+              <div className="bg-surface2 rounded-md p-5 border border-[var(--color-border)]">
                 <h2 className="text-xs font-semibold text-[var(--color-text3)] uppercase tracking-label mb-4">Column Mapping</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div className="col-span-2 sm:col-span-1 flex items-end">
@@ -885,8 +886,8 @@ export default function LegacyAdminImport() {
                 </div>
               )}
 
-              <div className="flex flex-col gap-3 rounded-md border border-[var(--color-border)] bg-zinc-50 dark:bg-zinc-900/40 p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="text-sm text-zinc-600 dark:text-zinc-300">
+              <div className="flex flex-col gap-3 rounded-md border border-[var(--color-border)] bg-surface2 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-sm text-text-secondary">
                   {selectedRows.length === 0
                     ? 'Select rows to apply a decision to several at once. Matching an existing member is always chosen row by row.'
                     : `${selectedRows.length} row${selectedRows.length !== 1 ? 's' : ''} selected.`}
@@ -895,21 +896,21 @@ export default function LegacyAdminImport() {
                   <button
                     onClick={() => applyDecisionToSelected('new')}
                     disabled={selectedRows.length === 0}
-                    className="inline-flex items-center gap-2 rounded border border-zinc-300 dark:border-zinc-600 px-3 py-2 text-sm font-medium text-[var(--color-text2)] transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded border border-[var(--color-border)] px-3 py-2 text-sm font-medium text-[var(--color-text2)] transition-colors hover:bg-surface2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Create New for Selected
                   </button>
                   <button
                     onClick={() => applyDecisionToSelected('skip')}
                     disabled={selectedRows.length === 0}
-                    className="inline-flex items-center gap-2 rounded border border-zinc-300 dark:border-zinc-600 px-3 py-2 text-sm font-medium text-[var(--color-text2)] transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded border border-[var(--color-border)] px-3 py-2 text-sm font-medium text-[var(--color-text2)] transition-colors hover:bg-surface2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Skip Selected
                   </button>
                   <button
                     onClick={() => applyDecisionToSelected('clear')}
                     disabled={selectedRows.length === 0}
-                    className="inline-flex items-center gap-2 rounded px-3 py-2 text-sm font-medium text-[var(--color-text3)] transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded px-3 py-2 text-sm font-medium text-[var(--color-text3)] transition-colors hover:bg-surface2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Undo Selected
                   </button>
@@ -937,9 +938,9 @@ export default function LegacyAdminImport() {
 
               {/* Preview table */}
               <div className="overflow-x-auto rounded-md border border-[var(--color-border)]">
-                <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-700 text-sm">
+                <table className="min-w-full divide-y divide-[var(--color-border)] text-sm">
                   <thead>
-                    <tr className="bg-zinc-50 dark:bg-zinc-900/60">
+                    <tr className="bg-surface2">
                       <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text3)] uppercase tracking-label whitespace-nowrap">
                         <input
                           type="checkbox"
@@ -950,7 +951,7 @@ export default function LegacyAdminImport() {
                         />
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text3)] uppercase tracking-label whitespace-nowrap">
-                        <button type="button" onClick={toggleActionSort} className="inline-flex items-center gap-1 hover:text-zinc-700 dark:hover:text-zinc-200">
+                        <button type="button" onClick={toggleActionSort} className="inline-flex items-center gap-1 hover:text-text-primary">
                           Action
                           <span className="text-[10px] normal-case">
                             {sortMode === 'review-first' ? 'Review first' : sortMode === 'review-last' ? 'Review last' : 'Default'}
@@ -962,7 +963,7 @@ export default function LegacyAdminImport() {
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="bg-[var(--color-surface)] divide-y divide-zinc-100 dark:divide-zinc-800">
+                  <tbody className="bg-[var(--color-surface)] divide-y divide-[var(--color-border)]">
                     {displayedRows.map((row) => {
                       const { status: effectiveStatus, member: resolvedMember } = resolved(row);
                       const candidates = row.candidateMemberIds
@@ -978,7 +979,7 @@ export default function LegacyAdminImport() {
                         effectiveStatus === 'match' ? 'bg-green-50/40 dark:bg-green-900/10' :
                         effectiveStatus === 'new'   ? 'bg-blue-50/40 dark:bg-blue-900/10' :
                         effectiveStatus === 'review'? 'bg-amber-50/60 dark:bg-amber-900/10' :
-                                                      'bg-zinc-50/60 dark:bg-zinc-900/20'
+                                                      'bg-brand-50/50 dark:bg-brand-900/20'
                       }>
                         <td className="px-4 py-2.5 whitespace-nowrap align-top">
                           <input
@@ -1012,7 +1013,7 @@ export default function LegacyAdminImport() {
                             <span className="ml-1 text-[10px] text-red-500 font-medium" title="Unrecognized year format">!</span>
                           )}
                         </td>
-                        <td className="px-4 py-2.5 text-zinc-700 dark:text-zinc-300 align-top">
+                        <td className="px-4 py-2.5 text-text-secondary align-top">
                           {(row.status === 'match' || row.status === 'already') && row.matchedMember && (
                             <div className={row.decision?.kind === 'new' ? 'line-through opacity-60' : undefined}>
                               <MemberIdentity member={row.matchedMember} />
@@ -1024,7 +1025,7 @@ export default function LegacyAdminImport() {
                             <span className="text-blue-500 dark:text-blue-400 text-xs italic">new member</span>
                           )}
                           {row.status === 'duplicate' && (
-                            <span className="text-zinc-500 dark:text-zinc-400 text-xs italic">{row.note}</span>
+                            <span className="text-text-muted text-xs italic">{row.note}</span>
                           )}
                           {effectiveStatus === 'invalid' && (
                             <span className="text-red-500 text-xs italic">No name — cannot be imported.</span>
@@ -1082,7 +1083,7 @@ export default function LegacyAdminImport() {
                     : <><CheckIcon />Import ({summary.existingMembers} update{summary.existingMembers !== 1 ? 's' : ''} + {totalNewMembers} new)</>}
                 </button>
                 <button onClick={() => { setStep('configure'); setRows([]); createdByRowIdRef.current = {}; withheldEmailRowIdsRef.current = new Set(); setAckPartial(false); }}
-                  className="text-sm text-[var(--color-text3)] hover:text-zinc-700 dark:hover:text-zinc-200 px-3 py-2.5">
+                  className="text-sm text-[var(--color-text3)] hover:text-text-primary px-3 py-2.5">
                   ← Back
                 </button>
               </div>
@@ -1145,8 +1146,8 @@ function ColSelect({ label, value, onChange, headers }: { label: string; value: 
     <div>
       <label className="block text-xs text-[var(--color-text3)] mb-1">{label}</label>
       <select value={value} onChange={e => onChange(e.target.value)}
-        className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900
-          text-[var(--color-text)] text-xs px-2 py-1.5 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500">
+        className="w-full rounded border border-[var(--color-border)] bg-[var(--color-input)]
+          text-[var(--color-text)] text-xs px-2 py-1.5 focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/30 dark:focus:border-brand-300 dark:focus:ring-brand-300/30">
         <option value="">(none)</option>
         {headers.map(h => <option key={h} value={h}>{h}</option>)}
       </select>
@@ -1159,12 +1160,12 @@ function SummaryBadge({ color, count, label, plural }: { color: string; count: n
     green:  'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
     blue:   'bg-blue-100  dark:bg-blue-900/30  text-blue-700  dark:text-blue-300',
     red:    'bg-red-100   dark:bg-red-900/30   text-red-700   dark:text-red-300',
-    gray:   'bg-gray-100  dark:bg-gray-700      text-gray-500  dark:text-gray-400',
+    gray:   'bg-surface2 text-text-muted',
     amber:  'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
     purple: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
   };
   const dot: Record<string, string> = {
-    green: 'bg-green-500', blue: 'bg-blue-500', red: 'bg-red-500', gray: 'bg-gray-400',
+    green: 'bg-green-500', blue: 'bg-blue-500', red: 'bg-red-500', gray: 'bg-[var(--color-border-strong)]',
     amber: 'bg-amber-500', purple: 'bg-purple-500',
   };
   return (
@@ -1194,11 +1195,11 @@ function ActionBadge({ color, label }: { color: string; label: string }) {
   const cls: Record<string, string> = {
     green: 'text-green-700 dark:text-green-400',
     blue:  'text-blue-700  dark:text-blue-400',
-    gray:  'text-gray-500  dark:text-gray-400',
+    gray:  'text-text-muted',
     amber: 'text-amber-700 dark:text-amber-400',
   };
   const dot: Record<string, string> = {
-    green: 'bg-green-500', blue: 'bg-blue-500', gray: 'bg-gray-400', amber: 'bg-amber-500',
+    green: 'bg-green-500', blue: 'bg-blue-500', gray: 'bg-[var(--color-border-strong)]', amber: 'bg-amber-500',
   };
   return (
     <span className={`inline-flex items-center gap-1 text-xs font-medium ${cls[color]}`}>

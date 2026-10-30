@@ -10,6 +10,8 @@ import { useAcademicTerms } from '../../hooks/useAcademicTerms';
 import { leaderboardRepository } from '../../data/repos/leaderboard';
 import { Button } from '../../components/ui/Button';
 import { Top3StoryDialog } from '../../components/features/admin/Top3StoryDialog';
+import { TOAST_OPTIONS } from '../../lib/toastOptions';
+import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -171,26 +173,21 @@ export default function AdminPoints() {
   return (
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="Points" />
-      <Toaster position="top-right" />
+      <Toaster position="top-right" toastOptions={TOAST_OPTIONS} />
 
-      <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Points</h1>
-            <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>Points distribution and check-in history</p>
-          </div>
-          <div className="flex items-center gap-2">
+      <AdminPageHeader
+        title="Points"
+        description="Points distribution and check-in history"
+        actions={
+          <>
             <Button size="sm" onClick={() => setStoryOpen(true)}>
               Generate Top 3 Story
             </Button>
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
-              className="h-8 rounded border bg-transparent px-2 font-sans text-xs font-medium outline-none transition-colors hover:border-zinc-400 focus:border-zinc-500"
-              style={{
-                borderColor: 'var(--color-border)',
-                color: 'var(--color-text)',
-              }}
+              aria-label="Academic year"
+              className="h-8 rounded border border-[var(--color-border)] bg-[var(--color-input)] px-2 font-sans text-xs font-medium text-text-primary outline-none transition-colors hover:border-brand-300 focus:border-brand-600 dark:hover:border-brand-700 dark:focus:border-brand-300"
             >
               <option value="all">All-Time</option>
               {academicYears.map(([year, label]) => (
@@ -199,9 +196,9 @@ export default function AdminPoints() {
                 </option>
               ))}
             </select>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
       {storyOpen && <Top3StoryDialog onClose={() => setStoryOpen(false)} />}
 
       <div className="p-4 sm:p-6 lg:p-8">

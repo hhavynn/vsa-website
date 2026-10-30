@@ -9,6 +9,8 @@ import toast, { Toaster } from 'react-hot-toast';
 import { usePagination } from '../../hooks/usePagination';
 import { PaginationControls } from '../../components/common/PaginationControls';
 import { PageTitle } from '../../components/common/PageTitle';
+import { TOAST_OPTIONS } from '../../lib/toastOptions';
+import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
 
 type Member = DuplicateCandidateMember;
 type MergePair = DuplicatePair<Member>;
@@ -136,14 +138,12 @@ export default function AdminMergeSuggestions() {
   return (
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="Merge Suggestions" />
-      <Toaster position="top-right" />
+      <Toaster position="top-right" toastOptions={TOAST_OPTIONS} />
 
-      <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Merge Suggestions</h1>
-        <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>
-          Review and merge likely duplicate member records before they diverge further.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Merge Suggestions"
+        description="Review and merge likely duplicate member records before they diverge further."
+      />
 
       <div className="p-4 sm:p-6 lg:p-8">
         <div className="border rounded-md p-6 min-h-[500px]" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
