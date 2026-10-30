@@ -513,6 +513,13 @@
       "rpcs": []
     },
     {
+      "path": "src/data/repos/houseAssignmentCoverage.ts",
+      "tables": [
+        "house_assignment_drafts"
+      ],
+      "rpcs": []
+    },
+    {
       "path": "src/data/repos/houseAssignments.ts",
       "tables": [
         "house_assignment_batches",
@@ -902,6 +909,7 @@
       ],
       "repositories": [
         "src/data/repos/houseAssets.ts",
+        "src/data/repos/houseAssignmentCoverage.ts",
         "src/data/repos/houseAssignments.ts",
         "src/data/repos/houseEvents.ts",
         "src/data/repos/houseMembershipWrites.ts",
