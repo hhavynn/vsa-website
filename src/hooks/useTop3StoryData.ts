@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from 'react-query';
 import { leaderboardRepository } from '../data/repos/leaderboard';
-import { buildTopNStoryEntries, selectTopNMembers, type StoryLimit, type TopNStoryEntry } from '../lib/story/topNStory';
+import { buildTopNStoryEntries, selectPublishedStoryCohort, selectTopNMembers, type StoryLimit, type TopNStoryEntry } from '../lib/story/topNStory';
 import type { MemberHouseBadge } from '../types';
 import { buildAcademicYearOptions, resolveDefaultLeaderboardYear } from '../utils/leaderboardYears';
 import { useAcademicTerms } from './useAcademicTerms';
@@ -43,8 +43,7 @@ export function useTop3StoryData(limit: StoryLimit = 3, cohort: LeaderboardCohor
   const cohortAvailable = !roster.isLoading && !roster.isError && !!roster.data;
   const filtered = useMemo(() => {
     if (!cohortAvailable || !roster.data) return [];
-    return (members ?? []).filter((member) =>
-      roster.data!.has(member.id) === (cohort === 'board'));
+    return selectPublishedStoryCohort(members ?? [], roster.data, cohort);
   }, [members, roster.data, cohortAvailable, cohort]);
   const selection = useMemo(() => selectTopNMembers(filtered, limit), [filtered, limit]);
   const topIds = useMemo(() => selection.selected.map((member) => member.id), [selection]);
