@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import toast from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import { QueryClient, QueryClientProvider } from "react-query";
 import AdminImport from "./Import";
 import { supabaseMock } from "../../test-utils/supabaseMock";
@@ -93,6 +93,7 @@ async function setup() {
     >
       <MemoryRouter>
         <AdminImport />
+        <Toaster />
       </MemoryRouter>
     </QueryClientProvider>,
   );

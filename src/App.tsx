@@ -7,6 +7,7 @@ import { SiteSettingsProvider } from "./context/SiteSettingsContext";
 import { AnalyticsConsentProvider } from "./context/AnalyticsConsentContext";
 import { AnalyticsConsentBanner } from "./components/common/AnalyticsConsentBanner";
 import { Toaster } from "react-hot-toast";
+import { TOAST_OPTIONS } from "./lib/toastOptions";
 import { MotionConfig } from "framer-motion";
 
 const queryClient = new QueryClient({
@@ -34,7 +35,7 @@ function App() {
                   <AppRoutes />
                   <AnalyticsConsentBanner />
                 </MotionConfig>
-                <Toaster position="top-right" />
+                <Toaster position="top-right" toastOptions={TOAST_OPTIONS} />
               </SiteSettingsProvider>
             </AuthProvider>
           </AnalyticsConsentProvider>

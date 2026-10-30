@@ -87,7 +87,7 @@ export function GetInvolved() {
     <>
       <PageTitle title="Get Involved" />
 
-      <div className="vsa-page-hero">
+      <div className="vsa-page-hero vsa-page-hero--lavender">
         <div className="vsa-container relative z-10">
           <span className="scrapbook-sticker scrapbook-sticker-teal mb-4">Choose Your Path</span>
           <h1 className="vsa-page-title">Get <em>Involved</em></h1>

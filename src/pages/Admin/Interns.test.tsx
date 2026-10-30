@@ -16,7 +16,7 @@ jest.mock('../../data/repos/adminOperations', () => ({
 }));
 jest.mock('react-hot-toast', () => {
   const toast = Object.assign(jest.fn(), { success: jest.fn(), error: jest.fn() });
-  return { __esModule: true, default: toast, Toaster: () => null };
+  return { __esModule: true, default: toast };
 });
 jest.mock('../../hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 'admin-1' } }) }));
 jest.mock('../../hooks/useCabinetYears', () => ({

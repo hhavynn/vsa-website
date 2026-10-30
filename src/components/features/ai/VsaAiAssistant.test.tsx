@@ -190,6 +190,7 @@ it("links to real alternatives after rate limits, temporary disablement, and fal
   expect(navs).toHaveLength(3);
   for (const nav of navs) {
     expect(within(nav).getByRole("link", { name: "Events" })).toHaveAttribute("href", "/events");
+    expect(within(nav).getByRole("link", { name: "Events" })).toHaveClass("min-h-11");
     expect(within(nav).getByRole("link", { name: "Get Involved" })).toHaveAttribute("href", "/get-involved");
     expect(within(nav).getByRole("link", { name: "Points" })).toHaveAttribute("href", "/points");
     expect(within(nav).getByRole("link", { name: "Send feedback" })).toHaveAttribute("href", "/feedback");
@@ -205,6 +206,7 @@ it("offers links on network errors while preserving Retry", async () => {
   await openAssistant();
   await ask("What events are happening?");
   expect(screen.getByRole("button", { name: "Retry" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Retry" })).toHaveClass("min-h-11");
   const nav = screen.getByRole("navigation", { name: "Other ways to get VSA information" });
   expect(within(nav).getByRole("link", { name: "Events" })).toHaveAttribute("href", "/events");
 });

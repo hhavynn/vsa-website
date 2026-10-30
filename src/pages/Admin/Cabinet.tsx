@@ -1,10 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useQuery } from 'react-query';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { Link, useSearchParams } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
+import { MemberLinkPicker } from '../../components/features/admin/MemberLinkPicker';
+import { memberLookupRepository } from '../../data/repos/memberLookup';
 import { useCabinetYears } from '../../hooks/useCabinetYears';
 import { getCurrentCabinetYear } from '../../lib/cabinetYears';
 import { CabinetYear } from '../../types';
@@ -143,7 +146,7 @@ function CabinetYearSelect({
     >
       {yearOptions}
     </select>,
-    <p key="helper" className="mt-1 text-xs text-zinc-500">
+    <p key="helper" className="mt-1 text-xs text-text-muted">
       {helperText}
     </p>,
   ];
@@ -185,6 +188,12 @@ export default function AdminCabinet() {
   const [previewTarget, setPreviewTarget] = useState<'create' | 'edit' | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedMemberBaseline, setSelectedMemberBaseline] = useState<CabinetMember | null>(null);
+  const linkedMemberId = selectedMember?.member_id ?? null;
+  const { data: resolvedLinkedMember = null, isError: memberLinkReadError } = useQuery(
+    ['cabinet-published-member-link', linkedMemberId],
+    () => memberLookupRepository.findMemberById(linkedMemberId),
+    { enabled: !!linkedMemberId, staleTime: 5 * 60 * 1000, retry: false },
+  );
 
   // Once cabinet years load, default to the active/most-recent year
   useEffect(() => {
@@ -251,6 +260,9 @@ export default function AdminCabinet() {
       (!m.cabinet_year_id && selectedAdminYearId === currentCabinetYear?.id)
     );
   }, [members, selectedAdminYearId, currentCabinetYear?.id]);
+
+  const linkedMemberCount = filteredMembers.filter((member) => !!member.member_id).length;
+  const unlinkedMemberCount = filteredMembers.length - linkedMemberCount;
 
   // When saving, fall back to the currently selected admin year if no year was explicitly chosen
   const resolveCabinetYearId = (cabinetYearId?: string | null) =>
@@ -434,7 +446,9 @@ export default function AdminCabinet() {
       const previousName = members.find((member) => member.id === selectedMember.id)?.name;
       const { error } = await supabase.from('cabinet_members').update({
         name: selectedMember.name,
-        ...(isRenamed(previousName, selectedMember.name) ? { member_id: null } : {}),
+        // A reviewed canonical link is saved only by explicit selection, and
+        // a rename always clears the previous person's link for re-review.
+        member_id: isRenamed(previousName, selectedMember.name) ? null : selectedMember.member_id,
         role: selectedMember.role,
         category: selectedMember.category,
         display_order: selectedMember.display_order,
@@ -654,9 +668,14 @@ export default function AdminCabinet() {
                 </button>
               )}
             </div>
-            <p className="-mt-3 mb-6 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+            <p className="-mt-3 mb-3 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
               Showing members for {selectedAdminYear?.label ?? 'the selected cabinet year'}. Use the Cabinet Year selector above before adding or moving members.
             </p>
+            {!loading && filteredMembers.length > 0 && (
+              <p role="status" className="mb-6 font-sans text-xs text-[var(--color-text2)]">
+                Published Cabinet identity review: {linkedMemberCount} linked, {unlinkedMemberCount} need a VSA member link. Unlinked entries cannot display verified leaderboard role badges.
+              </p>
+            )}
             {loading ? (
               <p className="py-8 text-center text-sm" style={{ color: 'var(--color-text3)' }}>Loading...</p>
             ) : filteredMembers.length === 0 && !loading ? (
@@ -695,6 +714,9 @@ export default function AdminCabinet() {
                             <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>
                               {getCabinetYearLabel(m.cabinet_year_id)}
                             </p>
+                            <span className={m.member_id ? 'mt-1 inline-block text-[11px] text-brand-600 dark:text-brand-400' : 'mt-1 inline-block text-[11px] text-amber-700 dark:text-amber-400'}>
+                              {m.member_id ? 'Linked to VSA member' : 'Needs member link'}
+                            </span>
                           </div>
                         </div>
                         <div className="flex shrink-0 gap-2 pl-11 sm:pl-0">
@@ -721,7 +743,7 @@ export default function AdminCabinet() {
 
       {/* Edit Modal */}
       {selectedMember && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:items-center">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-scrim p-4 backdrop-blur-sm sm:items-center">
           <div className="scrapbook-paper my-8 w-full max-w-2xl sm:my-0" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
             <div className="flex items-center justify-between border-b px-6 py-5" style={{ borderColor: 'var(--color-border)' }}>
               <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Edit {selectedMember.name}</h2>
@@ -774,6 +796,28 @@ export default function AdminCabinet() {
               <div>
                 <label className={labelCls}>Fun Fact</label>
                 <textarea value={selectedMember.fun_fact || ''} onChange={e => setSelectedMember({...selectedMember, fun_fact: e.target.value})} className={inputCls} rows={2} />
+              </div>
+              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-4" aria-label="Link Cabinet entry to VSA member">
+                <p className={labelCls}>Leaderboard role identity</p>
+                <p className="mb-3 font-sans text-xs leading-relaxed text-[var(--color-text2)]">
+                  Only a verified member ID will show this published Cabinet role on that person's leaderboard profile for the selected academic year. Select the right person explicitly; same names can belong to different members.
+                </p>
+                {memberLinkReadError && <p role="status" className="mb-2 font-sans text-xs text-amber-700 dark:text-amber-400">Could not verify the existing member link. You can review or change it manually.</p>}
+                <MemberLinkPicker
+                  linkedMemberId={selectedMember.member_id}
+                  linkedMember={resolvedLinkedMember}
+                  onLink={(member) => {
+                    setSelectedMember((previous) => previous ? { ...previous, member_id: member.id } : null);
+                  }}
+                  onUnlink={() => {
+                    setSelectedMember((previous) => previous ? { ...previous, member_id: null } : null);
+                  }}
+                  busy={uploading}
+                  disabledReason={isRenamed(selectedMemberBaseline?.name, selectedMember.name)
+                    ? 'Save the renamed Cabinet entry before linking it to another person.'
+                    : null}
+                />
+                <p className="mt-2 font-sans text-xs text-[var(--color-text3)]">This member link is saved with Save Changes. Unlinked or yearless Cabinet rows do not earn a role badge.</p>
               </div>
               <div>
                 <label className={labelCls}>Profile Photo</label>

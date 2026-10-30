@@ -5,7 +5,7 @@
 // Do not modify membership logic unless explicitly requested.
 // Authority: AGENTS.md § "Things to never do"; vsa-change-control § 1 (Forbidden tier).
 import { useEffect, useMemo, useState } from 'react';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { Link, useSearchParams } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
@@ -17,6 +17,7 @@ import { memberLookupRepository } from '../../data/repos/memberLookup';
 import { useAcademicTerms } from '../../hooks/useAcademicTerms';
 import { formatAcademicYear, getAcademicTermMeta } from '../../lib/academicTerms';
 import { HouseDraftWorkflow } from '../../components/features/admin/HouseDraftWorkflow';
+import { HouseAssignmentCoveragePanel } from '../../components/features/admin/HouseAssignmentCoveragePanel';
 import { HousePaymentsPanel } from '../../components/features/admin/HousePaymentsPanel';
 import { AttendanceReadinessPanel } from '../../components/features/admin/AttendanceReadinessPanel';
 import { HouseOverviewPanel } from '../../components/features/admin/HouseOverviewPanel';
@@ -293,8 +294,6 @@ export default function AdminHouses() {
   return (
     <>
       <PageTitle title="House Assignments" />
-      <Toaster position="top-right" />
-
       <AdminPageHeader
         title="Houses"
         description="Place members into Houses, then manage public House profiles, images, parents, and events. Assignments are drafted and locked privately, then revealed. They do not change attendance records or point calculations."
@@ -467,6 +466,7 @@ export default function AdminHouses() {
       )}
 
       {activeTab === 'assignments' ? (
+        <>
         <HouseDraftWorkflow
           selectedYear={selectedYear}
           onYearChange={setSelectedYear}
@@ -479,6 +479,8 @@ export default function AdminHouses() {
           loadingMembers={loadingMembers}
           onMembershipsPublished={() => { loadMembers(); loadHouseProfiles(selectedYear); }}
         />
+        <HouseAssignmentCoveragePanel selectedYear={selectedYear} />
+        </>
       ) : activeTab === 'overview' ? (
         <HouseOverviewPanel selectedYear={selectedYear} />
       ) : activeTab === 'payments' ? (

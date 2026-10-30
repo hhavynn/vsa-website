@@ -16,7 +16,7 @@ export function NotFound() {
   return (
     <>
       <PageTitle title="Page not found" />
-      <div className="vsa-container flex justify-center py-12 text-center sm:py-16">
+      <div className="vsa-dock-clear vsa-container flex justify-center py-12 text-center sm:py-16">
         <div className="scrapbook-paper relative mx-auto w-full max-w-2xl p-6 sm:p-10">
           <span className="scrapbook-pin" aria-hidden />
           <p className="font-serif text-[80px] leading-none tracking-[-0.04em] text-brand-600 dark:text-brand-400 sm:text-[120px]">

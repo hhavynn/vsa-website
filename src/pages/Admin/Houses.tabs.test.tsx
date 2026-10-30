@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import AdminHouses from './Houses';
 
-jest.mock('react-hot-toast', () => ({ __esModule: true, default: { error: jest.fn(), success: jest.fn() }, Toaster: () => null }));
+jest.mock('react-hot-toast', () => ({ __esModule: true, default: { error: jest.fn(), success: jest.fn() } }));
 jest.mock('../../hooks/useAcademicTerms', () => ({ useAcademicTerms: () => ({ terms: [] }) }));
 jest.mock('../../data/repos/memberLookup', () => ({ memberLookupRepository: { listHouseImportMembers: jest.fn().mockResolvedValue([]) } }));
 jest.mock('../../lib/supabase', () => {
@@ -11,6 +11,9 @@ jest.mock('../../lib/supabase', () => {
   chain.then = (resolve: (value: unknown) => void) => resolve({ data: [], error: null });
   return { supabase: { from: () => chain } };
 });
+jest.mock('../../components/features/admin/HouseAssignmentCoveragePanel', () => ({
+  HouseAssignmentCoveragePanel: () => require('react').createElement('div', null, 'coverage review mock'),
+}));
 jest.mock('../../components/features/admin/HouseDraftWorkflow', () => {
   const { createElement } = require('react');
   const { useLocation } = require('react-router-dom');

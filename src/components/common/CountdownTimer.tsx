@@ -67,20 +67,20 @@ export function CountdownTimer({ targetDate, onComplete }: CountdownTimerProps) 
       {timeLeft.days > 0 && (
         <div className="flex flex-col items-center">
           <span className="text-2xl font-bold text-indigo-400">{timeLeft.days}</span>
-          <span className="text-xs text-gray-400">days</span>
+          <span className="text-xs text-text-muted">days</span>
         </div>
       )}
       <div className="flex flex-col items-center">
         <span className="text-2xl font-bold text-indigo-400">{timeLeft.hours.toString().padStart(2, '0')}</span>
-        <span className="text-xs text-gray-400">hours</span>
+        <span className="text-xs text-text-muted">hours</span>
       </div>
       <div className="flex flex-col items-center">
         <span className="text-2xl font-bold text-indigo-400">{timeLeft.minutes.toString().padStart(2, '0')}</span>
-        <span className="text-xs text-gray-400">min</span>
+        <span className="text-xs text-text-muted">min</span>
       </div>
       <div className="flex flex-col items-center">
         <span className="text-2xl font-bold text-indigo-400">{timeLeft.seconds.toString().padStart(2, '0')}</span>
-        <span className="text-xs text-gray-400">sec</span>
+        <span className="text-xs text-text-muted">sec</span>
       </div>
     </div>
   );
