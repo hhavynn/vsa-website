@@ -6,6 +6,7 @@ import { FiCalendar, FiClock, FiMapPin } from "react-icons/fi";
 import { OptimizedImage } from "../../common/OptimizedImage";
 import { EventInterestButtons } from "../events/EventInterestButtons";
 import { Skeleton } from "../../ui/Skeleton";
+import { Sparkle } from "../../ui/Sparkle";
 import {
   EditorialArrow as Arrow,
   Eyebrow,
@@ -21,6 +22,7 @@ import { OFFICIAL_LOGO } from "../../../config/brandAssets";
 import {
   formatEventDateRange,
   formatEventTime,
+  getEventDateOnly,
   formatEventTimeRange,
 } from "../../../lib/eventTime";
 
@@ -33,6 +35,26 @@ function academicYearCaption(date = new Date()): string {
 const CalendarIcon = FiCalendar as ComponentType<IconBaseProps>;
 const ClockIcon = FiClock as ComponentType<IconBaseProps>;
 const MapPinIcon = FiMapPin as ComponentType<IconBaseProps>;
+
+const aboutPhoto = {
+  src: "/images/gallery/vietnamese-culture-night-2026_2026-04-18.webp",
+  thumb: { src: "/images/gallery/vietnamese-culture-night-2026_2026-04-18_thumb.webp", width: 720 },
+  caption: "Vietnamese Culture Night · April 2026",
+  alt: "The Vietnamese Culture Night 2026 cast and crew together on stage",
+};
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** Day, month and weekday of an event's San Diego calendar day. */
+function dateParts(date: string, startTime?: string | null) {
+  const [year, month, day] = getEventDateOnly(date, startTime).split("-").map(Number);
+  return {
+    day,
+    month: MONTHS[month - 1] ?? "",
+    weekday: WEEKDAYS[new Date(Date.UTC(year, month - 1, day)).getUTCDay()] ?? "",
+  };
+}
 
 const archivePhotos = {
   fallGbm: "/images/gallery/fall-26-gbm-1_2026-09-30.webp",
@@ -99,7 +121,7 @@ export function EditorialHero({
       <div className="relative z-10 mx-auto grid w-full max-w-[1520px] grid-cols-1 items-center gap-10 px-5 pb-10 pt-[92px] sm:px-10 sm:pt-28 lg:min-h-[max(740px,calc(100svh-60px))] lg:grid-cols-[52%_48%] lg:gap-0 lg:px-[4vw] lg:py-[clamp(3rem,7vw,7.5rem)]">
         <div className="relative z-20 min-w-0 lg:pr-0">
           <Eyebrow className="mb-6 text-white [text-shadow:0_1px_14px_rgba(20,35,86,0.45)]">
-            Vietnamese Student Association · UC San Diego
+            Vietnamese Student Association · UC{"\u00a0"}San{"\u00a0"}Diego
           </Eyebrow>
           <h1
             className={`${editorialFont} relative w-max max-w-full text-[clamp(4.25rem,18vw,8rem)] leading-[0.78] drop-shadow-[0_4px_24px_rgba(20,35,86,0.22)] lg:text-[clamp(5rem,11vw,10.5rem)] lg:leading-[0.72]`}
@@ -192,30 +214,6 @@ export function EditorialHero({
   );
 }
 
-export function EditorialPillars() {
-  return (
-    <div
-      aria-label="VSA pillars"
-      className="flex min-h-[72px] items-center justify-start gap-8 overflow-hidden border-y border-ed-line bg-ed-paper px-5 sm:justify-around sm:gap-0 sm:px-[4vw]"
-    >
-      {["Social", "Community", "Cultural", "Academic"].map((pillar) => (
-        <span
-          key={pillar}
-          className={`${editorialFont} flex shrink-0 items-center whitespace-nowrap text-[clamp(1.2rem,2vw,1.9rem)] text-ed-ink`}
-        >
-          {pillar}
-          <span
-            aria-hidden="true"
-            className="home-editorial-star ml-[3vw] hidden text-[0.7em] sm:inline"
-          >
-            ✦
-          </span>
-        </span>
-      ))}
-    </div>
-  );
-}
-
 function getEventTimeLabel(event: PublicEventPreview): string | null {
   if (event.start_time && event.end_time)
     return formatEventTimeRange(event.start_time, event.end_time);
@@ -223,33 +221,34 @@ function getEventTimeLabel(event: PublicEventPreview): string | null {
   return null;
 }
 
-function EditorialEventRow({
-  event,
-  index,
-}: {
-  event: PublicEventPreview;
-  index: number;
-}) {
+function EditorialEventRow({ event }: { event: PublicEventPreview }) {
   const image = event.thumbnail_url || event.image_url;
   const time = getEventTimeLabel(event);
+  const { day, month, weekday } = dateParts(event.date, event.start_time);
+  const isMultiDay = Boolean(
+    event.end_date && event.end_date !== getEventDateOnly(event.date, event.start_time),
+  );
   return (
-    <article className="home-editorial-event grid min-w-0 grid-cols-[1.5rem_28%_minmax(0,1fr)] items-center gap-x-3 gap-y-4 border-b border-ed-line py-6 sm:grid-cols-[2.5rem_26%_minmax(0,1fr)] sm:gap-x-6 lg:grid-cols-[7%_19%_minmax(0,1fr)_auto] lg:gap-x-[clamp(1rem,3vw,3rem)] lg:py-8">
-      <span
-        aria-hidden="true"
-        className="self-start pt-1 font-mono text-[10.5px] text-ed-muted sm:self-center sm:pt-0"
-      >
-        {String(index + 1).padStart(2, "0")}
-      </span>
-      {/* Figma crops flyers to 4:3. Real flyers are portrait posters, so the
-          poster is contained over a blurred fill of itself (same cached URL). */}
-      <div className="relative aspect-[4/3] overflow-hidden bg-surface2">
+    <article className="grid min-w-0 grid-cols-[3.25rem_6.5rem_minmax(0,1fr)] items-start gap-x-3 gap-y-4 border-b border-ed-line py-6 sm:grid-cols-[4.5rem_10rem_minmax(0,1fr)] sm:gap-x-6 lg:grid-cols-[5.5rem_15rem_minmax(0,1fr)_auto] lg:items-center lg:gap-x-10 lg:py-8">
+      <p className="flex flex-col items-start pt-0.5 lg:pt-0">
+        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-ed-accent">
+          {month}
+        </span>
+        <span className={`${editorialFont} text-[2.75rem] leading-[0.95] text-ed-ink sm:text-[3.5rem]`}>
+          {day}
+        </span>
+        <span className="text-[12px] text-ed-muted">{weekday}</span>
+      </p>
+      {/* Real flyers are portrait posters: contain the poster over a blurred
+          fill of itself (same cached URL) instead of cropping its type. */}
+      <div className="relative aspect-[4/5] overflow-hidden bg-surface2 sm:aspect-[4/3]">
         {image ? (
           <>
             <OptimizedImage
               src={image}
               width={360}
               height={270}
-              sizes="(min-width: 1024px) 19vw, 28vw"
+              sizes="(min-width: 1024px) 240px, (min-width: 640px) 160px, 104px"
               widths={[360]}
               alt=""
               aria-hidden="true"
@@ -259,11 +258,11 @@ function EditorialEventRow({
               src={image}
               width={360}
               height={270}
-              sizes="(min-width: 1024px) 19vw, 28vw"
+              sizes="(min-width: 1024px) 240px, (min-width: 640px) 160px, 104px"
               widths={[360, 540]}
               resize="contain"
               alt={`${event.name} flyer`}
-              className="home-editorial-flyer relative h-full w-full object-contain"
+              className="relative h-full w-full object-contain"
             />
           </>
         ) : (
@@ -276,15 +275,17 @@ function EditorialEventRow({
         )}
       </div>
       <div className="min-w-0">
-        <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-ed-muted">
-          {formatEventDateRange(event.date, event.end_date, event.start_time)}
-        </p>
+        {isMultiDay && (
+          <p className="mb-1 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-ed-muted">
+            {formatEventDateRange(event.date, event.end_date, event.start_time)}
+          </p>
+        )}
         <h3
-          className={`${editorialFont} my-1.5 text-[clamp(1.45rem,3.3vw,4rem)] leading-none text-ed-ink sm:my-2.5`}
+          className={`${editorialFont} text-[clamp(1.5rem,3vw,2.75rem)] leading-[1.02] text-ed-ink [text-wrap:balance]`}
         >
           {event.name}
         </h3>
-        <dl className="flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-ed-muted sm:text-[13px]">
+        <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] text-ed-muted sm:text-[13px]">
           {time && (
             <div className="flex items-center gap-1.5">
               <dt>
@@ -316,7 +317,7 @@ function EditorialEventRow({
           )}
         </dl>
       </div>
-      <div className="col-span-2 col-start-2 flex min-w-0 flex-wrap items-center justify-between gap-3 sm:col-span-1 sm:col-start-3 lg:row-start-2 lg:-mt-2">
+      <div className="col-span-3 flex min-w-0 flex-wrap items-center justify-between gap-3 sm:col-span-2 sm:col-start-2 lg:col-span-1 lg:col-start-3 lg:row-start-2 lg:-mt-3">
         <div className="max-w-lg">
           <EventInterestButtons
             eventId={event.id}
@@ -335,7 +336,7 @@ function EditorialEventRow({
       <Link
         to={`/events#event-${event.id}`}
         aria-label={`Event details for ${event.name}`}
-        className="hidden h-[50px] w-[50px] items-center justify-center rounded-full border border-ed-line text-2xl text-ed-ink transition-colors hover:border-ed-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ed-ink lg:col-start-4 lg:row-span-2 lg:row-start-1 lg:inline-flex"
+        className="hidden h-[52px] w-[52px] items-center justify-center rounded-full border border-ed-line text-xl text-ed-ink transition-colors hover:border-ed-accent hover:bg-ed-accent hover:text-ed-on-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ed-ink lg:col-start-4 lg:row-span-2 lg:row-start-1 lg:inline-flex"
       >
         <Arrow />
       </Link>
@@ -356,18 +357,12 @@ export function EditorialEvents({
     <section
       id="upcoming-events"
       aria-labelledby="upcoming-events-title"
-      className="relative overflow-hidden bg-ed-paper px-5 py-[5.5rem] text-ed-ink sm:px-[6vw] sm:py-[clamp(5rem,10vw,10rem)]"
+      className="vsa-halftone relative isolate scroll-mt-16 bg-ed-paper px-5 pb-20 pt-16 text-ed-ink sm:px-[6vw] sm:pb-28 sm:pt-24"
     >
-      <div
-        aria-hidden="true"
-        className="home-editorial-event-dots pointer-events-none absolute -right-[7vw] top-[3vw] h-[30vw] w-[30vw] opacity-100"
-      />
       <div className="relative mx-auto max-w-[1400px]">
         <SectionHeading
           id="upcoming-events-title"
-          eyebrow="On the calendar"
-          title="Upcoming"
-          accent="Events"
+          title="Upcoming events"
           action={
             <Link to="/events" className={editorialLinkClass()}>
               View all events <Arrow />
@@ -422,8 +417,8 @@ export function EditorialEvents({
           </div>
         ) : (
           <div>
-            {events.slice(0, 3).map((event, index) => (
-              <EditorialEventRow key={event.id} event={event} index={index} />
+            {events.slice(0, 3).map((event) => (
+              <EditorialEventRow key={event.id} event={event} />
             ))}
           </div>
         )}
@@ -432,65 +427,129 @@ export function EditorialEvents({
   );
 }
 
+const pillars = ["Social", "Community", "Cultural", "Academic"];
+
 export function EditorialAbout() {
   return (
     <section
       id="about-vsa"
       aria-labelledby="about-vsa-title"
-      className="home-editorial-about relative grid items-center gap-12 overflow-hidden px-5 py-[5.5rem] sm:px-[6vw] sm:py-[clamp(5rem,10vw,10rem)] lg:grid-cols-[42%_58%] lg:gap-0"
+      className="home-about-field vsa-halftone vsa-halftone--left relative isolate overflow-hidden px-5 py-20 sm:px-[6vw] sm:py-28"
     >
-      <div
-        aria-hidden="true"
-        className="home-editorial-orb mx-auto flex aspect-square w-[70%] max-w-[420px] items-center justify-center rounded-full sm:w-[55%] lg:mx-0 lg:w-[75%] lg:max-w-[460px]"
-      >
-        <span
-          className={`${editorialFont} text-[clamp(4rem,8vw,8rem)] italic text-white [text-shadow:0_2px_20px_rgba(40,53,77,0.18)]`}
-        >
-          ’77
-        </span>
-      </div>
-      <div className="relative z-10 min-w-0">
-        <Eyebrow className="text-figma-ink">About VSA</Eyebrow>
-        <h2
-          id="about-vsa-title"
-          className={`${editorialFont} my-5 text-[clamp(3.25rem,7vw,7.5rem)] leading-[0.86] text-figma-ink`}
-        >
-          Vietnamese Student
-          <br className="hidden sm:block" /> Association{" "}
-          <em className="font-normal text-figma-accent">at UCSD</em>
-        </h2>
-        <p className="my-8 max-w-[42rem] text-[15px] leading-[1.8] text-figma-ink sm:my-10">
-          VSA at UC San Diego is a cultural and social student organization
-          established in 1977. Our programming includes general body meetings,
-          cultural events, community programs, and academic support.
-        </p>
-        <Link
-          to="/get-involved"
-          className="inline-flex min-h-11 items-center gap-4 border-b border-figma-ink text-[13px] font-semibold text-figma-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-figma-ink"
-        >
-          Learn about VSA <Arrow />
-        </Link>
+      <div className="relative mx-auto grid max-w-[1400px] items-center gap-14 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-[6vw]">
+        <figure className="relative m-0 -rotate-[1.2deg] bg-ed-paper p-2.5 pb-10 shadow-[0_24px_60px_rgba(40,44,110,0.18)] dark:bg-surface sm:p-3 sm:pb-12">
+          <div className="overflow-hidden bg-figma-mist">
+            <OptimizedImage
+              src={aboutPhoto.src}
+              srcWidth={1200}
+              lowRes={aboutPhoto.thumb}
+              width={1200}
+              height={627}
+              sizes="(min-width: 1024px) 52vw, 100vw"
+              alt={aboutPhoto.alt}
+              className="aspect-[1200/627] h-auto w-full object-cover"
+            />
+          </div>
+          <figcaption className="absolute bottom-3 left-3 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-figma-ink dark:text-ed-ink sm:bottom-4 sm:left-4">
+            {aboutPhoto.caption}
+          </figcaption>
+          <div
+            aria-hidden="true"
+            className="home-editorial-bubble absolute -right-6 -top-8 h-24 w-24 sm:-right-10 sm:-top-12 sm:h-36 sm:w-36"
+          />
+        </figure>
+        <div className="relative min-w-0">
+          <p className={`${editorialFont} flex items-center gap-3 text-[2.1rem] italic leading-none text-ed-accent`}>
+            Since 1977
+            <Sparkle glow className="h-6 w-6 text-white dark:text-ed-accent" />
+          </p>
+          <h2
+            id="about-vsa-title"
+            className={`${editorialFont} mt-5 text-[clamp(2.6rem,5vw,4.5rem)] leading-[0.92] text-ed-ink [text-wrap:balance]`}
+          >
+            Vietnamese Student Association{" "}
+            <em className="font-normal text-ed-accent">at UC San Diego</em>
+          </h2>
+          <p className="mt-6 max-w-[38rem] text-[15.5px] leading-[1.8] text-ed-ink">
+            A cultural and social student organization at UC San Diego. Our
+            programming includes general body meetings, cultural events,
+            community programs, and academic support.
+          </p>
+          <ul
+            aria-label="VSA pillars"
+            className="mt-8 grid grid-cols-2 border-t border-ed-line sm:grid-cols-4"
+          >
+            {pillars.map((pillar) => (
+              <li
+                key={pillar}
+                className={`${editorialFont} flex items-center gap-2 border-b border-ed-line py-3 text-[1.35rem] text-ed-ink`}
+              >
+                <Sparkle className="h-2.5 w-2.5 text-ed-accent" />
+                {pillar}
+              </li>
+            ))}
+          </ul>
+          <Link
+            to="/get-involved"
+            className="mt-8 inline-flex min-h-11 items-center gap-4 border-b border-ed-ink text-[13.5px] font-semibold text-ed-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ed-ink"
+          >
+            Find your way in <Arrow />
+          </Link>
+        </div>
       </div>
     </section>
   );
 }
 
-const galleryPlacements = [
-  "lg:left-[2%] lg:top-[3%] lg:h-[42%] lg:w-[32%] lg:-rotate-3",
-  "lg:left-[30%] lg:top-[15%] lg:z-20 lg:h-[54%] lg:w-[38%] lg:rotate-2",
-  "lg:right-[1%] lg:top-0 lg:h-[37%] lg:w-[35%] lg:rotate-[4deg]",
-  "lg:bottom-0 lg:left-[8%] lg:h-[38%] lg:w-[29%] lg:rotate-3",
-  "lg:bottom-0 lg:right-[6%] lg:h-[40%] lg:w-[35%] lg:-rotate-3",
-];
+/* Supporting prints beside the camera: alternating tilts like loose photos. */
+const printTilts = ["-rotate-[2deg]", "rotate-[1.5deg]", "rotate-[1deg]", "-rotate-[1.5deg]"];
 
-/* Below lg the five albums keep a collage feel with alternating tilts. */
-const galleryMobileTilt = [
-  "-rotate-2",
-  "rotate-2",
-  "rotate-1",
-  "-rotate-1",
-  "rotate-2",
-];
+type HomeAlbum = Awaited<ReturnType<typeof galleryRepository.getAlbums>>[number];
+
+function albumCover(album: HomeAlbum): string {
+  return album.cover_thumbnail_url || album.cover_image_url || "";
+}
+
+/**
+ * The newest album on the screen of a point-and-shoot camera, the framing
+ * VSA's "Froyo With VSA" post uses for its group photo. The body and buttons
+ * are decoration; the screen is the album link.
+ */
+function CameraAlbum({ album }: { album: HomeAlbum }) {
+  return (
+    <div className="relative rounded-[22px] bg-figma-camera p-3 pr-[3.25rem] shadow-[0_30px_70px_rgba(20,24,80,0.35),inset_0_-3px_0_rgba(40,53,77,0.08)] sm:rounded-[28px] sm:p-4 sm:pr-24 dark:bg-figma-camera-dim">
+      <span aria-hidden="true" className="absolute -top-2.5 right-[16%] h-3 w-14 rounded-t-md bg-figma-camera-rim sm:-top-3 sm:h-3.5 sm:w-20" />
+      <a
+        href={album.google_photos_url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`Open ${album.title} photo album`}
+        className="group relative block overflow-hidden rounded-md bg-figma-screen focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+      >
+        <OptimizedImage
+          src={albumCover(album)}
+          width={960}
+          height={640}
+          sizes="(min-width: 1024px) 50vw, 90vw"
+          alt={album.title}
+          className="aspect-[3/2] h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+        />
+        <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-black/70 to-transparent px-3 pb-2.5 pt-8 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-white sm:px-4 sm:pb-3">
+          <span className="line-clamp-1">{album.title}</span>
+          <span aria-hidden="true">↗</span>
+        </span>
+      </a>
+      <span aria-hidden="true" className="absolute right-3 top-1/2 flex -translate-y-1/2 flex-col items-center gap-2 sm:right-6 sm:gap-3">
+        <span className="h-3 w-3 rounded-full bg-figma-shutter ring-[3px] ring-figma-camera-rim sm:h-4 sm:w-4" />
+        <span className="h-8 w-8 rounded-full border border-figma-camera-key bg-figma-camera-rim shadow-inner sm:h-14 sm:w-14" />
+        <span className="flex gap-1.5 sm:gap-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-figma-camera-key sm:h-3.5 sm:w-3.5" />
+          <span className="h-2.5 w-2.5 rounded-full bg-figma-camera-key sm:h-3.5 sm:w-3.5" />
+        </span>
+      </span>
+    </div>
+  );
+}
 
 const GALLERY_ALBUM_COUNT = 5;
 const GALLERY_FETCH_LIMIT = 12;
@@ -508,28 +567,34 @@ export function EditorialGallery() {
     retry: 1,
   });
   // Cap after dropping cover-less albums so one missing cover never leaves a
-  // gap in the five-photo collage or an empty state.
+  // gap in the grid or an empty state.
   const visibleAlbums = albums
     .filter((album) => album.cover_thumbnail_url || album.cover_image_url)
-    .slice(0, GALLERY_ALBUM_COUNT);
+        .slice(0, GALLERY_ALBUM_COUNT);
 
   return (
     <section
       id="recent-photos"
       aria-labelledby="recent-photos-title"
-      className="home-editorial-gallery home-editorial-grain relative isolate overflow-hidden px-5 py-[5.5rem] text-white sm:px-[6vw] sm:py-[clamp(5rem,10vw,10rem)]"
+      className="home-gallery-field home-editorial-grain relative isolate overflow-hidden px-5 py-20 text-white sm:px-[6vw] sm:py-28"
     >
+      <Sparkle glow className="absolute left-[46%] top-12 h-10 w-10 text-white sm:h-14 sm:w-14" />
+      <Sparkle glow className="absolute bottom-16 right-[6%] hidden h-7 w-7 text-white lg:block" />
       <div className="relative z-10 mx-auto max-w-[1400px]">
         <SectionHeading
           id="recent-photos-title"
-          eyebrow="From the archive"
           title="Recent"
-          accent="Photos"
+          accent="photos"
           tone="inverse"
+          action={
+            <Link to="/gallery" className={editorialLinkClass("inverse")}>
+              Open the gallery <Arrow />
+            </Link>
+          }
         />
         {isLoading ? (
           <div
-            className="grid grid-cols-2 gap-5 py-10 sm:grid-cols-3"
+            className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3"
             role="status"
             aria-live="polite"
           >
@@ -545,47 +610,55 @@ export function EditorialGallery() {
               : "No photo albums posted yet."}
           </p>
         ) : (
-          <div className="relative mx-auto mt-10 grid max-w-[1300px] grid-cols-2 gap-x-4 gap-y-6 pb-4 sm:mt-14 sm:grid-cols-3 sm:gap-7 lg:mt-16 lg:block lg:h-[720px] lg:pb-0">
-            {visibleAlbums.map((album, index) => (
-              <a
-                key={album.id}
-                href={album.google_photos_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`Open ${album.title} photo album`}
-                className={`home-editorial-polaroid flex min-w-0 flex-col p-2 pb-3 transition-transform focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white motion-reduce:transform-none sm:p-2.5 lg:absolute lg:pb-4 lg:hover:z-30 lg:hover:-translate-y-2 ${galleryMobileTilt[index] ?? ""} ${galleryPlacements[index] ?? ""} ${index === 0 ? "col-span-2 sm:col-span-1" : ""}`}
-              >
-                <OptimizedImage
-                  src={album.cover_thumbnail_url || album.cover_image_url || ""}
-                  width={540}
-                  height={400}
-                  sizes="(min-width: 1024px) 420px, (min-width: 640px) 30vw, 45vw"
-                  alt={album.title}
-                  className="aspect-[4/3] h-auto w-full object-cover lg:aspect-auto lg:min-h-0 lg:flex-1"
-                />
-                <p className="mt-2.5 line-clamp-2 font-mono text-[9px] uppercase tracking-[0.08em] sm:text-[10px]">
-                  {album.title}
-                </p>
-              </a>
-            ))}
+          <div className="relative mt-12 grid gap-10 sm:mt-14 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-center lg:gap-[4vw]">
+            <div className="relative">
+              <CameraAlbum album={visibleAlbums[0]} />
+              <div
+                aria-hidden="true"
+                className="home-editorial-bubble absolute -bottom-10 -left-6 h-24 w-24 sm:h-32 sm:w-32"
+              />
+            </div>
+            {visibleAlbums.length > 1 && (
+              <ul className="grid grid-cols-2 gap-x-4 gap-y-6 sm:gap-x-6">
+                {visibleAlbums.slice(1).map((album, index) => (
+                  <li key={album.id} className={`min-w-0 ${printTilts[index] ?? ""}`}>
+                    <a
+                      href={album.google_photos_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Open ${album.title} photo album`}
+                      className="home-editorial-polaroid group block p-1.5 pb-2 transition-transform duration-300 ease-out hover:-translate-y-1 hover:rotate-0 focus-visible:rotate-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:p-2 sm:pb-2.5"
+                    >
+                      <OptimizedImage
+                        src={albumCover(album)}
+                        width={540}
+                        height={360}
+                        sizes="(min-width: 1024px) 20vw, 45vw"
+                        alt={album.title}
+                        className="aspect-[3/2] w-full bg-figma-mist object-cover"
+                      />
+                      <span className="mt-2 flex items-baseline justify-between gap-2 font-mono text-[9px] font-semibold uppercase tracking-[0.08em] sm:text-[10px]">
+                        <span className="line-clamp-1">{album.title}</span>
+                        <span aria-hidden="true">↗</span>
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
-        <Link
-          to="/gallery"
-          className="relative z-20 mt-10 flex min-h-12 items-center justify-end gap-4 border-t border-white/25 pt-5 text-[13px] font-semibold underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
-        >
-          Open the gallery <Arrow />
-        </Link>
       </div>
     </section>
   );
 }
 
 const programLinks = [
-  { label: "House System", href: "/house" },
-  { label: "ACE", href: "/ace" },
-  { label: "Intern Program", href: "/intern-program" },
-  { label: "Vietnamese Culture Night", href: "/vcn" },
+  { label: "House System", href: "/house", note: "A year-long community competition inside VSA." },
+  { label: "ACE", href: "/ace", note: "VSA’s Big/Little family program." },
+  { label: "Intern Program", href: "/intern-program", note: "A year-long leadership class on how VSA runs." },
+  { label: "Vietnamese Culture Night", href: "/vcn", note: "Our annual culture show, built by students." },
+  { label: "Wild N’ Culture", href: "/wild-n-culture", note: "An intercollegiate comedy competition." },
 ];
 
 export function EditorialGetInvolved() {
@@ -593,39 +666,47 @@ export function EditorialGetInvolved() {
     <section
       id="get-involved"
       aria-labelledby="get-involved-title"
-      className="home-editorial-involved grid gap-10 px-5 py-[5.5rem] sm:px-[6vw] sm:py-[clamp(5rem,10vw,10rem)] lg:grid-cols-2 lg:gap-[10vw]"
+      className="home-involved-field relative isolate overflow-hidden px-5 py-20 sm:px-[6vw] sm:py-28"
     >
-      <div>
-        <Eyebrow className="text-ed-muted">Get involved</Eyebrow>
-        <h2
-          id="get-involved-title"
-          className={`${editorialFont} mt-5 text-[clamp(3.6rem,8vw,9rem)] leading-[0.84] text-ed-ink`}
-        >
-          There’s more
-          <br />
-          to <em className="font-normal text-ed-accent">explore.</em>
-        </h2>
-      </div>
-      <nav
-        aria-label="VSA programs"
-        className="self-center border-t border-ed-line"
-      >
-        {programLinks.map(({ label, href }, index) => (
-          <Link
-            key={href}
-            to={href}
-            className="grid min-h-[76px] grid-cols-[3rem_1fr_auto] items-center border-b border-ed-line py-5 text-ed-ink transition-colors hover:text-ed-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ed-ink sm:py-7"
+      <div aria-hidden="true" className="home-editorial-bubble absolute -left-10 bottom-[-4rem] h-48 w-48 sm:h-72 sm:w-72" />
+      <div aria-hidden="true" className="home-editorial-bubble absolute right-[38%] top-10 hidden h-16 w-16 lg:block" />
+      <Sparkle glow className="absolute left-[34%] top-[18%] hidden h-9 w-9 text-white sm:block" />
+      <Sparkle glow className="absolute bottom-[14%] left-[8%] h-5 w-5 text-white" />
+      <div className="relative mx-auto grid max-w-[1400px] gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-[6vw]">
+        <div>
+          <h2
+            id="get-involved-title"
+            className={`${editorialFont} text-[clamp(3rem,6.5vw,6rem)] leading-[0.88] text-ed-ink`}
           >
-            <span className="font-mono text-[10px] tracking-[0.08em]">
-              {String(index + 1).padStart(2, "0")}
-            </span>
-            <span className={`${editorialFont} text-[1.5rem] sm:text-[2rem]`}>
-              {label}
-            </span>
-            <Arrow />
-          </Link>
-        ))}
-      </nav>
+            There’s more
+            <br />
+            to <em className="font-normal text-ed-accent">explore.</em>
+          </h2>
+          <p className="mt-6 max-w-[26rem] text-[15.5px] leading-[1.75] text-ed-muted">
+            Start at a general body meeting, then explore Houses, ACE, VCN,
+            and more.
+          </p>
+        </div>
+        <nav aria-label="VSA programs" className="self-end border-t border-ed-line">
+          {programLinks.map(({ label, href, note }) => (
+            <Link
+              key={href}
+              to={href}
+              className="group grid min-h-[76px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 border-b border-ed-line py-5 text-ed-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ed-ink sm:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_auto]"
+            >
+              <span className={`${editorialFont} text-[1.6rem] leading-tight transition-colors group-hover:text-ed-accent sm:text-[1.9rem]`}>
+                {label}
+              </span>
+              <span className="col-start-1 row-start-2 text-[13px] text-ed-muted sm:col-start-2 sm:row-start-1">
+                {note}
+              </span>
+              <span className="col-start-2 row-span-2 row-start-1 text-lg transition-transform group-hover:translate-x-1 motion-reduce:transition-none sm:col-start-3 sm:row-span-1">
+                <Arrow />
+              </span>
+            </Link>
+          ))}
+        </nav>
+      </div>
     </section>
   );
 }

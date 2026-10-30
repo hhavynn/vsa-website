@@ -270,7 +270,7 @@ export function HouseDetail() {
       <PageTitle title={`${label} House`} />
       <PublicBreadcrumbs context={{ currentYear, houseLabel: label }} />
       {isDegraded && <DegradedModeBanner sourceName="house" />}
-      <div className="vsa-page-hero">
+      <div className="vsa-page-hero vsa-page-hero--blush">
         <div className="vsa-container relative z-10">
           <Link to={backHref} className="font-mono text-[11px] uppercase tracking-wider text-brand-600 dark:text-brand-400">
             ← Back to House Program

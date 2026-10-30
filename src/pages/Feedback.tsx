@@ -19,7 +19,7 @@ export const FeedbackPage: React.FC = () => {
     <>
       <PageTitle title="Feedback" />
 
-      <div className="vsa-page-hero">
+      <div className="vsa-page-hero vsa-page-hero--sky">
         <div className="vsa-container relative z-10">
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <span className="scrapbook-sticker scrapbook-sticker-teal">Feedback System</span>

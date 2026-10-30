@@ -17,13 +17,18 @@ interface EditorialHeroProps {
    * Pass it only when there is something to show (or it is loading).
    */
   media?: ReactNode;
+  /**
+   * `stage` sets the hero on the blue→violet performance field (VCN, Wild N'
+   * Culture) in the public shell; `default` keeps the light wash.
+   */
+  tone?: 'default' | 'stage';
 }
 
 /**
  * Full-width editorial page hero shared by the program pages (the ACE
  * visual system). Styles live in src/index.css under `.editorial-hero`.
  */
-export function EditorialHero({ eyebrow, title, meta, watermark, actions, media }: EditorialHeroProps) {
+export function EditorialHero({ eyebrow, title, meta, watermark, actions, media, tone = 'default' }: EditorialHeroProps) {
   const text = (
     <>
       <div className="editorial-hero-eyebrow">{eyebrow}</div>
@@ -34,7 +39,7 @@ export function EditorialHero({ eyebrow, title, meta, watermark, actions, media 
   );
 
   return (
-    <section className="editorial-hero">
+    <section className={cn('editorial-hero', tone === 'stage' && 'editorial-hero--stage')}>
       <div className="editorial-hero-grain" aria-hidden="true" />
       <div className="editorial-hero-inner">
         {media ? (

@@ -45,6 +45,7 @@ export function VCN() {
 
       <div className="program-app">
         <EditorialHero
+          tone="stage"
           eyebrow="Program Booklet"
           title={<>Vietnamese Culture <EditorialHeroScript>Night</EditorialHeroScript></>}
           meta="VSA at UCSD’s annual culture show, built by students through acting, dance, and behind-the-scenes production."

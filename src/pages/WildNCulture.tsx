@@ -86,6 +86,7 @@ export function WildNCulture() {
 
       <div className="program-app">
         <EditorialHero
+          tone="stage"
           eyebrow="Event Flyer"
           title={<>Wild N' <EditorialHeroScript>Culture</EditorialHeroScript></>}
           meta="Annual intercollegiate comedy competition · VSA at UCSD"

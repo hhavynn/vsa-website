@@ -103,6 +103,7 @@ export function VCNCurrent() {
         <PublicBreadcrumbs />
         <div className="program-app min-h-[60vh]">
           <EditorialHero
+            tone="stage"
             eyebrow="Current Production"
             title={<>VCN <EditorialHeroScript>{currentVcn.year || 'Coming Soon'}</EditorialHeroScript></>}
             meta={
@@ -138,6 +139,7 @@ export function VCNCurrent() {
 
       <div className="program-app">
         <EditorialHero
+          tone="stage"
           eyebrow="Current Production"
           title={currentVcn.title || `Vietnamese Culture Night ${currentVcn.year}`}
           meta={

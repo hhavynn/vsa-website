@@ -184,6 +184,7 @@ export function VCNArchive() {
 
       <div className="program-app">
         <EditorialHero
+          tone="stage"
           eyebrow="Poster Archive"
           title={<>VCN <EditorialHeroScript>Archive</EditorialHeroScript></>}
           meta={<>Past productions of <VCNNativeName />, preserved through official videos, albums, and production notes.</>}

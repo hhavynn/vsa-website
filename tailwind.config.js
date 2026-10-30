@@ -62,6 +62,15 @@ module.exports = {
           pink:   '#f0ccd9',
           // Photo mat inside a Polaroid while its image loads or after it fails.
           mist:   '#e7e9f6',
+          // The point-and-shoot camera that frames the homepage's newest album.
+          camera: {
+            DEFAULT: '#f4f3f8',
+            dim:     '#dcdcea',
+            rim:     '#e5e4ec',
+            key:     '#d1cfdb',
+          },
+          screen:  '#1d2235',
+          shutter: '#e2475a',
         },
       },
 

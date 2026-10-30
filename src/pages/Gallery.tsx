@@ -183,7 +183,7 @@ export default function Gallery() {
       <PageTitle title="Gallery" />
       {/* Degraded mode banner already handled above with full page fallback */}
 
-      <div className="vsa-page-hero">
+      <div className="vsa-page-hero vsa-page-hero--lavender">
         <div className="vsa-container relative z-10">
           <span className="scrapbook-sticker scrapbook-sticker-gold mb-4">Memory Wall</span>
           <h1 className="vsa-page-title">Gallery</h1>

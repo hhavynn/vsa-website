@@ -14,7 +14,6 @@ import {
   EditorialGallery,
   EditorialGetInvolved,
   EditorialHero,
-  EditorialPillars,
 } from "../components/features/home/EditorialSections";
 import { usePresidentsContent } from "../hooks/usePresidentsContent";
 import { useSiteSettings } from "../context/SiteSettingsContext";
@@ -67,7 +66,6 @@ export function Home() {
         logoSrc={logoSrc}
         logoAlt={siteSettings.logoAlt || "Official VSA at UC San Diego logo"}
       />
-      <EditorialPillars />
 
       <ThisWeekInVSA />
       <ClosingSoonApplications />

@@ -5,6 +5,10 @@
    Like src/styles/ace.css, this lives outside index.css because it is a
    route-scoped theme, not a global pattern. */
 
+/* ─── Homepage hero ─────────────────────────────────────────────────────
+   The Figma composition as first shipped in #761: blue→violet field with
+   community photography, two Polaroids, the glass logo tile, iridescent
+   bubbles and glowing stars. Kept as-is by the owner's direction. */
 .home-editorial-hero {
   background:
     /* Scrim behind the white text column: the pale blue highlight on the left
@@ -34,7 +38,8 @@
     linear-gradient(145deg, #326dbb 0%, #718bd4 47%, #8b72c4 100%);
 }
 
-.home-editorial-grain::after {
+.home-editorial-grain::after,
+.vsa-grain::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -78,52 +83,86 @@
   transform: rotate(-28deg);
 }
 
+/* ─── Homepage bands, after VSA's own posts ───────────────────────────
+   About: a lavender wash with a pink halftone corner (Yogurtworld).
+   Recent photos: the Hu Tieu Huzz field — saturated blue→violet with a pink
+   bloom, grain and glowing four-point stars. Get Involved: the Senior Send
+   Off sky — luminous blue fading to lavender with soft cloud light and
+   bubbles. Each band uses its effect once; dark mode keeps the same hues at
+   night depth. */
+.home-about-field {
+  background: var(--ed-lavender-wash);
+  --vsa-halftone-color: rgba(214, 140, 190, 0.38);
+}
+
+.home-gallery-field {
+  /* Blooms sit low, behind the photos, so the heading and link stay ≥4.5:1. */
+  background:
+    radial-gradient(55% 50% at 94% 100%, rgba(244, 176, 222, 0.5), transparent 70%),
+    radial-gradient(50% 50% at 6% 100%, rgba(120, 190, 255, 0.45), transparent 70%),
+    linear-gradient(150deg, #2c4fbf 0%, #4f5ccb 50%, #6c5fc4 100%);
+}
+
+html.dark .home-gallery-field {
+  background:
+    radial-gradient(55% 50% at 94% 100%, rgba(190, 110, 180, 0.3), transparent 70%),
+    radial-gradient(50% 50% at 6% 100%, rgba(60, 120, 220, 0.35), transparent 70%),
+    linear-gradient(150deg, #18286e 0%, #2d2d78 48%, #452f7c 100%);
+}
+
+.home-involved-field {
+  background:
+    radial-gradient(40% 28% at 78% 18%, rgba(255, 255, 255, 0.85), transparent 70%),
+    radial-gradient(46% 30% at 14% 86%, rgba(255, 255, 255, 0.75), transparent 72%),
+    linear-gradient(180deg, #bfdcf7 0%, #d9e8fb 48%, #ece4f8 100%);
+}
+
+html.dark .home-involved-field {
+  background:
+    radial-gradient(40% 28% at 78% 18%, rgba(150, 170, 255, 0.16), transparent 70%),
+    radial-gradient(46% 30% at 14% 86%, rgba(200, 160, 240, 0.12), transparent 72%),
+    linear-gradient(180deg, #132a55 0%, #1a2652 48%, #26204d 100%);
+}
+
+/* The presidents' letter sits on a soft blush wash, like stationery. */
+.vsa-editorial-shell .vsa-message-section {
+  background: linear-gradient(180deg, #f6e6ef 0%, var(--ed-paper) 85%);
+}
+
+html.dark .vsa-editorial-shell .vsa-message-section {
+  background: linear-gradient(180deg, #2a1e3e 0%, var(--ed-paper) 85%);
+}
+
+/* Halftone: a corner of print dots, like VSA's poster overlays. The element
+   needs position + isolation; --vsa-halftone-color tints it. */
+.vsa-halftone::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 auto auto;
+  width: min(46vw, 560px);
+  aspect-ratio: 1;
+  background-image: radial-gradient(var(--vsa-halftone-color, rgba(113, 139, 212, 0.32)) 1.3px, transparent 1.9px);
+  background-size: 10px 10px;
+  -webkit-mask-image: radial-gradient(circle at 100% 0%, #000 0%, transparent 68%);
+  mask-image: radial-gradient(circle at 100% 0%, #000 0%, transparent 68%);
+  pointer-events: none;
+}
+
+.vsa-halftone--left::before {
+  inset: auto auto 0 0;
+  -webkit-mask-image: radial-gradient(circle at 0% 100%, #000 0%, transparent 68%);
+  mask-image: radial-gradient(circle at 0% 100%, #000 0%, transparent 68%);
+}
+
+html.dark .vsa-halftone::before {
+  --vsa-halftone-color: rgba(200, 184, 232, 0.16);
+}
+
 .home-editorial-polaroid {
   background: #faf9f5;
   color: #28354d;
   box-shadow: 0 18px 55px rgba(25, 34, 75, 0.27);
-}
-
-.home-editorial-about {
-  background: linear-gradient(125deg, #b3c49b, #c9d5b9 52%, #eed3df);
-  color: #28354d;
-}
-
-.home-editorial-orb {
-  background: radial-gradient(
-    circle at 35% 25%,
-    #fff,
-    rgba(200, 184, 232, 0.85) 40%,
-    rgba(168, 217, 240, 0.3) 70%
-  );
-  box-shadow:
-    inset -20px -20px 40px rgba(108, 98, 141, 0.22),
-    20px 25px 50px rgba(40, 53, 77, 0.14);
-}
-
-.home-editorial-gallery {
-  background: linear-gradient(145deg, #244e9d, #566cc3 47%, #936fbc);
-}
-
-.home-editorial-involved {
-  background: linear-gradient(145deg, var(--ed-paper), var(--ed-lavender-wash));
-  color: var(--ed-ink);
-}
-
-/* Figma .ticker star colour */
-.home-editorial-star {
-  color: #9f8ebd;
-}
-
-/* Figma event flyer: desaturated at rest, full colour + slight tilt on hover. */
-.home-editorial-flyer {
-  filter: saturate(0.72);
-  transition: filter 0.4s ease, transform 0.4s ease;
-}
-
-.home-editorial-event:hover .home-editorial-flyer {
-  filter: none;
-  transform: rotate(-1deg);
 }
 
 /* Figma footer: periwinkle in light mode, deep navy in dark. */
@@ -139,15 +178,6 @@ html.dark .vsa-editorial-shell .editorial-footer {
   --color-text2: #d5dcf0;
 }
 
-.home-editorial-event-dots {
-  background-image: radial-gradient(
-    rgba(40, 53, 77, 0.18) 1px,
-    transparent 1.5px
-  );
-  background-size: 9px 9px;
-  mask-image: radial-gradient(circle, #000 10%, transparent 70%);
-}
-
 /* Shared public visual language. The exact Figma homepage colors carry into
    existing public routes through tokens, without touching admin workflows. */
 .vsa-editorial-shell {
@@ -161,6 +191,10 @@ html.dark .vsa-editorial-shell .editorial-footer {
   --ed-on-ink: #ffffff;
   --ed-footer: #becbe9;
   --ed-lavender-wash: #e7def3;
+  /* Pale sky field behind the light program heroes. */
+  --ed-sky-wash: #e2eefb;
+  /* The palette in one line: a signature edge under page heroes. */
+  --ed-ribbon: linear-gradient(90deg, #a8d9f0, #718bd4 34%, #c8b8e8 68%, #f0ccd9);
   --vsa-serif-font: "Instrument Serif";
   --color-bg: #faf9f5;
   --color-surface: #ffffff;
@@ -234,7 +268,8 @@ html.dark .vsa-editorial-shell {
   --ed-wordmark: #c9b6ec;
   --ed-on-ink: #16213f;
   --ed-footer: #18244a;
-  --ed-lavender-wash: #1b2546;
+  --ed-lavender-wash: #251e48;
+  --ed-sky-wash: #10294a;
   --color-bg: #101a31;
   --color-surface: #1b2843;
   --color-surface2: #243354;
@@ -273,32 +308,101 @@ html.dark .vsa-editorial-shell {
 }
 
 /* ─── Shared page hero ──────────────────────────────────────────────────
-   Gallery, Events, Cabinet, Get Involved, Calendar, Leaderboard, Points and
-   House pages share .vsa-page-hero. Figma has no frame for them, so they
-   take the homepage's sky→periwinkle wash, a single glass bubble, a hairline
-   base and the display title scale used by the homepage section headings. */
+   Public pages share .vsa-page-hero; each picks a tone by purpose, after
+   VSA's own posts, and the ribbon underneath is the common signature:
+   - sky (Leaderboard, Points, Calendar, Feedback): a calm sky gradient and
+     nothing else, so the data reads first.
+   - default (Events): periwinkle into pink with a flyer-style halftone.
+   - lavender (Gallery, Get Involved): lavender into pink with one bubble.
+   - blush (Cabinet, House pages): the Cabinet-reveal treatment — two
+     glowing four-point stars over a blue→pink sweep.
+   Inner controls keep the page's light/dark tokens on every tone. */
 .vsa-editorial-shell .vsa-page-hero {
-  padding-block: clamp(56px, 8vw, 112px) clamp(40px, 5vw, 72px);
+  padding-block: clamp(48px, 6.5vw, 96px) clamp(36px, 4.5vw, 64px);
   isolation: isolate;
-  border-bottom: 1px solid var(--ed-line);
-  background:
-    radial-gradient(ellipse at 13% 22%, rgba(168, 217, 240, 0.95), transparent 42%),
-    radial-gradient(ellipse at 86% 6%, rgba(200, 184, 232, 0.86), transparent 43%),
-    linear-gradient(115deg, #edf5fc, #dfe4f9 54%, #efdded);
+  border-bottom: 0;
+  background: var(--vsa-hero-bg);
+  --vsa-hero-bg: linear-gradient(115deg, #dfe7fb 0%, #e7e1f8 55%, #f4e3ef 100%);
 }
 
-.vsa-editorial-shell .vsa-page-hero::before {
+html.dark .vsa-editorial-shell .vsa-page-hero {
+  --vsa-hero-bg: linear-gradient(115deg, #1f3175 0%, #2c286c 55%, #3b2558 100%);
+}
+
+.vsa-editorial-shell .vsa-page-hero::after {
   content: "";
   position: absolute;
-  top: -110px;
-  right: -90px;
-  width: min(42vw, 410px);
-  aspect-ratio: 1;
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  border-radius: 50%;
-  background: radial-gradient(circle at 22% 19%, rgba(255, 255, 255, 0.62), transparent 48%);
-  box-shadow: inset 15px 12px 34px rgba(255, 255, 255, 0.28);
+  inset: auto 0 0;
+  height: 5px;
+  background: var(--ed-ribbon);
   pointer-events: none;
+}
+
+.vsa-editorial-shell .vsa-page-hero--sky {
+  --vsa-hero-bg: linear-gradient(180deg, #d9eafa 0%, #e6ebfb 100%);
+}
+
+html.dark .vsa-editorial-shell .vsa-page-hero--sky {
+  --vsa-hero-bg: linear-gradient(180deg, #16336a 0%, #1d2c66 100%);
+}
+
+.vsa-editorial-shell .vsa-page-hero--lavender {
+  --vsa-hero-bg: linear-gradient(120deg, #e4ddf8 0%, #eee1f5 55%, #f7e4ee 100%);
+}
+
+html.dark .vsa-editorial-shell .vsa-page-hero--lavender {
+  --vsa-hero-bg: linear-gradient(120deg, #2d2868 0%, #3a2862 55%, #48285a 100%);
+}
+
+.vsa-editorial-shell .vsa-page-hero--lavender::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: -120px;
+  right: -80px;
+  width: min(40vw, 400px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 23%, rgba(255, 255, 255, 0.85) 0 1.5%, transparent 8%),
+    radial-gradient(circle at 65% 72%, rgba(244, 188, 238, 0.28), transparent 48%);
+  box-shadow: inset 12px 10px 30px rgba(255, 255, 255, 0.35), inset -12px -10px 28px rgba(150, 200, 255, 0.2);
+  pointer-events: none;
+}
+
+html.dark .vsa-editorial-shell .vsa-page-hero--lavender::before {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: radial-gradient(circle at 30% 23%, rgba(255, 255, 255, 0.3) 0 1.5%, transparent 8%);
+  box-shadow: inset 12px 10px 30px rgba(255, 255, 255, 0.06);
+}
+
+.vsa-editorial-shell .vsa-page-hero--blush {
+  --vsa-hero-bg: linear-gradient(125deg, #dde4fb 0%, #e9dff8 45%, #f6e1ec 100%);
+}
+
+html.dark .vsa-editorial-shell .vsa-page-hero--blush {
+  --vsa-hero-bg: linear-gradient(125deg, #233a86 0%, #3a2c7a 45%, #4c2a66 100%);
+}
+
+.vsa-editorial-shell .vsa-page-hero--blush::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='white' d='M50 0C52 34 66 48 100 50 66 52 52 66 50 100 48 66 34 52 0 50 34 48 48 34 50 0Z'/%3E%3C/svg%3E") no-repeat right 9% top 22% / clamp(34px, 4vw, 54px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='white' d='M50 0C52 34 66 48 100 50 66 52 52 66 50 100 48 66 34 52 0 50 34 48 48 34 50 0Z'/%3E%3C/svg%3E") no-repeat right 22% bottom 18% / clamp(18px, 2vw, 26px);
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.9));
+  pointer-events: none;
+}
+
+/* Leaderboard and Find My Points wrap their hero copy in a paper card; on the
+   wash it is a card inside a band, so the hero text sits on the band itself. */
+.vsa-editorial-shell .vsa-page-hero > .vsa-container > .scrapbook-paper {
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .vsa-editorial-shell .vsa-page-hero > * {
@@ -315,13 +419,15 @@ html.dark .vsa-editorial-shell {
 }
 
 .vsa-editorial-shell .vsa-page-title {
-  font-size: clamp(56px, 9vw, 116px);
-  line-height: 0.86;
+  font-size: clamp(52px, 7.5vw, 100px);
+  line-height: 0.88;
+  text-wrap: balance;
 }
 
 .vsa-editorial-shell .vsa-section-title {
-  font-size: clamp(40px, 5.6vw, 76px);
-  line-height: 0.9;
+  font-size: clamp(36px, 4.6vw, 60px);
+  line-height: 0.92;
+  text-wrap: balance;
 }
 
 .vsa-editorial-shell :is(.vsa-page-title, .vsa-section-title) :is(em, span) {
@@ -500,17 +606,26 @@ html.dark .vsa-editorial-shell .gallery-memory-card {
   box-shadow: 0 18px 46px rgba(0, 0, 0, 0.32);
 }
 
-/* Program landing pages reuse EditorialHero. ACE retains its bespoke hero. */
+/* Program landing pages reuse EditorialHero (ACE keeps its bespoke hero).
+   The default program hero takes a flat sky wash and the ribbon; the stage
+   tone (VCN, Wild N' Culture) is a blue→violet field like the homepage
+   hero, with every text, button and border token re-pointed to read on it. */
 .vsa-editorial-shell .program-app .editorial-hero {
-  --eh-grad-a: #f0ccd9;
-  --eh-grad-b: #a8d9f0;
-  --eh-grad-c: #edf0fd;
-  --eh-grid: rgba(40, 53, 77, 0.02);
-  --eh-grid-2: rgba(40, 53, 77, 0.018);
-  --eh-watermark: rgba(80, 95, 174, 0.09);
+  background: linear-gradient(180deg, var(--ed-sky-wash) 0%, var(--ed-lavender-wash) 100%);
+  border-bottom: 0;
 }
 
 .vsa-editorial-shell .program-app .editorial-hero::after {
+  inset: auto 0 0;
+  top: auto;
+  height: 5px;
+  border-radius: 0;
+  background: var(--ed-ribbon);
+  transform: none;
+  opacity: 1;
+}
+
+.vsa-editorial-shell .program-app .editorial-hero-grain {
   display: none;
 }
 
@@ -520,23 +635,74 @@ html.dark .vsa-editorial-shell .gallery-memory-card {
   font-weight: 400;
 }
 
-html.dark .vsa-editorial-shell .vsa-page-hero {
+.vsa-editorial-shell .program-app .editorial-hero--stage {
+  --eh-text: #ffffff;
+  --eh-text-2: #e9edfd;
+  --eh-accent: #f0ccd9;
+  --eh-accent-strong: #f0ccd9;
+  --eh-watermark: rgba(255, 255, 255, 0.07);
+  --ed-ink: #ffffff;
+  --ed-on-ink: #28354d;
+  --ed-line: rgba(255, 255, 255, 0.45);
+  --ed-muted: #e9edfd;
+  /* Page copy inside the hero (dates, the Instagram link) reads these. */
+  --color-text2: #e9edfd;
+  --color-text3: #e9edfd;
+  --vsa-brand-600: 255 224 236;
+  --vsa-brand-400: 255 224 236;
+  color: #ffffff;
   background:
-    radial-gradient(ellipse at 16% 18%, rgba(62, 92, 161, 0.66), transparent 52%),
-    radial-gradient(ellipse at 87% 4%, rgba(114, 73, 150, 0.52), transparent 50%),
-    linear-gradient(115deg, #142645, #27325c 55%, #372747);
+    radial-gradient(70% 70% at 100% 0%, rgba(240, 204, 217, 0.16), transparent 60%),
+    linear-gradient(160deg, #3557b0 0%, #4c58b4 55%, #5a4fae 100%);
 }
 
-html.dark .vsa-editorial-shell .vsa-page-hero::before {
-  border-color: rgba(255, 255, 255, 0.22);
-  background: radial-gradient(circle at 22% 19%, rgba(255, 255, 255, 0.16), transparent 48%);
+/* The VCN Archive skeleton stands in for a stage hero while it loads. */
+.vsa-editorial-shell .vsa-page-hero--stage {
+  --vsa-hero-bg: linear-gradient(160deg, #3557b0 0%, #4c58b4 55%, #5a4fae 100%);
 }
 
-html.dark .vsa-editorial-shell .program-app .editorial-hero {
-  --eh-grad-a: rgba(183, 113, 168, 0.24);
-  --eh-grad-b: rgba(90, 146, 210, 0.25);
-  --eh-grad-c: #142442;
-  --eh-watermark: rgba(190, 183, 244, 0.09);
+html.dark .vsa-editorial-shell .vsa-page-hero--stage {
+  --vsa-hero-bg: linear-gradient(160deg, #1d2c66 0%, #2c2f72 55%, #3d2d74 100%);
+}
+
+html.dark .vsa-editorial-shell .program-app .editorial-hero--stage {
+  background:
+    radial-gradient(70% 70% at 100% 0%, rgba(240, 204, 217, 0.08), transparent 60%),
+    linear-gradient(160deg, #1d2c66 0%, #2c2f72 55%, #3d2d74 100%);
+}
+
+/* Stage heroes get the Hu Tieu Huzz finish: film grain and glowing stars. */
+.vsa-editorial-shell .program-app .editorial-hero--stage .editorial-hero-grain {
+  display: block;
+  opacity: 0.2;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.65'/%3E%3C/svg%3E");
+  background-size: auto;
+}
+
+.vsa-editorial-shell .program-app .editorial-hero--stage::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='white' d='M50 0C52 34 66 48 100 50 66 52 52 66 50 100 48 66 34 52 0 50 34 48 48 34 50 0Z'/%3E%3C/svg%3E") no-repeat left 46% top 16% / clamp(30px, 3.4vw, 48px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='white' d='M50 0C52 34 66 48 100 50 66 52 52 66 50 100 48 66 34 52 0 50 34 48 48 34 50 0Z'/%3E%3C/svg%3E") no-repeat left 6% bottom 14% / clamp(16px, 1.6vw, 22px);
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.9));
+  pointer-events: none;
+}
+
+/* On phones the title fills the width: keep one star, low on the right. */
+@media (max-width: 759px) {
+  .vsa-editorial-shell .program-app .editorial-hero--stage::before {
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='white' d='M50 0C52 34 66 48 100 50 66 52 52 66 50 100 48 66 34 52 0 50 34 48 48 34 50 0Z'/%3E%3C/svg%3E") no-repeat right 7% bottom 10% / 22px;
+  }
+}
+
+.vsa-editorial-shell .editorial-hero--stage .scrapbook-sticker {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
 }
 
 /* ─── Quick-dock clearance ─────────────────────────────────────────────
@@ -566,21 +732,5 @@ html.dark .vsa-editorial-shell .program-app .editorial-hero {
 
   .vsa-editorial-shell nav[aria-label="Breadcrumb"] ~ .program-app .editorial-hero-inner {
     padding-top: 32px;
-  }
-}
-
-@media (max-width: 640px) {
-  .vsa-editorial-shell .vsa-page-hero::before {
-    top: -42px;
-    right: -80px;
-    width: 220px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .home-editorial-hero *,
-  .home-editorial-gallery * {
-    animation: none !important;
-    transition: none !important;
   }
 }
