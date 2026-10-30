@@ -158,7 +158,7 @@ export default function AdminMemberRoles() {
         <section aria-labelledby="role-paste" className="rounded border border-border-strong bg-surface p-4 sm:p-5">
           <h2 id="role-paste" className="mb-3 font-serif text-xl text-text-primary">2. Paste and parse names</h2>
           <label htmlFor="role-names" className="block text-xs font-semibold text-text-secondary">Member names, up to {MAX_ROLE_REVIEW_ROWS} rows</label>
-          <textarea id="role-names" rows={4} value={raw} onChange={(e) => setRaw(e.target.value)} placeholder="Ada Example, Bea Sample, Cai Example" className={'mt-1 ' + fieldCls} />
+          <textarea id="role-names" rows={4} value={raw} onChange={(e) => { setRaw(e.target.value); resetReview(); }} placeholder="Ada Example, Bea Sample, Cai Example" className={'mt-1 ' + fieldCls} />
           <label className="mt-3 inline-flex items-center gap-2 text-sm text-text-secondary">
             <input type="checkbox" checked={format === 'last-first'} onChange={(e) => { setFormat(e.target.checked ? 'last-first' : 'first-last'); resetReview(); }} />
             Each line uses Last, First (one name per line)
