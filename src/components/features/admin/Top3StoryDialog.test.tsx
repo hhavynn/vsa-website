@@ -51,7 +51,7 @@ describe('Top3StoryDialog', () => {
     render(<Top3StoryDialog onClose={() => undefined} />);
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Download Story Image' })).toBeEnabled());
-    expect(screen.getByText(/Current public leaderboard \(2026–27\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Members leaderboard \(2026–27\)/)).toBeInTheDocument();
     expect(screen.getByText('An Nguyen')).toBeInTheDocument();
     expect(screen.getByText('1,240 pts')).toBeInTheDocument();
     expect(screen.getByText('Chi Le')).toBeInTheDocument();
