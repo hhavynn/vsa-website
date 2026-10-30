@@ -8,6 +8,8 @@ import { useAcademicTerms } from './useAcademicTerms';
 import { useIndividualLeaderboard } from './useIndividualLeaderboard';
 import { useLeaderboardYears } from './useLeaderboardYears';
 import { useMemberAvatars } from './useMemberAvatars';
+import { usePublishedBoardRoster } from './usePublishedBoardRoster';
+import type { LeaderboardCohort } from '../lib/memberCohorts';
 
 export interface Top3StoryData {
   academicYearStart: number | null;
@@ -16,6 +18,8 @@ export interface Top3StoryData {
   error: unknown;
   excludedBoundaryTie?: number;
   excludedRank?: number | null;
+  /** The published Cabinet cohort must be verified before exporting a ranking. */
+  cohortUnavailable?: boolean;
 }
 
 /**
@@ -23,7 +27,7 @@ export interface Top3StoryData {
  * comparator. Only the selected Top N receives single-member House badge
  * reads; there is no private House standings or new scoring path.
  */
-export function useTop3StoryData(limit: StoryLimit = 3): Top3StoryData {
+export function useTop3StoryData(limit: StoryLimit = 3, cohort: LeaderboardCohort = 'members'): Top3StoryData {
   const { terms, loading: termsLoading } = useAcademicTerms();
   const { yearsWithData, loading: yearsLoading } = useLeaderboardYears();
   const yearsReady = !termsLoading && !yearsLoading;
@@ -35,8 +39,14 @@ export function useTop3StoryData(limit: StoryLimit = 3): Top3StoryData {
 
   const { data: members, isLoading: membersLoading, error } = useIndividualLeaderboard(academicYearStart);
   const avatars = useMemberAvatars();
-
-  const selection = useMemo(() => selectTopNMembers(members ?? [], limit), [members, limit]);
+  const roster = usePublishedBoardRoster(academicYearStart);
+  const cohortAvailable = !roster.isLoading && !roster.isError && !!roster.data;
+  const filtered = useMemo(() => {
+    if (!cohortAvailable || !roster.data) return [];
+    return (members ?? []).filter((member) =>
+      roster.data!.has(member.id) === (cohort === 'board'));
+  }, [members, roster.data, cohortAvailable, cohort]);
+  const selection = useMemo(() => selectTopNMembers(filtered, limit), [filtered, limit]);
   const topIds = useMemo(() => selection.selected.map((member) => member.id), [selection]);
 
   const { data: houses, isLoading: housesLoading } = useQuery(
@@ -61,7 +71,8 @@ export function useTop3StoryData(limit: StoryLimit = 3): Top3StoryData {
     entries,
     excludedBoundaryTie: selection.excludedBoundaryTie,
     excludedRank: selection.excludedRank,
-    loading: !yearsReady || (academicYearStart !== null && membersLoading) || (topIds.length > 0 && housesLoading),
+    loading: !yearsReady || (academicYearStart !== null && (membersLoading || roster.isLoading)) || (topIds.length > 0 && housesLoading),
+    cohortUnavailable: academicYearStart !== null && !roster.isLoading && !cohortAvailable,
     error,
   };
 }
