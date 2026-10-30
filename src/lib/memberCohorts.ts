@@ -17,6 +17,6 @@ export function rankPublishedCohort(
   return assignTiedRanks(
     group,
     metric === 'points' ? comparePointsThenEvents : (a, b) => b.events_attended - a.events_attended,
-    compareMemberNames,
+    (a, b) => compareMemberNames(a, b) || a.id.localeCompare(b.id),
   );
 }
