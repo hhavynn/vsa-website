@@ -158,7 +158,7 @@ export function PastEventMemoryCard({
             href={linkedAlbum}
             target="_blank"
             rel="noopener noreferrer"
-            className="absolute bottom-2 right-2 inline-flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-sm transition-opacity hover:bg-black/80"
+            className="absolute bottom-2 right-2 inline-flex items-center gap-1.5 rounded-full bg-scrim px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-sm transition-opacity hover:bg-black/80"
             aria-label={`View photos from ${event.name}`}
             onClick={(e) => e.stopPropagation()}
           >
@@ -238,7 +238,8 @@ export function FeaturedEventCard({ event, external }: { event: Event; external?
     <motion.div
       initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="scrapbook-paper mb-9 flex flex-col-reverse overflow-hidden lg:grid lg:grid-cols-[minmax(0,0.92fr)_minmax(360px,1.08fr)]"
+      data-testid="featured-event-card"
+      className="scrapbook-paper mb-9 flex flex-col overflow-hidden lg:grid lg:grid-cols-[minmax(0,0.92fr)_minmax(360px,1.08fr)]"
       style={{ borderColor: 'var(--color-border)' }}
     >
       <span className="scrapbook-pin" aria-hidden />
@@ -282,7 +283,7 @@ export function FeaturedEventCard({ event, external }: { event: Event; external?
         </div>
       </div>
 
-      <div className="relative flex min-h-[320px] flex-col justify-center bg-[var(--color-surface2)] p-4 sm:min-h-[380px] sm:p-6 lg:min-h-[460px] lg:p-7">
+      <div data-testid="featured-event-flyer" className="relative flex min-h-[320px] flex-col justify-center bg-[var(--color-surface2)] p-4 sm:min-h-[380px] sm:p-6 lg:min-h-[460px] lg:p-7">
         <div className="scrapbook-photo relative mx-auto flex h-full min-h-[280px] w-full max-w-none rotate-[1deg] items-center justify-center overflow-hidden bg-[var(--color-surface)] transition-transform hover:rotate-0 sm:min-h-[340px] lg:min-h-[400px]">
           <EventImage
             event={event}
@@ -318,11 +319,12 @@ export function UpcomingEventRow({ event, external }: { event: Event; external?:
   return (
     <motion.div
       whileHover={shouldReduceMotion ? undefined : { y: -2 }}
+      data-testid="upcoming-event-row"
       className="scrapbook-paper grid gap-4 p-4 sm:grid-cols-[104px_minmax(0,1fr)] lg:grid-cols-[88px_240px_minmax(0,1fr)_auto]"
       style={{ borderColor: 'var(--color-border)' }}
     >
       <span className="scrapbook-pin" aria-hidden />
-      <div className="relative order-1 overflow-hidden rounded bg-[var(--color-surface2)] p-2 sm:order-2">
+      <div data-testid="upcoming-event-flyer" className="relative order-4 overflow-hidden rounded bg-[var(--color-surface2)] p-2 sm:order-2">
         <EventImage
           event={event}
           className="aspect-[4/3] max-h-[260px] w-full object-cover sm:max-h-none"
@@ -333,7 +335,7 @@ export function UpcomingEventRow({ event, external }: { event: Event; external?:
         />
       </div>
 
-      <div className="order-2 border-b pb-4 text-center sm:order-1 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-4" style={{ borderColor: 'var(--color-border)' }}>
+      <div data-testid="upcoming-event-date" className="order-1 border-b pb-4 text-center sm:order-1 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-4" style={{ borderColor: 'var(--color-border)' }}>
         <div className="font-mono text-[10px] uppercase tracking-[.08em]" style={{ color: 'var(--color-text3)' }}>
           {format(eventDay(event), 'MMM')}
         </div>
@@ -345,7 +347,7 @@ export function UpcomingEventRow({ event, external }: { event: Event; external?:
         </div>
       </div>
 
-      <div className="order-3 min-w-0 sm:col-span-2 sm:order-3 lg:col-auto lg:py-1">
+      <div data-testid="upcoming-event-info" className="order-2 min-w-0 sm:col-span-2 sm:order-3 lg:col-auto lg:py-1">
         <div className="mb-3 flex flex-wrap items-center gap-3">
           <Badge
             label={EVENT_TYPE_LABELS[event.event_type] ?? event.event_type}
@@ -380,7 +382,7 @@ export function UpcomingEventRow({ event, external }: { event: Event; external?:
         )}
       </div>
 
-      <div className="order-4 flex flex-col items-start gap-4 pt-1 sm:col-span-2 sm:order-4 lg:col-auto lg:items-end lg:justify-start">
+      <div data-testid="upcoming-event-actions" className="order-3 flex flex-col items-start gap-4 pt-1 sm:col-span-2 sm:order-4 lg:col-auto lg:items-end lg:justify-start">
         <AddToCalendarButton event={event} align="right" />
         <div className="w-full lg:w-auto">
           <EventInterestButtons eventId={event.id} initialCounts={event.interest_counts || null} compact />

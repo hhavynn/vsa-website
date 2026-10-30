@@ -14,6 +14,7 @@ import {
   adminNavItemFor,
 } from '../../../lib/adminNavigation';
 import { cn } from '../../../lib/utils';
+import { Sparkle } from '../../ui/Sparkle';
 import { QuickSearchButton } from './AdminQuickSearch';
 
 const FOCUS_RING =
@@ -48,7 +49,7 @@ function ItemLink({
         'relative flex min-h-[40px] min-w-0 flex-1 items-center gap-2.5 rounded-md py-2 pl-3 pr-2 text-[13px] transition-colors',
         FOCUS_RING,
         active
-          ? 'bg-brand-50 font-semibold text-brand-800 before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-brand-600 dark:bg-brand-900/40 dark:text-brand-100 dark:before:bg-brand-400'
+          ? 'bg-brand-50 font-semibold text-brand-800 before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-[linear-gradient(180deg,#718bd4,#c8b8e8)] dark:bg-brand-900/50 dark:text-brand-100 dark:before:bg-[linear-gradient(180deg,#a8d9f0,#d3b8f1)]'
           : 'font-medium text-text-secondary hover:bg-surface2 hover:text-text-primary',
         className,
       )}
@@ -86,7 +87,7 @@ function PinButton({
         'flex h-9 w-8 shrink-0 items-center justify-center rounded-md text-text-muted transition-opacity hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-30',
         FOCUS_RING,
         pinned
-          ? 'text-gold-600 opacity-100 dark:text-gold-400'
+          ? 'text-[var(--color-accent-text)] opacity-100'
           : 'opacity-0 focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-60',
       )}
     >
@@ -196,10 +197,17 @@ function NavPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)] px-4 py-3.5">
-        <div className="min-w-0">
-          <div className="font-sans text-[13px] font-bold uppercase tracking-widest text-brand-700 dark:text-brand-300">VSA Admin</div>
-          <div className="mt-0.5 font-sans text-[11px] text-text-muted">Cabinet tools</div>
+      <div className="vsa-ribbon-top flex items-center justify-between gap-2 border-b border-[var(--color-border)] px-4 py-3.5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[linear-gradient(140deg,#718bd4,#9a86cf_55%,#e2b4d4)] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]">
+            <Sparkle className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <div className="font-display text-[19px] leading-none text-text-primary">
+              VSA <i className="text-[var(--ed-wordmark)]">admin</i>
+            </div>
+            <div className="mt-1 font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-text-muted">Cabinet workspace</div>
+          </div>
         </div>
         {variant === 'drawer' && onClose && (
           <button
@@ -230,7 +238,7 @@ function NavPanel({
         <ItemLinkRow item={dashboard} active={dashboard.to === activePath} onNavigate={onClose} />
 
         <section aria-labelledby={`${variant}-favorites`}>
-          <h2 id={`${variant}-favorites`} className="mb-1 flex items-center gap-1.5 px-3 font-sans text-[10px] font-bold uppercase tracking-[0.1em] text-text-muted">
+          <h2 id={`${variant}-favorites`} className="mb-1 flex items-center gap-1.5 px-3 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-text-muted">
             <FiStar aria-hidden className="h-3 w-3" /> Favorites
           </h2>
           {favoriteItems.length === 0 ? (
@@ -277,7 +285,7 @@ function NavPanel({
           <FiArrowLeft aria-hidden className="h-4 w-4" /> Back to vsaucsd.org
         </Link>
         <div className="flex items-center gap-2.5 px-2">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[var(--color-border)] bg-surface font-sans text-[10px] font-bold uppercase text-text-primary">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(140deg,#cfd8fb,#e3d6f5)] font-sans text-[10px] font-bold uppercase text-[#28354d] ring-1 ring-[var(--color-border)]">
             {initials}
           </div>
           <div className="min-w-0 truncate font-sans text-xs text-text-muted" title={user?.email ?? undefined}>
@@ -352,7 +360,7 @@ function MobileDrawer({ onClose, children }: { onClose: () => void; children: Re
 
   return (
     <div className="fixed inset-0 z-[60] md:hidden">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden="true" data-testid="admin-nav-backdrop" />
+      <div className="absolute inset-0 bg-scrim backdrop-blur-sm" onClick={onClose} aria-hidden="true" data-testid="admin-nav-backdrop" />
       <motion.div
         ref={panelRef}
         role="dialog"
@@ -360,8 +368,8 @@ function MobileDrawer({ onClose, children }: { onClose: () => void; children: Re
         aria-label="Admin navigation"
         initial={reduceMotion ? false : { x: -24, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: reduceMotion ? 0 : 0.18, ease: 'easeOut' }}
-        className="absolute inset-y-0 left-0 w-[min(320px,88vw)] border-r border-[var(--color-border)] bg-surface shadow-2xl"
+        transition={{ duration: reduceMotion ? 0 : 0.22, ease: [0.22, 1, 0.36, 1] }}
+        className="absolute inset-y-0 left-0 w-[min(320px,88vw)] border-r border-[var(--color-border)] bg-[var(--color-sidebar)] shadow-[0_24px_60px_rgba(22,30,61,0.28)]"
       >
         {children}
       </motion.div>
@@ -386,7 +394,7 @@ export function AdminNav({ isOpen, onClose, onSearch }: { isOpen?: boolean; onCl
     <>
       <aside
         aria-label="Admin sidebar"
-        className="sticky top-[60px] hidden h-[calc(100vh-60px)] w-[264px] shrink-0 self-start border-r border-[var(--color-border)] bg-surface md:block"
+        className="sticky top-[60px] hidden h-[calc(100vh-60px)] w-[264px] shrink-0 self-start border-r border-[var(--color-sidebar-border)] bg-[var(--color-sidebar)] md:block"
       >
         <NavPanel variant="desktop" activePath={activePath} preferences={preferences} expansion={expansion} onSearch={onSearch} />
       </aside>

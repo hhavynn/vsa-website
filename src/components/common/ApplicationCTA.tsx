@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ApplicationKey, ApplicationStatus, PublicApplicationLink } from '../../types';
 import { usePublicApplicationLinks } from '../../hooks/useApplicationLinks';
@@ -6,8 +6,8 @@ import {
   DEFAULT_APPLICATION_MESSAGES,
   applicationKeyLabel,
   formatApplicationDateTime,
+  getApplicationStatus,
 } from '../../lib/applicationLinks';
-import { isSupabaseUnavailable } from '../../utils/isSupabaseUnavailable';
 import { FALLBACK_APPLICATIONS, FALLBACK_LINKS } from '../../config/publicFallbackContent';
 import { Skeleton } from '../ui/Skeleton';
 
@@ -62,6 +62,20 @@ function pickRowForKey(
     if (rank !== 0) return rank;
     return a.sort_order - b.sort_order;
   })[0];
+}
+
+/**
+ * The public view masks a link at fetch time, but a visitor can keep that
+ * cached row open across the deadline. Never leave an expired form URL in
+ * page markup. Do not promote not_open -> open without a fresh server read:
+ * the view intentionally returned no target URL before opening.
+ */
+export function publicApplicationAtTime(link: PublicApplicationLink, now: Date): PublicApplicationLink {
+  if (link.status !== 'open') return link;
+  const live = getApplicationStatus(link.open_at, link.due_at, link.is_enabled, now);
+  return live === 'open'
+    ? link
+    : { ...link, status: live, target_url: null };
 }
 
 function ApplicationButton({ link }: { link: PublicApplicationLink }) {
@@ -193,7 +207,21 @@ export function ApplicationCTA({
     () => (Array.isArray(applicationKeys) ? applicationKeys : [applicationKeys]),
     [applicationKeys],
   );
-  const { links, loading, error } = usePublicApplicationLinks();
+  const { links: fetchedLinks, loading, error } = usePublicApplicationLinks();
+  const [nowMillis, setNowMillis] = useState(() => Date.now());
+  // A user may leave a page open past a closing time. Refresh the local
+  // mask on a modest cadence and immediately when returning to the tab.
+  useEffect(() => {
+    const refresh = () => setNowMillis(Date.now());
+    const interval = window.setInterval(refresh, 30_000);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+    };
+  }, []);
+  const now = new Date(nowMillis);
+  const links = fetchedLinks.map((link) => publicApplicationAtTime(link, now));
 
   if (loading) {
     return (
@@ -204,7 +232,9 @@ export function ApplicationCTA({
   }
 
   // Supabase outage: show friendly unavailable copy, never a raw error.
-  if (error && isSupabaseUnavailable(error)) {
+  // Any failed public view read is unavailable, not authoritative evidence
+  // that all application forms have disappeared or closed.
+  if (error) {
     return (
       <div className={className}>
         <MutedMessage>
@@ -229,6 +259,16 @@ export function ApplicationCTA({
     .filter((link) => !keys.includes(link.application_key) && link.status === 'open' && !!link.target_url)
     .filter((link, index, all) => all.findIndex((item) => item.application_key === link.application_key) === index)
     .slice(0, 3);
+  // When nothing is currently open, link to genuine scheduled program pages.
+  // We never create a form CTA from a future row with a masked target URL.
+  const otherUpcomingPrograms = !hasRequestedOpenWindow && otherOpenPrograms.length === 0
+    ? links
+        .filter((link) => !keys.includes(link.application_key) && link.status === 'not_open' && link.is_enabled)
+        .filter((link) => Number.isFinite(Date.parse(link.open_at)) && Date.parse(link.open_at) > nowMillis)
+        .sort((a, b) => Date.parse(a.open_at) - Date.parse(b.open_at) || a.sort_order - b.sort_order)
+        .filter((link, index, all) => all.findIndex((item) => item.application_key === link.application_key) === index)
+        .slice(0, 3)
+    : [];
 
   if (openOnly) {
     const openRows = rows.filter(
@@ -297,6 +337,34 @@ export function ApplicationCTA({
             ))}
           </ul>
           <p className="mt-2 font-sans text-xs text-[var(--color-text2)]">Check each program page for current requirements and details.</p>
+        </aside>
+      )}
+      {!hasRequestedOpenWindow && otherUpcomingPrograms.length > 0 && (
+        <aside
+          className="mt-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-4"
+          aria-label="Upcoming VSA application windows"
+        >
+          <p className="mb-2 font-sans text-sm font-semibold text-[var(--color-text)]">
+            Coming up in other VSA programs
+          </p>
+          <ul className="space-y-2">
+            {otherUpcomingPrograms.map((link) => (
+              <li key={link.application_key} className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <Link
+                  to={PUBLIC_PROGRAM_ROUTES[link.application_key]}
+                  className="font-sans text-sm font-semibold text-brand-600 underline underline-offset-2 dark:text-brand-400"
+                >
+                  {applicationKeyLabel(link.application_key)}
+                </Link>
+                <span className="font-sans text-xs text-[var(--color-text2)]">
+                  Scheduled to open {formatApplicationDateTime(link.open_at)}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 font-sans text-xs text-[var(--color-text2)]">
+            Confirm the requirements and dates on each program page before applying.
+          </p>
         </aside>
       )}
       {hasRequestedOpenWindow && (

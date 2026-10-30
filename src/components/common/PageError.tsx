@@ -33,9 +33,9 @@ export function PageError({
     >
       <div className="max-w-md w-full text-center">
         <div className="mb-6">
-          <div className="mx-auto w-16 h-16 bg-red-950/20 border border-red-900/40 rounded flex items-center justify-center mb-4">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg border border-red-200 bg-red-50 dark:border-red-400/30 dark:bg-red-400/10">
             <svg
-              className="w-8 h-8 text-red-500"
+              className="h-8 w-8 text-red-700 dark:text-red-300"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -49,20 +49,20 @@ export function PageError({
             </svg>
           </div>
 
-          <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight mb-2">
+          <h2 className="mb-2 font-display text-[1.9rem] font-normal leading-tight text-text-primary">
             {title}
           </h2>
 
-          <p className="text-zinc-500 mb-6">
+          <p className="mb-6 font-sans text-sm leading-relaxed text-text-secondary">
             {message}
           </p>
 
           {process.env.NODE_ENV === 'development' && error && (
             <details className="mb-6 text-left">
-              <summary className="cursor-pointer text-sm font-medium text-zinc-500 mb-2">
+              <summary className="mb-2 cursor-pointer text-sm font-medium text-text-muted">
                 Error Details (Development)
               </summary>
-              <pre className="text-xs bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-3 rounded overflow-auto">
+              <pre className="overflow-auto rounded border border-[var(--color-border)] bg-surface2 p-3 text-xs text-text-primary">
                 {error.stack || error.message}
               </pre>
             </details>
@@ -73,7 +73,7 @@ export function PageError({
           {showRetry && (
             <button
               onClick={handleRetry}
-              className="px-6 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded font-medium text-sm transition-colors duration-150"
+              className="rounded bg-brand-600 px-6 py-2 text-sm font-medium text-white transition-colors duration-150 hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 dark:bg-brand-300 dark:text-brand-950 dark:hover:bg-brand-200"
             >
               Try Again
             </button>
@@ -81,7 +81,7 @@ export function PageError({
 
           <button
             onClick={() => window.history.back()}
-            className="px-6 py-2 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded font-medium text-sm transition-colors duration-150"
+            className="rounded border border-[var(--color-border)] px-6 py-2 text-sm font-medium text-text-secondary transition-colors duration-150 hover:bg-surface2 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2"
           >
             Go Back
           </button>

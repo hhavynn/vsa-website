@@ -499,7 +499,7 @@ export default function AdminGallery() {
 
       {/* Edit Album Modal */}
       {albumToEdit && (
-        <div className="fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 overflow-y-auto">
+        <div className="fixed inset-0 bg-scrim backdrop-blur-sm flex items-start justify-center z-50 p-4 overflow-y-auto">
           <div className="my-8 w-full max-w-2xl rounded-md border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
             <div className="flex items-center justify-between border-b px-6 py-4" style={{ borderColor: 'var(--color-border)' }}>
               <h3 className="text-base font-semibold" style={{ color: 'var(--color-text)' }}>Edit Album</h3>
@@ -591,7 +591,7 @@ export default function AdminGallery() {
                     <img
                       src={albumToEdit.cover_thumbnail_url || albumToEdit.cover_image_url || ''}
                       alt={albumToEdit.title}
-                      className="w-full h-36 object-cover rounded border border-zinc-700"
+                      className="w-full h-36 object-cover rounded border border-[var(--color-border)]"
                     />
                   </div>
                 )}
