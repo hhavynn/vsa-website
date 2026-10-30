@@ -357,11 +357,15 @@ export function resolveRequestedName(requested: string, candidates: readonly Mut
 // ─── Classification ──────────────────────────────────────────────────────────
 
 export type PossibleDecision = 'accepted' | 'rejected';
-/** Keyed by possibleMatchKey. A missing key means not decided yet. */
+/**
+ * Keyed by possibleMatchKey. A missing key means not decided yet. The key
+ * names the candidate too, so a decision never carries over to someone else
+ * after the paste changes.
+ */
 export type PossibleDecisions = ReadonlyMap<string, PossibleDecision>;
 
-export function possibleMatchKey(requesterId: string, requested: string): string {
-  return `${requesterId}→${normalizeMemberName(requested)}`;
+export function possibleMatchKey(requesterId: string, requested: string, candidateId: string): string {
+  return `${requesterId}→${normalizeMemberName(requested)}→${candidateId}`;
 }
 
 export interface MutualPair {
@@ -440,7 +444,7 @@ export function classifyMutualRequests(
         continue;
       }
       if (resolution.kind === 'possible') {
-        const key = possibleMatchKey(from.id, requested);
+        const key = possibleMatchKey(from.id, requested, resolution.target.id);
         const decision = decisions.get(key) ?? 'pending';
         check.possible.push({ key, from, requested, candidate: resolution.target, decision });
         if (decision === 'accepted' && !out.has(resolution.target.id)) out.set(resolution.target.id, { requested, byChair: true });

@@ -290,7 +290,7 @@ describe('classifyMutualRequests', () => {
     expect(pending.pairs).toEqual([]);
     expect(pending.oneSided.map((o) => o.from.id)).toEqual(['l1']);
 
-    const key = possibleMatchKey('b1', 'Tamsin Vael');
+    const key = possibleMatchKey('b1', 'Tamsin Vael', 'l1');
     const accepted = classifyMutualRequests(people, new Map([[key, 'accepted']]));
     expect(accepted.pairs).toHaveLength(1);
     expect(accepted.pairs[0].confirmedByChair).toBe(true);
@@ -299,6 +299,14 @@ describe('classifyMutualRequests', () => {
     const rejected = classifyMutualRequests(people, new Map([[key, 'rejected']]));
     expect(rejected.pairs).toEqual([]);
     expect(rejected.unresolved[0].reason).toMatch(/rejected/);
+  });
+
+  it('does not carry an accepted spelling over to a different person after the paste changes', () => {
+    const key = possibleMatchKey('b1', 'Tamsin Vael', 'l1');
+    const repasted = [big('b1', 'Wren Halloway', ['Tamsin Vael']), little('l9', 'Tamsin Vahl', ['Wren Halloway'])];
+    const check = classifyMutualRequests(repasted, new Map([[key, 'accepted']]));
+    expect(check.possible[0]).toMatchObject({ decision: 'pending', candidate: { id: 'l9' } });
+    expect(check.pairs).toEqual([]);
   });
 
   it('flags a Little mutually matched with two Bigs and keeps them out of the confirmed pairs', () => {
