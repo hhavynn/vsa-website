@@ -84,6 +84,7 @@ gh api repos/{owner}/{repo}/branches/main/protection   # 404 = still unprotected
 Derive the current file set with `find src -name "*.test.ts*" | sort`; never trust a copied count. The inventory below explains what the current metadata, pure-logic, and smoke tests certify—and, more importantly, what nothing certifies.
 
 | File | What it certifies | Why it exists |
+| `src/hooks/usePublishedMemberHouses.test.ts` | #627 splits all visible canonical IDs into ≤100-member House badge batches, preserving 100-row pages plus podium/modal, without duplicating or skipping IDs. | Unit batching guard; staging anon Reveal/permission checks outstanding. |
 |---|---|---|
 | `src/pages/Admin/Settings.form-shell.test.tsx`, `src/pages/Admin/UVSASchools.form-shell.test.tsx` | Site-branding and UVSA Network page-copy forms adopt the shared save/discard/pending/error shell, protect unsaved copy, and retain/retry failed writes. | **Admin form migrations (#258).** Uses existing data validation and write repositories; no RLS or underlying mutation change. |
 | `src/data/repos/feedback.test.ts`, `src/components/features/feedback/FeedbackForm.test.tsx` | Public feedback uses the submission function through the repository, excludes client identity/status fields, handles controlled failures, preserves pending/success/error states, and never inserts directly from the form. | Feedback impersonation regression (#572). Deno tests cover the HTTP boundary; `scripts/test-feedback-boundary.sh` proves quotas, grants, rollback, and administrator review on disposable PostgreSQL. |
