@@ -254,10 +254,9 @@ const INTERN_ISSUE: Record<InternPreflightIssue['code'], { detail: string; fix?:
   duplicate_member: { detail: 'One member cannot be two interns.', fix: { label: 'Review', filter: 'needs_review' } },
   unlinked: { detail: 'Linking shows an approved photo. Not required to publish.', fix: { label: 'Review Unlinked', filter: 'unlinked' } },
   duplicate_name: { detail: 'Check these are two different people.', fix: { label: 'Review', filter: 'needs_review' } },
-  missing_mentor: { detail: 'Mentors are optional.', fix: { label: 'Review Missing Mentor', filter: 'missing_mentor' } },
 };
 
-export function internIssues(preflight: Pick<InternPreflight, 'blockers' | 'warnings' | 'notes'>): UnifiedIssue[] {
+export function internIssues(preflight: Pick<InternPreflight, 'blockers' | 'warnings'>): UnifiedIssue[] {
   const toIssue = (level: IssueLevel) => (issue: InternPreflightIssue): UnifiedIssue => ({
     id: `intern:${issue.code}`,
     level,
@@ -266,5 +265,5 @@ export function internIssues(preflight: Pick<InternPreflight, 'blockers' | 'warn
     count: issue.draftIds.length,
     fix: INTERN_ISSUE[issue.code]?.fix,
   });
-  return [...preflight.blockers.map(toIssue('blocker')), ...preflight.warnings.map(toIssue('warning')), ...preflight.notes.map(toIssue('info'))];
+  return [...preflight.blockers.map(toIssue('blocker')), ...preflight.warnings.map(toIssue('warning'))];
 }

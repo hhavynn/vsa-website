@@ -173,7 +173,7 @@ export const ADMIN_NAV_GROUPS: readonly AdminNavGroup[] = [
         to: '/admin/interns',
         label: 'Intern Cohort',
         icon: FiBriefcase,
-        keywords: ['internship', 'mentor', 'accepted', 'cohort'],
+        keywords: ['internship', 'shadow', 'accepted', 'cohort'],
         summary: 'Prepare the accepted intern cohort privately, then publish it to the Cabinet Interns group.',
         affects: '/intern-program, /cabinet (Interns group), intern avatars',
       },

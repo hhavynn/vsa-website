@@ -50,7 +50,7 @@ describe('MemberPhotoRequestFormSchema email domain', () => {
 
   it('requires a @ucsd.edu address, matching the upload broker', () => {
     const result = MemberPhotoRequestFormSchema.safeParse({ ...validForm, submitted_email: 'me@gmail.com' });
-    const issues = result.success ? [] : result.error.errors;
+    const issues = result.success ? [] : result.error.issues;
     expect(result.success).toBe(false);
     expect(issues[0]?.path).toEqual(['submitted_email']);
     expect(issues[0]?.message).toMatch(/@ucsd\.edu/);

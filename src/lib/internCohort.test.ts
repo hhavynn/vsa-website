@@ -1,12 +1,17 @@
 import {
   InternCohortDraft,
+  MAX_SHADOW_POSITIONS,
   buildInternDraftRows,
   buildInternPreflight,
   cabinetMemberFromIntern,
+  distinctPositionTitles,
   matchInternToMember,
   moveId,
   parseInternNames,
   resequence,
+  sameShadowPositions,
+  shadowPositionChoices,
+  withShadowPosition,
 } from './internCohort';
 import { buildMemberNameIndex, toMemberOption } from './memberLinkMatching';
 
@@ -25,7 +30,7 @@ function draft(overrides: Partial<InternCohortDraft> = {}): InternCohortDraft {
     cycle_id: 'c1',
     name: ['Ann Lee', 'Bo Chen', 'Cy Dao', 'Di Eng', 'Ed Fox'][n % 5],
     member_id: `m${n}`,
-    mentor_cabinet_member_id: null,
+    shadow_positions: [],
     role_or_track: null,
     caption: null,
     internal_notes: null,
@@ -95,12 +100,11 @@ describe('ordering', () => {
 });
 
 describe('intern preflight', () => {
-  it('counts accepted and linked interns, and treats mentors as optional', () => {
-    const result = buildInternPreflight([draft(), draft({ member_id: null }), draft({ mentor_cabinet_member_id: 'cm1' })]);
+  it('counts accepted and linked interns, and never flags missing shadow positions', () => {
+    const result = buildInternPreflight([draft(), draft({ member_id: null }), draft({ shadow_positions: ['Treasurer'] })]);
     expect(result).toMatchObject({ accepted: 3, linked: 2, canLock: true, blockers: [] });
     expect(result.warnings.map((w) => w.code)).toEqual(['unlinked']);
-    expect(result.notes[0]).toMatchObject({ code: 'missing_mentor' });
-    expect(result.notes[0].draftIds).toHaveLength(2);
+    expect(Object.keys(result).sort()).toEqual(['accepted', 'blockers', 'canLock', 'linked', 'warnings']);
   });
 
   it('warns about duplicate names', () => {
@@ -120,10 +124,50 @@ describe('intern preflight', () => {
   });
 });
 
+describe('shadow positions', () => {
+  it('reduces titles to distinct, trimmed, non-empty values in the given order', () => {
+    expect(distinctPositionTitles(['Co-President', ' Treasurer ', 'Co-President', 'Treasurer', '  '])).toEqual(['Co-President', 'Treasurer']);
+  });
+
+  it('adds, replaces, and clears, keeping the list compact', () => {
+    expect(withShadowPosition([], 0, 'Treasurer')).toEqual(['Treasurer']);
+    expect(withShadowPosition(['Treasurer'], 1, 'Secretary')).toEqual(['Treasurer', 'Secretary']);
+    expect(withShadowPosition(['Treasurer', 'Secretary'], 0, 'Historian')).toEqual(['Historian', 'Secretary']);
+    expect(withShadowPosition(['Treasurer', 'Secretary', 'Historian'], 0, '')).toEqual(['Secretary', 'Historian']);
+  });
+
+  it('never exceeds the limit of 3', () => {
+    expect(MAX_SHADOW_POSITIONS).toBe(3);
+    expect(withShadowPosition(['A', 'B', 'C'], 3, 'D')).toEqual(['A', 'B', 'C']);
+  });
+
+  it('never holds the same position twice', () => {
+    expect(withShadowPosition(['Treasurer', 'Secretary'], 2, 'Treasurer')).toEqual(['Treasurer', 'Secretary']);
+    expect(withShadowPosition(['Treasurer', 'Secretary'], 1, 'Treasurer')).toEqual(['Treasurer']);
+  });
+
+  it('offers each picker every position the other pickers do not hold', () => {
+    const options = ['Treasurer', 'Secretary', 'Historian'];
+    expect(shadowPositionChoices(options, ['Treasurer', 'Secretary'], 0)).toEqual(['Treasurer', 'Historian']);
+    expect(shadowPositionChoices(options, ['Treasurer', 'Secretary'], 2)).toEqual(['Historian']);
+  });
+
+  it('keeps a saved title on screen after it leaves the option list', () => {
+    expect(shadowPositionChoices(['Treasurer'], ['Old Title'], 0)).toEqual(['Old Title', 'Treasurer']);
+    expect(shadowPositionChoices(['Treasurer'], ['Old Title'], 1)).toEqual(['Treasurer']);
+  });
+
+  it('treats order as part of the value', () => {
+    expect(sameShadowPositions(['A', 'B'], ['A', 'B'])).toBe(true);
+    expect(sameShadowPositions(['A', 'B'], ['B', 'A'])).toBe(false);
+    expect(sameShadowPositions(['A'], ['A', 'B'])).toBe(false);
+  });
+});
+
 describe('cabinet_members mapping', () => {
   it('maps only public-safe fields and defaults the role to Intern', () => {
     const row = cabinetMemberFromIntern(
-      draft({ name: ' Sarah Nguyen ', member_id: 'm-sarah', display_order: 3, caption: 'bio', internal_notes: 'secret', mentor_cabinet_member_id: 'cm1' }),
+      draft({ name: ' Sarah Nguyen ', member_id: 'm-sarah', display_order: 3, caption: 'bio', internal_notes: 'secret', shadow_positions: ['cm1'] }),
       'year-1',
     );
     expect(row).toEqual({

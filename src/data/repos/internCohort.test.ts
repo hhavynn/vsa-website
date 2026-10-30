@@ -34,7 +34,7 @@ function draft(order: number, overrides: Partial<InternCohortDraft> = {}): Inter
     cycle_id: 'cycle-1',
     name: `Intern ${order}`,
     member_id: `m${order}`,
-    mentor_cabinet_member_id: null,
+    shadow_positions: [],
     role_or_track: null,
     caption: null,
     internal_notes: null,
@@ -72,12 +72,44 @@ describe('draft persistence', () => {
     expect(supabaseMock.queriesFor('cabinet_members')).toHaveLength(0);
   });
 
-  it('stores a cabinet mentor on the draft', async () => {
+  it('stores shadow positions on the draft', async () => {
     supabaseMock.queueResult('intern_cohort_cycles', { data: cycle('draft'), error: null });
 
-    await internCohortRepository.updateDraft('cycle-1', 'd1', { mentor_cabinet_member_id: 'cm-emily' });
+    await internCohortRepository.updateDraft('cycle-1', 'd1', { shadow_positions: ['Treasurer', 'Secretary'] });
 
-    expect(callsFor('intern_cohort_drafts', 'update')[0].args[0]).toEqual({ mentor_cabinet_member_id: 'cm-emily' });
+    expect(callsFor('intern_cohort_drafts', 'update')[0].args[0]).toEqual({ shadow_positions: ['Treasurer', 'Secretary'] });
+  });
+});
+
+describe('shadow position options', () => {
+  it('reads only Board positions of the cabinet year, board by board in display order', async () => {
+    supabaseMock.queueResult('cabinet_members', { data: [], error: null });
+
+    await internCohortRepository.listShadowPositionOptions('cy-2026');
+
+    const calls = supabaseMock.queriesFor('cabinet_members')[0].calls;
+    expect(calls).toEqual(expect.arrayContaining([
+      { method: 'select', args: ['role'] },
+      { method: 'eq', args: ['cabinet_year_id', 'cy-2026'] },
+      { method: 'in', args: ['category', ['Executive Board', 'General Board']] },
+    ]));
+    expect(calls.filter((call) => call.method === 'order').map((call) => call.args[0])).toEqual(['category', 'display_order']);
+    expect(supabaseMock.usedMethod('cabinet_members', 'insert')).toBe(false);
+  });
+
+  it('returns each trimmed title once, even when two people hold it', async () => {
+    supabaseMock.queueResult('cabinet_members', {
+      data: [{ role: 'Co-President' }, { role: 'Co-President ' }, { role: ' Treasurer' }, { role: '   ' }, { role: 'Media Director' }],
+      error: null,
+    });
+
+    expect(await internCohortRepository.listShadowPositionOptions('cy-2026')).toEqual(['Co-President', 'Treasurer', 'Media Director']);
+  });
+
+  it('surfaces a failed read', async () => {
+    supabaseMock.queueResult('cabinet_members', { data: null, error: { message: 'boom' } });
+
+    await expect(internCohortRepository.listShadowPositionOptions('cy-2026')).rejects.toThrow();
   });
 });
 
@@ -125,7 +157,7 @@ describe('publishing', () => {
   });
 
   it('creates the Interns row in the cycle cabinet year and records its id on the draft', async () => {
-    queuePublish('locked', [draft(0, { member_id: 'm-sarah', name: 'Sarah Nguyen', role_or_track: 'Events', display_order: 4, mentor_cabinet_member_id: 'cm-e', caption: 'hi', internal_notes: 'private' })]);
+    queuePublish('locked', [draft(0, { member_id: 'm-sarah', name: 'Sarah Nguyen', role_or_track: 'Events', display_order: 4, shadow_positions: ['Treasurer'], caption: 'hi', internal_notes: 'private' })]);
     supabaseMock.queueResult('cabinet_members', { data: { id: 'cm-new' }, error: null });
     supabaseMock.queueResult('intern_cohort_cycles', { data: [{ id: 'cycle-1' }], error: null });
 

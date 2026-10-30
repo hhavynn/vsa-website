@@ -84,7 +84,7 @@ describe('searchAdmin', () => {
 
   it('matches admin pages by keyword and shows pages for an empty query', () => {
     expect(searchAdmin(records, 'upload')[0].to).toBe('/admin/import');
-    expect(searchAdmin(records, 'mentor').some((result) => result.to === '/admin/interns')).toBe(true);
+    expect(searchAdmin(records, 'shadow').some((result) => result.to === '/admin/interns')).toBe(true);
     const empty = searchAdmin(records, '   ');
     expect(empty.length).toBeGreaterThan(0);
     expect(empty.every((result) => result.type === 'page')).toBe(true);

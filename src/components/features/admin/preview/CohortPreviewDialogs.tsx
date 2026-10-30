@@ -34,7 +34,7 @@ export function InternCohortPreviewDialog({ members, yearLabel, onClose }: { mem
     <PublicPreviewDialog
       title={`${yearLabel} Intern cohort`}
       surface="/cabinet · /intern-program"
-      notice="Draft cohort — mentors, captions, and notes stay private. Nothing is public until you publish."
+      notice="Draft cohort — shadow positions, captions, and notes stay private. Nothing is public until you publish."
       onClose={onClose}
     >
       <Board members={members} />
