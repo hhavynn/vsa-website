@@ -3,7 +3,7 @@ import { useMemberDirectory } from '../../../hooks/useMemberDirectory';
 import { reviewVcnRoleCsv, type VcnReview } from '../../../lib/vcnRoleRosterReview';
 
 /** Private, local-only intake preview. This does not write or publish cast credits. */
-export function VcnRoleRosterReview({ editionYear }: { editionYear: number | null }) {
+export function VcnRoleRosterReview({ editionYear, editionId }: { editionYear: number | null; editionId?: string | null }) {
   const [open, setOpen] = useState(false);
   const [csv, setCsv] = useState('');
   const [result, setResult] = useState<VcnReview | null>(null);
@@ -13,7 +13,7 @@ export function VcnRoleRosterReview({ editionYear }: { editionYear: number | nul
   const members = directory.members;
   const byId = directory.byId;
   // An edition change must invalidate both source rows and confirmed identities.
-  useEffect(() => { setCsv(''); setResult(null); setConfirmed(new Map()); setFailure(''); }, [editionYear]);
+  useEffect(() => { setCsv(''); setResult(null); setConfirmed(new Map()); setFailure(''); }, [editionYear, editionId]);
   const counts = useMemo(() => {
     const rows = result?.rows ?? [];
     return {
