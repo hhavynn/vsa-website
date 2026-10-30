@@ -16,6 +16,7 @@ import { useIndividualLeaderboard, type IndividualLeaderboardMember as Member } 
 import { usePublishedLeaderboardRoles } from '../hooks/usePublishedLeaderboardRoles';
 import { usePublishedBoardRoster } from '../hooks/usePublishedBoardRoster';
 import { usePublishedMemberHouses } from '../hooks/usePublishedMemberHouses';
+import type { PublicMemberHouse } from '../data/repos/houseMemberships';
 import { rankPublishedCohort, type LeaderboardCohort } from '../lib/memberCohorts';
 import { rolesForSelectedYear, type PublicMemberRole } from '../lib/memberRoles';
 import { PublicMemberRoleBadges } from '../components/features/leaderboard/PublicMemberRoleBadges';
@@ -1073,7 +1074,7 @@ function PodiumIndividual({
   activeTab: 'points' | 'events';
   memberAvatars: MemberAvatarMap;
   rolesById: ReadonlyMap<string, PublicMemberRole[]>;
-  housesById: ReadonlyMap<string, import('../data/repos/houseMemberships').PublicMemberHouse>;
+  housesById: ReadonlyMap<string, PublicMemberHouse>;
   selectedYear: SelectedYear | null;
   onSelectMember: (member: LeaderboardEntry) => void;
 }) {
