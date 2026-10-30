@@ -31,6 +31,8 @@ jest.mock('../hooks/useIndividualLeaderboard', () => ({
     error: null,
   }),
 }));
+// Existing role-chip assertions use the explicitly labelled unsplit fallback.
+jest.mock('../hooks/usePublishedBoardRoster', () => ({ usePublishedBoardRoster: () => ({ data: undefined, isLoading: false, isError: true }) }));
 jest.mock('../hooks/usePublishedLeaderboardRoles', () => ({
   usePublishedLeaderboardRoles: (year: number | 'all' | null, ids: string[]) => {
     mockVisibleReads.push({ year, ids });
