@@ -21,6 +21,8 @@ import { HouseEvent, HousePageAsset } from '../types';
 import { getHousePagePath, houseSlugFromKey } from '../utils/houseSlug';
 import { getLegacyHouseArchiveByYear, getLegacyHouseArchiveYears, getVerifiedLegacyHouseYears } from '../data/legacyHouseArchive';
 import { HouseYearSelector } from '../components/features/house/HouseYearSelector';
+import { FindMyHouse } from '../components/features/house/FindMyHouse';
+import { hasRevealedHouseMemberships } from '../data/repos/publicHouseLookup';
 
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
@@ -333,6 +335,16 @@ export function House() {
   const { assets: houseAssets, loading: houseAssetsLoading, error: houseAssetsError } = usePublishedHouseAssets(activeYear);
   // An empty list while loading (or after a failed request) is not evidence
   // that the Houses are unannounced; only say so once the query has succeeded.
+  // An anonymous, bounded read from the already Reveal-gated score-free view.
+  // Never show the identity search before public House memberships exist.
+  const { data: hasPublishedHouseMembers = false } = useQuery<boolean>({
+    queryKey: ['house', 'find-my-house-revealed', activeYear],
+    queryFn: () => hasRevealedHouseMemberships(activeYear as number),
+    enabled: !!activeYear && !isArchive && !isFutureYear && houseAssets.length > 0,
+    staleTime: 60 * 1000,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
   const houseAssetsSettled = !houseAssetsLoading && !houseAssetsError;
   const isDegradedMode = isSupabaseUnavailable(houseAssetsError);
   const displayedHouses = isFutureYear
@@ -480,6 +492,14 @@ export function House() {
                   closed: 'House applications reopen next quarter.',
                 }}
               />
+            </div>
+          </section>
+        )}
+
+        {!isArchive && hasPublishedHouseMembers && activeYear !== null && (
+          <section className="program-section">
+            <div className="program-section-inner">
+              <FindMyHouse academicYearStart={activeYear} />
             </div>
           </section>
         )}
