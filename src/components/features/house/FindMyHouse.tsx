@@ -8,7 +8,7 @@ import { memberLookupRepository } from '../../../data/repos/memberLookup';
 import { leaderboardRepository } from '../../../data/repos/leaderboard';
 import { formatAcademicYear } from '../../../lib/academicTerms';
 import type { MemberOption } from '../../../lib/memberLinkMatching';
-import { getHousePagePath } from '../../../utils/houseSlug';
+import { houseSlugFromKey } from '../../../utils/houseSlug';
 
 const SEARCH_LIMIT = 11;
 const MAX_QUERY_LENGTH = 100;
@@ -102,7 +102,7 @@ export function FindMyHouse({ academicYearStart }: { academicYearStart: number }
                 <p className="text-xs font-semibold text-text-secondary">Published {formatAcademicYear(academicYearStart)} House</p>
                 <p className="mt-1 font-serif text-2xl font-bold text-text-primary">{badge.data.display_name || badge.data.house}</p>
                 <div className="mt-4 flex flex-wrap gap-3">
-                  <Link className="vsa-btn-primary min-h-11" to={getHousePagePath(badge.data.house, academicYearStart)}>
+                  <Link className="vsa-btn-primary min-h-11" to={`/house/year/${formatAcademicYear(academicYearStart)}/${houseSlugFromKey(badge.data.house || badge.data.display_name)}`}>
                     Meet your House and parents
                   </Link>
                   <Link className="vsa-btn-secondary min-h-11" to="/events">Upcoming events</Link>
