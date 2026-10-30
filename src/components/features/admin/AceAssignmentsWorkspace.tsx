@@ -15,6 +15,7 @@ import {
   useAceNodeRefs,
 } from '../../../hooks/useAceAssignments';
 import { ACE_MEMBER_LINKS_QUERY_KEY } from '../../../hooks/useAceFamilies';
+import { useAceApplicationProfiles } from '../../../hooks/useAceApplicationProfiles';
 import { useAceEligibility } from '../../../hooks/useAceEligibility';
 import { useMemberDirectory } from '../../../hooks/useMemberDirectory';
 import { useOperatingYear } from '../../../hooks/useOperatingYear';
@@ -44,6 +45,7 @@ import {
   selectBulkLittleLinks,
 } from '../../../lib/aceAssignments';
 import { AceAssignmentCycle, AceAssignmentDraft } from '../../../types';
+import { AceApplicationProfilesPanel } from './AceApplicationProfilesPanel';
 import { AceAssignmentImportPanel } from './AceAssignmentImportPanel';
 import { AceMutualRequestPanel } from './AceMutualRequestPanel';
 import { AceAssignmentPreflightPanel } from './AceAssignmentPreflightPanel';
@@ -113,6 +115,7 @@ export function AceAssignmentsWorkspace() {
   const [newLittle, setNewLittle] = useState('');
   const [importOpen, setImportOpen] = useState(false);
   const [mutualOpen, setMutualOpen] = useState(false);
+  const [applicationsOpen, setApplicationsOpen] = useState(false);
   const [confirmPublish, setConfirmPublish] = useState(false);
   const [filter, setFilter] = useUrlFilter(ACE_DRAFT_FILTER_KEYS);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
@@ -153,6 +156,8 @@ export function AceAssignmentsWorkspace() {
   const publishPreview = useMemo(() => buildPublishPreview(drafts, nodes), [drafts, nodes]);
   const loadFor = (bigId: string) => computeBigLoad(bigId, drafts, nodes);
   const nodeNameById = useMemo(() => new Map(nodes.map((node) => [node.id, node.name])), [nodes]);
+  // Pasted application answers: React state only, never saved (see the hook).
+  const applications = useAceApplicationProfiles(cycleId, drafts, nodes, loadFor);
 
   const draftIds = useMemo(() => drafts.map((draft) => draft.id), [drafts]);
   const { reviewed, markReviewed } = useReviewMarks('ace_assignment_draft', cycleId, draftIds, yearStart);
@@ -529,7 +534,7 @@ export function AceAssignmentsWorkspace() {
         <div className="space-y-3">
           <AceAssignmentPreflightPanel
             preflight={preflight}
-            extraIssues={eligibilityWarnings}
+            extraIssues={[...eligibilityWarnings, ...applications.warningIssues]}
             heading={cycle.status === 'locked' ? 'Preflight before publishing' : 'Preflight before locking'}
             readyLabel={cycle.status === 'locked' ? 'Ready to Publish' : 'Ready to Lock'}
             onFilter={setFilter}
@@ -667,6 +672,22 @@ export function AceAssignmentsWorkspace() {
         </div>
       )}
 
+      {ready && (cycle.status === 'draft' || cycle.status === 'locked') && (
+        <div className="space-y-3">
+          <button type="button" onClick={() => setApplicationsOpen((open) => !open)} aria-expanded={applicationsOpen} className={ghostBtnCls}>
+            {applicationsOpen ? 'Close application answers' : applications.loaded ? 'Application answers loaded' : 'Load application answers'}
+          </button>
+          {applicationsOpen && (
+            <AceApplicationProfilesPanel
+              summary={applications.summary}
+              onLoad={applications.load}
+              onClear={applications.clear}
+              onClose={() => setApplicationsOpen(false)}
+            />
+          )}
+        </div>
+      )}
+
       {drafts.length > 0 && (
         <FilterChips filters={ACE_DRAFT_FILTERS} counts={counts} active={filter} onChange={setFilter} label="Filter Littles" />
       )}
@@ -730,6 +751,8 @@ export function AceAssignmentsWorkspace() {
                 reviewed={isReviewed}
                 onPatch={patchDraft}
                 onRemove={removeDraft}
+                application={applications.rowFor(draft)}
+                capacityFor={applications.capacityFor}
               />
             ))}
           </ul>
