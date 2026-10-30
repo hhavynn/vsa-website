@@ -589,21 +589,104 @@ html.dark .vsa-editorial-shell .scrapbook-sticker-gold {
   border-radius: 0;
 }
 
-/* Gallery album wall: Figma .gallery-photo Polaroids — tilt kept, tape gone. */
-.vsa-editorial-shell .gallery-memory-card {
-  border-color: transparent;
+/* ─── Gallery album wall: a camera roll of photo objects ─────────────────
+   Gallery.tsx deals each album one of three objects in a fixed rhythm —
+   Polaroid, stacked print, point-and-shoot camera — tilted by the wall's
+   existing --album-rotate. They are physical objects, so they stay light in
+   dark mode and carry their own ink. Each photo gets a film-camera date
+   imprint (decorative; the caption has the readable date). The `html`
+   prefix outranks index.css's `.dark .gallery-memory-card` surface. */
+html .vsa-editorial-shell .gallery-memory-card {
+  --text: #28354d;
+  --text2: #4f5a74;
+  --text3: #4f5a74;
+  border: 0;
   border-radius: 0;
-  background: var(--ed-paper);
-  box-shadow: 0 18px 46px rgba(25, 34, 75, 0.14);
+  background: #faf9f5;
+  box-shadow: 0 18px 46px rgba(25, 34, 75, 0.16);
+}
+
+html.dark .vsa-editorial-shell .gallery-memory-card {
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.4);
 }
 
 .vsa-editorial-shell .gallery-memory-card::before {
   display: none;
 }
 
-html.dark .vsa-editorial-shell .gallery-memory-card {
-  background: var(--color-surface);
-  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.32);
+.vsa-editorial-shell .gallery-memory-image {
+  border-radius: 0;
+  background: #e7e9f6;
+}
+
+.vsa-editorial-shell .gallery-memory-title {
+  color: #28354d;
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 1.4rem;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.gallery-date-stamp {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  z-index: 1;
+  color: #ffb45e;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 6px rgba(255, 140, 50, 0.75), 0 1px 2px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+/* Polaroid: a deep bottom mat for the handwritten-style title. */
+html .vsa-editorial-shell .gallery-memory-card--polaroid {
+  padding: 10px 10px 20px;
+}
+
+/* Stacked print: a thin white border over a lavender print peeking out. */
+html .vsa-editorial-shell .gallery-memory-card--print {
+  padding: 7px 7px 14px;
+  background: #ffffff;
+  box-shadow:
+    9px 10px 0 -2px #e7def3,
+    9px 10px 0 -1px rgba(40, 53, 77, 0.12),
+    0 16px 40px rgba(25, 34, 75, 0.15);
+}
+
+html.dark .vsa-editorial-shell .gallery-memory-card--print {
+  box-shadow:
+    9px 10px 0 -2px #4a3f78,
+    0 16px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Camera: light plastic body, dark-bezelled screen, button rail. */
+html .vsa-editorial-shell .gallery-memory-card--camera {
+  padding: 12px 52px 16px 12px;
+  border-radius: 22px;
+  background: #f4f3f8;
+  box-shadow: 0 24px 60px rgba(20, 24, 80, 0.28), inset 0 -3px 0 rgba(40, 53, 77, 0.08);
+}
+
+.vsa-editorial-shell .gallery-memory-card--camera .gallery-memory-image {
+  border-radius: 8px;
+  box-shadow: 0 0 0 4px #1d2235;
+}
+
+.vsa-editorial-shell .gallery-memory-card--camera::before {
+  display: block;
+  top: -8px;
+  left: auto;
+  right: 18%;
+  width: 56px;
+  height: 10px;
+  border-radius: 5px 5px 0 0;
+  background: #e5e4ec;
+  transform: none;
 }
 
 /* Program landing pages reuse EditorialHero (ACE keeps its bespoke hero).

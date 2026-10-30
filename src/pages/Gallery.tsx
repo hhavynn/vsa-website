@@ -18,6 +18,7 @@ import { AlbumFallback, AlbumLightbox } from '../components/features/gallery/Alb
 import { GalleryFilters } from '../components/features/gallery/GalleryFilters';
 import { GalleryLoadMore } from '../components/features/gallery/GalleryLoadMore';
 import { GalleryHeroContactSheet, hasContactSheetCovers } from '../components/features/gallery/GalleryHeroContactSheet';
+import { CameraRail, cameraDateStamp } from '../components/features/gallery/CameraFrame';
 
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
@@ -31,6 +32,11 @@ const albumPatterns = [
   { rotate: '1.6deg', offset: '-6px', height: '256px', span: 5, tape: 'var(--tape-teal)', tapeX: '50%', tapeRotate: '2deg' },
   { rotate: '-1.1deg', offset: '28px', height: '238px', span: 3, tape: 'var(--tape-gold)', tapeX: '62%', tapeRotate: '-2.5deg' },
 ];
+
+// The wall mixes three photo objects in a fixed rhythm so no two neighbours
+// match: a Polaroid, a stacked print, and (on the widest slot) a camera.
+type AlbumObject = 'polaroid' | 'print' | 'camera';
+const albumObjects: AlbumObject[] = ['polaroid', 'print', 'polaroid', 'camera', 'print'];
 
 function getAlbumStyle(index: number): CSSProperties {
   const pattern = albumPatterns[index % albumPatterns.length];
@@ -270,7 +276,7 @@ export default function Gallery() {
                 className="mb-5 flex items-center gap-2 font-sans text-xs text-text-secondary sm:hidden"
                 aria-label="Swipe horizontally to browse photo albums"
               >
-                <span aria-hidden="true" className="font-mono text-base text-brand-600 dark:text-brand-400">← →</span>
+                <span aria-hidden="true" className="font-mono text-base text-brand-600 dark:text-brand-400">◀ ▶</span>
                 Swipe sideways to explore more memories
               </p>
             )}
@@ -280,10 +286,16 @@ export default function Gallery() {
                 // would make hi-DPI phones download the larger file: more egress than before.
                 const coverUrl = album.cover_thumbnail_url || album.cover_image_url;
 
+                const object = albumObjects[index % albumObjects.length];
+                const formattedDate = formatDateOnly(album.date, { month: 'short', day: 'numeric', year: 'numeric' });
+
                 return (
                   <motion.article
                     key={album.id}
-                    className="gallery-memory-card group block min-w-[82vw] snap-start transition-all hover:!rotate-0 hover:-translate-y-1 hover:shadow-xl motion-reduce:transform-none motion-reduce:transition-none sm:min-w-0"
+                    className={cn(
+                      'gallery-memory-card group block min-w-[82vw] snap-start transition-all hover:!rotate-0 hover:-translate-y-1 hover:shadow-xl motion-reduce:transform-none motion-reduce:transition-none sm:min-w-0',
+                      `gallery-memory-card--${object}`,
+                    )}
                     style={getAlbumStyle(index)}
                     whileHover={shouldReduceMotion ? undefined : { y: -4 }}
                   >
@@ -306,28 +318,20 @@ export default function Gallery() {
                       ) : (
                         <AlbumFallback />
                       )}
+                      {/* Film-camera date imprint; the caption carries the readable date. */}
+                      <span aria-hidden="true" className="gallery-date-stamp">
+                        {cameraDateStamp(album.date)}
+                      </span>
                       <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors duration-200 group-hover:bg-black/40">
                         <span className="font-sans text-xs font-medium text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                           Preview Album
                         </span>
                       </div>
                     </div>
+                    {object === 'camera' && <CameraRail />}
 
                     <div className="gallery-memory-caption">
-                      <div className="mb-3 flex flex-wrap items-center gap-2">
-                        <span className="scrapbook-sticker scrapbook-sticker-gold">
-                          {formatDateOnly(album.date, { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase()}
-                        </span>
-                        {album.event && (
-                          <span
-                            className="scrapbook-sticker scrapbook-sticker-coral"
-                            title={`From event: ${album.event.name}`}
-                          >
-                            From event
-                          </span>
-                        )}
-                      </div>
-                      <h2 className="min-w-0 break-words font-sans text-sm font-semibold leading-snug tracking-[-0.01em]" style={{ color: 'var(--text)' }}>
+                      <h2 className="gallery-memory-title min-w-0 break-words">
                         {/* The title is the link; its ::after stretches over the whole card, so the
                             accessible name ("<title>. Preview album") contains the visible text. */}
                         <a
@@ -346,20 +350,13 @@ export default function Gallery() {
                           {album.description}
                         </p>
                       )}
-                      {album.event && (
-                        <p
-                          className="mt-2 break-words font-mono text-[10px] uppercase leading-relaxed tracking-[0.08em]"
-                          style={{ color: 'var(--text3)' }}
-                        >
-                          Related event / {album.event.name}
-                        </p>
-                      )}
-                      <div className="mt-3 flex items-center justify-between gap-4">
-                        <span className="scrapbook-caption" style={{ color: 'var(--text3)' }}>Album</span>
-                        <span className="scrapbook-sticker scrapbook-sticker-teal">
-                          Google Photos
+                      <p className="mt-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 font-mono text-[10px] uppercase leading-relaxed tracking-[0.08em]" style={{ color: 'var(--text3)' }}>
+                        <span className="min-w-0 break-words">
+                          {formattedDate}
+                          {album.event && <> · {album.event.name}</>}
                         </span>
-                      </div>
+                        <span aria-hidden="true">Google Photos ↗</span>
+                      </p>
                     </div>
                   </motion.article>
                 );

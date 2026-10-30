@@ -7,6 +7,7 @@ import { OptimizedImage } from "../../common/OptimizedImage";
 import { EventInterestButtons } from "../events/EventInterestButtons";
 import { Skeleton } from "../../ui/Skeleton";
 import { Sparkle } from "../../ui/Sparkle";
+import { CameraFrame, cameraDateStamp } from "../gallery/CameraFrame";
 import {
   EditorialArrow as Arrow,
   Eyebrow,
@@ -510,21 +511,16 @@ function albumCover(album: HomeAlbum): string {
   return album.cover_thumbnail_url || album.cover_image_url || "";
 }
 
-/**
- * The newest album on the screen of a point-and-shoot camera, the framing
- * VSA's "Froyo With VSA" post uses for its group photo. The body and buttons
- * are decoration; the screen is the album link.
- */
-function CameraAlbum({ album }: { album: HomeAlbum }) {
+/** The newest album on the camera screen; the screen is the album link. */
+function CameraAlbum({ album, total }: { album: HomeAlbum; total: number }) {
   return (
-    <div className="relative rounded-[22px] bg-figma-camera p-3 pr-[3.25rem] shadow-[0_30px_70px_rgba(20,24,80,0.35),inset_0_-3px_0_rgba(40,53,77,0.08)] sm:rounded-[28px] sm:p-4 sm:pr-24 dark:bg-figma-camera-dim">
-      <span aria-hidden="true" className="absolute -top-2.5 right-[16%] h-3 w-14 rounded-t-md bg-figma-camera-rim sm:-top-3 sm:h-3.5 sm:w-20" />
+    <CameraFrame hud={{ date: cameraDateStamp(album.date), counter: `1 / ${total}` }}>
       <a
         href={album.google_photos_url}
         target="_blank"
         rel="noopener noreferrer"
         aria-label={`Open ${album.title} photo album`}
-        className="group relative block overflow-hidden rounded-md bg-figma-screen focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+        className="group block focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-white"
       >
         <OptimizedImage
           src={albumCover(album)}
@@ -539,15 +535,7 @@ function CameraAlbum({ album }: { album: HomeAlbum }) {
           <span aria-hidden="true">↗</span>
         </span>
       </a>
-      <span aria-hidden="true" className="absolute right-3 top-1/2 flex -translate-y-1/2 flex-col items-center gap-2 sm:right-6 sm:gap-3">
-        <span className="h-3 w-3 rounded-full bg-figma-shutter ring-[3px] ring-figma-camera-rim sm:h-4 sm:w-4" />
-        <span className="h-8 w-8 rounded-full border border-figma-camera-key bg-figma-camera-rim shadow-inner sm:h-14 sm:w-14" />
-        <span className="flex gap-1.5 sm:gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-figma-camera-key sm:h-3.5 sm:w-3.5" />
-          <span className="h-2.5 w-2.5 rounded-full bg-figma-camera-key sm:h-3.5 sm:w-3.5" />
-        </span>
-      </span>
-    </div>
+    </CameraFrame>
   );
 }
 
@@ -612,7 +600,7 @@ export function EditorialGallery() {
         ) : (
           <div className="relative mt-12 grid gap-10 sm:mt-14 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-center lg:gap-[4vw]">
             <div className="relative">
-              <CameraAlbum album={visibleAlbums[0]} />
+              <CameraAlbum album={visibleAlbums[0]} total={visibleAlbums.length} />
               <div
                 aria-hidden="true"
                 className="home-editorial-bubble absolute -bottom-10 -left-6 h-24 w-24 sm:h-32 sm:w-32"
