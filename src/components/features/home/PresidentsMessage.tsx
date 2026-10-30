@@ -2,10 +2,16 @@ import {
   type PresidentsContent,
   splitPresidentsMessage,
 } from "../../../data/presidentsContent";
-import {
-  getSupabaseImageSrcSet,
-  getSupabaseImageUrl,
-} from "../../../lib/supabaseImages";
+import { OptimizedImage } from "../../common/OptimizedImage";
+
+/** "April Pham and Havyn Nguyen" → "A + H", so the placeholder follows each year's presidents. */
+export function presidentInitials(names: string): string {
+  return names
+    .split(/\s*(?:,|&|\band\b)\s*/i)
+    .map((name) => name.trim().charAt(0).toUpperCase())
+    .filter(Boolean)
+    .join(" + ");
+}
 
 /**
  * The homepage presidents letter. Shared by the homepage and the admin
@@ -82,40 +88,30 @@ export function PresidentsMessageSection({
             )}
           </div>
           <div>
-            {presidentsPhotoUrl ? (
-              <div className="scrapbook-photo rotate-[1.5deg]">
-                <img
-                  src={getSupabaseImageUrl(presidentsPhotoUrl, {
-                    width: 440,
-                    height: 586,
-                    resize: "cover",
-                    quality: 74,
-                  })}
-                  srcSet={getSupabaseImageSrcSet(
-                    presidentsPhotoUrl,
-                    [320, 440, 640],
-                    {
-                      resize: "cover",
-                      quality: 74,
-                    },
-                  )}
-                  sizes="(min-width: 1024px) 220px, 70vw"
-                  alt={content.names}
-                  className="aspect-[3/4] w-full object-cover"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </div>
-            ) : (
-              <div className="scrapbook-photo flex aspect-[3/4] items-center justify-center">
-                <span
-                  className="font-serif text-[28px] italic"
-                  style={{ color: "var(--text3)" }}
-                >
-                  A + H
-                </span>
-              </div>
-            )}
+            {/* No photo, or one that fails to load, shows the presidents' initials. */}
+            <div className="scrapbook-photo rotate-[1.5deg]">
+              <OptimizedImage
+                src={presidentsPhotoUrl}
+                width={440}
+                height={586}
+                widths={[320, 440, 640]}
+                resize="cover"
+                quality={74}
+                sizes="(min-width: 1024px) 220px, 70vw"
+                alt={content.names}
+                className="aspect-[3/4] w-full object-cover"
+                fallback={
+                  <div className="flex aspect-[3/4] items-center justify-center">
+                    <span
+                      className="font-serif text-[28px] italic"
+                      style={{ color: "var(--text3)" }}
+                    >
+                      {presidentInitials(content.names) || "VSA"}
+                    </span>
+                  </div>
+                }
+              />
+            </div>
             <div
               className="mt-3 border-t py-3"
               style={{ borderColor: "var(--border)" }}

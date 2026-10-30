@@ -223,8 +223,8 @@ export default function AdminYearSetup() {
   return (
     <>
       <PageTitle title="New Year Setup" />
-      <div className="border-b px-6 py-6 sm:px-8 sm:py-8 border-[var(--color-border)] bg-surface">
-        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl text-text-primary">Start {yearLabel}</h1>
+      <div className="vsa-admin-field vsa-ribbon-bottom border-b px-5 py-6 sm:px-8 sm:py-7 border-[var(--color-border)]">
+        <h1 className="font-display text-[2rem] font-normal leading-[1.05] tracking-[-0.02em] text-text-primary sm:text-[2.6rem]">Start {yearLabel}</h1>
         <YearContextBadge context={describeYearContext(targetYear, operatingYear)} className="mt-2" />
         <p className="mt-2 max-w-3xl font-sans text-sm leading-relaxed text-text-secondary">
           Review what already exists for the new school year, then create only what is missing. Nothing is written until you press Create Setup. Terms and the Cabinet year are created inactive, past assignments are never copied, and no House is revealed.

@@ -4,8 +4,8 @@ const DOT: Record<string, string> = {
   draft: 'bg-amber-500',
   locked: 'bg-sky-500',
   published: 'bg-green-500',
-  archived: 'bg-gray-400',
-  none: 'bg-gray-400',
+  archived: 'bg-[var(--color-border-strong)]',
+  none: 'bg-[var(--color-border-strong)]',
 };
 
 export interface StatusBadgeProps {

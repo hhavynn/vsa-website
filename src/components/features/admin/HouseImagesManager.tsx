@@ -462,7 +462,7 @@ export function HouseImagesManager({ selectedYear, onYearChange }: HouseImagesMa
                 </div>
                 <div className="flex items-center gap-3">
                   {!draft.is_active && (
-                    <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-zinc-500">Archived</span>
+                    <span className="rounded bg-surface2 px-1.5 py-0.5 text-[9px] font-bold uppercase text-text-muted">Archived</span>
                   )}
                   <span className="h-3 w-3 rounded-full" style={{ background: color }} />
                 </div>
@@ -559,7 +559,7 @@ export function HouseImagesManager({ selectedYear, onYearChange }: HouseImagesMa
                   </div>
 
                   <p className="text-[10px] italic" style={{ color: 'var(--color-text3)' }}>
-                    Images are compressed before upload. Static migration can move them to <code className="bg-zinc-100 px-1 dark:bg-zinc-800">/images/houses/...</code> later to reduce Supabase egress.
+                    Images are compressed before upload. Static migration can move them to <code className="bg-surface2 px-1">/images/houses/...</code> later to reduce Supabase egress.
                   </p>
 
                   <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-text2)' }}>
@@ -693,7 +693,7 @@ export function HouseImagesManager({ selectedYear, onYearChange }: HouseImagesMa
       </div>
 
       {showAddForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4 backdrop-blur-sm">
           <div className="scrapbook-paper w-full max-w-md p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
             <h2 className="font-serif text-xl font-bold">New House Profile</h2>
             <p className="mt-2 text-xs" style={{ color: 'var(--color-text2)' }}>

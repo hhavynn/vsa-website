@@ -21,11 +21,11 @@ const inputStyle: React.CSSProperties = {
   border: '1px solid var(--color-border)', borderRadius: 4, outline: 'none',
 };
 
-const STATUS_BADGE: Record<MemberPhotoRequest['status'], { label: string; color: string }> = {
-  pending: { label: 'Pending', color: '#d97706' },
-  approved: { label: 'Approved', color: '#16a34a' },
-  rejected: { label: 'Rejected', color: '#dc2626' },
-  removed: { label: 'Removed', color: 'var(--color-text3)' },
+const STATUS_BADGE: Record<MemberPhotoRequest['status'], { label: string; className: string }> = {
+  pending: { label: 'Pending', className: 'border-amber-600 text-amber-700 dark:border-amber-400 dark:text-amber-300' },
+  approved: { label: 'Approved', className: 'border-green-700 text-green-700 dark:border-green-400 dark:text-green-300' },
+  rejected: { label: 'Rejected', className: 'border-red-700 text-red-700 dark:border-red-400 dark:text-red-300' },
+  removed: { label: 'Removed', className: 'border-[var(--color-border-strong)] text-text-muted' },
 };
 
 type StatusFilter = 'pending' | 'all';
@@ -235,8 +235,7 @@ function RequestCard({
               {request.submitted_name}
             </span>
             <span
-              className="font-sans text-[10px] font-semibold uppercase tracking-wide rounded px-1.5 py-0.5"
-              style={{ color: badge.color, border: `1px solid ${badge.color}` }}
+              className={`rounded border px-1.5 py-0.5 font-sans text-[10px] font-semibold uppercase tracking-wide ${badge.className}`}
             >
               {badge.label}
             </span>
@@ -331,8 +330,7 @@ function RequestCard({
             <button
               onClick={handleApprove}
               disabled={busy}
-              className="font-sans text-xs font-medium rounded px-4 py-2 disabled:opacity-40"
-              style={{ background: '#16a34a', color: '#fff', border: 'none', cursor: busy ? 'default' : 'pointer' }}
+              className="rounded bg-green-700 px-4 py-2 font-sans text-xs font-medium text-white transition-colors hover:bg-green-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2 disabled:cursor-default disabled:opacity-40 dark:bg-green-500 dark:text-[#06210f] dark:hover:bg-green-400"
             >
               {busy ? 'Working…' : 'Approve & Publish'}
             </button>
@@ -340,8 +338,7 @@ function RequestCard({
               <button
                 onClick={handleReject}
                 disabled={busy}
-                className="font-sans text-xs font-medium rounded px-4 py-2 disabled:opacity-40"
-                style={{ background: '#dc2626', color: '#fff', border: 'none', cursor: busy ? 'default' : 'pointer' }}
+                className="rounded bg-red-700 px-4 py-2 font-sans text-xs font-medium text-white transition-colors hover:bg-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 disabled:cursor-default disabled:opacity-40 dark:bg-red-500 dark:hover:bg-red-400"
               >
                 Confirm Reject
               </button>
@@ -349,8 +346,7 @@ function RequestCard({
               <button
                 onClick={() => setShowRejectNote(true)}
                 disabled={busy}
-                className="font-sans text-xs rounded border px-4 py-2 disabled:opacity-40"
-                style={{ borderColor: '#dc2626', color: '#dc2626', background: 'transparent', cursor: 'pointer' }}
+                className="rounded border border-red-700 bg-transparent px-4 py-2 font-sans text-xs text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 disabled:opacity-40 dark:border-red-400 dark:text-red-300 dark:hover:bg-red-400/10"
               >
                 Reject…
               </button>
@@ -364,8 +360,7 @@ function RequestCard({
           <button
             onClick={() => setConfirmRemove(true)}
             disabled={busy}
-            className="font-sans text-xs rounded border px-4 py-2 disabled:opacity-40"
-            style={{ borderColor: '#dc2626', color: '#dc2626', background: 'transparent', cursor: 'pointer' }}
+            className="rounded border border-red-700 bg-transparent px-4 py-2 font-sans text-xs text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 disabled:opacity-40 dark:border-red-400 dark:text-red-300 dark:hover:bg-red-400/10"
           >
             {busy ? 'Working…' : 'Remove from public display'}
           </button>

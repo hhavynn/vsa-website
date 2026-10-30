@@ -454,7 +454,7 @@ export function Events() {
       <PageTitle title="Events" />
       {/* Degraded mode check again here in case of partial failure if we still want to show what we have */}
 
-      <div className="vsa-page-hero">
+      <div className="vsa-page-hero vsa-halftone">
         <div className="vsa-container relative z-10">
           <span className="scrapbook-sticker scrapbook-sticker-coral mb-4">Flyer Board</span>
           <h1 className="vsa-page-title">Events</h1>

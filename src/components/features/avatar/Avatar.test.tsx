@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { Avatar } from "./Avatar";
 
 describe("public member avatar", () => {
@@ -13,5 +13,12 @@ describe("public member avatar", () => {
 
     rerender(<Avatar avatarUrl={null} />);
     expect(screen.queryByAltText("")).not.toBeInTheDocument();
+  });
+
+  it("shows the silhouette instead of a broken image when the photo fails to load", () => {
+    render(<Avatar avatarUrl="/images/removed-avatar.webp" />);
+    fireEvent.error(screen.getByAltText(""));
+    expect(screen.queryByAltText("")).not.toBeInTheDocument();
+    expect(screen.getByTestId("avatar-placeholder")).toBeInTheDocument();
   });
 });

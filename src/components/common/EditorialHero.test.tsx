@@ -32,4 +32,18 @@ describe('EditorialHero', () => {
     );
     expect(screen.getByRole('link', { name: 'Get Tickets' })).toBeInTheDocument();
   });
+
+  it('keeps one h1 and the watermark in the tree when media is provided', () => {
+    render(
+      <EditorialHero
+        eyebrow="Program Booklet"
+        title="Vietnamese Culture Night"
+        watermark="vcn"
+        media={<div role="group" aria-label="VCN photo albums" />}
+      />
+    );
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole('group', { name: 'VCN photo albums' })).toBeInTheDocument();
+    expect(screen.getByText('vcn')).toHaveAttribute('aria-hidden', 'true');
+  });
 });
