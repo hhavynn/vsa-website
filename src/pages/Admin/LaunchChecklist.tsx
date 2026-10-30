@@ -389,12 +389,12 @@ export default function LaunchChecklist() {
       <PageTitle title="Launch Checklist" />
 
       {/* Page header */}
-      <div className="border-b px-6 py-6 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+      <div className="vsa-admin-field vsa-ribbon-bottom border-[var(--color-border)] border-b px-5 py-6 sm:px-8 sm:py-7">
         <div className="max-w-5xl">
           <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--color-text3)' }}>
             Admin tools
           </p>
-          <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>
+          <h1 className="mt-2 font-display text-[2rem] font-normal leading-[1.05] tracking-[-0.02em] text-text-primary sm:text-[2.6rem]" style={{ color: 'var(--color-text)' }}>
             Launch Checklist
           </h1>
           <p className="mt-2 max-w-2xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>

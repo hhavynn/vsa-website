@@ -61,7 +61,7 @@
   --color-on-brand:      #ffffff;
   --color-accent:        #9072b7;   /* lavender */
   --color-accent-text:   #69518d;
-  --color-on-accent:     #16213f;
+  --color-on-accent:     #0b1530;   /* ≥4.5:1 on --color-accent */
   --color-gold:          #9886c0;
   --color-gold-text:     #635187;
   --teal: #718bd4;
@@ -126,6 +126,22 @@
   --ed-ribbon: linear-gradient(90deg, #a8d9f0, #718bd4 34%, #c8b8e8 68%, #f0ccd9);
   /* Scrim behind dialogs and drawers: ink navy, never flat black. */
   --color-scrim: rgba(22, 30, 61, 0.48);
+  /* Status chips (text / border / fill). Each text color is ≥4.5:1 on its fill. */
+  --status-info-text: #36478a;
+  --status-info-border: #ced6f9;
+  --status-info-bg: #f2f4fe;
+  --status-success-text: #0f6a47;
+  --status-success-border: #bfe3d4;
+  --status-success-bg: #edf8f2;
+  --status-warning-text: #8a5a0a;
+  --status-warning-border: #ead39b;
+  --status-warning-bg: #fff7e0;
+  --status-danger-text: #b42318;
+  --status-danger-border: #f2c7c3;
+  --status-danger-bg: #fff1f0;
+  --status-accent-text: #5f4596;
+  --status-accent-border: #dccffc;
+  --status-accent-bg: #f5f0ff;
 }
 
 @keyframes vsa-float {
@@ -442,16 +458,16 @@
   .scrapbook-board {
     position: relative;
     background:
-      linear-gradient(90deg, rgba(20, 32, 40, 0.035) 1px, transparent 1px),
-      linear-gradient(0deg, rgba(20, 32, 40, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(40, 53, 77, 0.035) 1px, transparent 1px),
+      linear-gradient(0deg, rgba(40, 53, 77, 0.03) 1px, transparent 1px),
       var(--bg);
     background-size: 32px 32px;
   }
 
   .dark .scrapbook-board {
     background:
-      linear-gradient(90deg, rgba(228, 216, 200, 0.035) 1px, transparent 1px),
-      linear-gradient(0deg, rgba(228, 216, 200, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(241, 238, 251, 0.035) 1px, transparent 1px),
+      linear-gradient(0deg, rgba(241, 238, 251, 0.03) 1px, transparent 1px),
       var(--bg);
     background-size: 32px 32px;
   }
@@ -578,20 +594,20 @@
   }
 
   .scrapbook-sticker-teal {
-    border-color: rgba(30, 136, 120, 0.35);
-    background: rgba(30, 136, 120, 0.1);
+    border-color: rgba(67, 86, 161, 0.35);
+    background: rgba(67, 86, 161, 0.1);
     color: var(--brand);
   }
 
   .scrapbook-sticker-coral {
-    border-color: rgba(232, 98, 58, 0.35);
-    background: rgba(232, 98, 58, 0.1);
+    border-color: rgba(194, 95, 159, 0.35);
+    background: rgba(194, 95, 159, 0.1);
     color: var(--color-accent-text);
   }
 
   .scrapbook-sticker-gold {
-    border-color: rgba(212, 132, 26, 0.35);
-    background: rgba(212, 132, 26, 0.12);
+    border-color: rgba(122, 95, 192, 0.35);
+    background: rgba(122, 95, 192, 0.12);
     color: var(--color-gold-text);
   }
 
@@ -604,7 +620,7 @@
     font-family: "DM Sans", system-ui, sans-serif;
     font-size: 14px;
     padding: 10px 12px;
-    box-shadow: 0 1px 0 rgba(196, 184, 168, 0.35);
+    box-shadow: 0 1px 0 rgba(188, 188, 214, 0.35);
   }
 
   .scrapbook-empty {
@@ -656,7 +672,7 @@
     transition: opacity var(--trans);
     background: radial-gradient(
       220px circle at var(--spot-x, 50%) var(--spot-y, 0%),
-      rgba(59, 189, 181, 0.18),
+      rgba(163, 178, 236, 0.18),
       transparent 68%
     );
   }
@@ -677,7 +693,7 @@
       opacity: 0.55;
       background: radial-gradient(
         160px circle at 50% 0%,
-        rgba(59, 189, 181, 0.1),
+        rgba(163, 178, 236, 0.1),
         transparent 70%
       );
     }
@@ -974,14 +990,14 @@
     --eh-accent-strong: var(--color-accent-text);
     --eh-border: var(--color-border);
     /* Decorative washes with no global equivalent. */
-    --eh-grad-a: #fde0d4;
-    --eh-grad-b: #d2efec;
-    --eh-grad-c: #f9f4ec;
-    --eh-grid: rgba(20, 32, 40, 0.035);
-    --eh-grid-2: rgba(20, 32, 40, 0.03);
-    --eh-watermark: rgba(30, 136, 120, 0.07);
-    --eh-grain-a: rgba(20, 32, 40, 0.18);
-    --eh-grain-b: rgba(20, 32, 40, 0.12);
+    --eh-grad-a: #f0dbeb;
+    --eh-grad-b: #d9e6fa;
+    --eh-grad-c: #f5f5fb;
+    --eh-grid: rgba(40, 53, 77, 0.035);
+    --eh-grid-2: rgba(40, 53, 77, 0.03);
+    --eh-watermark: rgba(67, 86, 161, 0.07);
+    --eh-grain-a: rgba(40, 53, 77, 0.18);
+    --eh-grain-b: rgba(40, 53, 77, 0.12);
 
     container-type: inline-size;
     container-name: editorial-hero;
@@ -999,17 +1015,17 @@
   }
 
   html.dark .editorial-hero {
-    --eh-grad-a: rgba(232, 98, 58, 0.14);
-    --eh-grad-b: rgba(59, 189, 181, 0.16);
-    --eh-grad-c: #0a1218;
-    --eh-grid: rgba(228, 216, 200, 0.035);
-    --eh-grid-2: rgba(228, 216, 200, 0.03);
-    --eh-watermark: rgba(59, 189, 181, 0.06);
+    --eh-grad-a: rgba(211, 184, 241, 0.14);
+    --eh-grad-b: rgba(163, 178, 236, 0.16);
+    --eh-grad-c: #0f182d;
+    --eh-grid: rgba(241, 238, 251, 0.035);
+    --eh-grid-2: rgba(241, 238, 251, 0.03);
+    --eh-watermark: rgba(163, 178, 236, 0.06);
     --eh-grain-a: rgba(255, 255, 255, 0.06);
     --eh-grain-b: rgba(255, 255, 255, 0.04);
   }
 
-  /* Gold washi-tape strip near the top edge. */
+  /* Lavender washi-tape strip near the top edge. */
   .editorial-hero::after {
     content: '';
     position: absolute;
@@ -1018,7 +1034,7 @@
     right: 8%;
     height: 24px;
     border-radius: 3px;
-    background: repeating-linear-gradient(-45deg, rgba(212, 132, 26, 0.24) 0 8px, rgba(255, 255, 255, 0.14) 8px 12px);
+    background: repeating-linear-gradient(-45deg, rgba(200, 184, 232, 0.4) 0 8px, rgba(255, 255, 255, 0.14) 8px 12px);
     transform: rotate(-0.7deg);
     opacity: 0.55;
     pointer-events: none;
@@ -1032,8 +1048,8 @@
     background-image:
       radial-gradient(1.2px 1.2px at 20% 30%, var(--eh-grain-a) 50%, transparent 51%),
       radial-gradient(1px 1px at 60% 80%, var(--eh-grain-b) 50%, transparent 51%),
-      radial-gradient(1.5px 1.5px at 80% 20%, rgba(232, 98, 58, 0.22) 50%, transparent 51%),
-      radial-gradient(1px 1px at 40% 60%, rgba(30, 136, 120, 0.18) 50%, transparent 51%);
+      radial-gradient(1.5px 1.5px at 80% 20%, rgba(194, 95, 159, 0.2) 50%, transparent 51%),
+      radial-gradient(1px 1px at 40% 60%, rgba(67, 86, 161, 0.18) 50%, transparent 51%);
     background-size: 220px 220px, 180px 180px, 260px 260px, 200px 200px;
   }
 
@@ -1068,7 +1084,7 @@
   .editorial-hero-title {
     margin: 18px 0 12px;
     color: var(--eh-text);
-    font-family: "DM Serif Display", Georgia, serif;
+    font-family: "Instrument Serif", "DM Serif Display", Georgia, serif;
     font-size: 60px;
     font-weight: 400;
     letter-spacing: -0.035em;
@@ -1460,8 +1476,8 @@
     justify-content: center;
     gap: 8px;
     background:
-      radial-gradient(circle at 30% 24%, rgba(232, 98, 58, 0.16), transparent 30%),
-      radial-gradient(circle at 70% 74%, rgba(30, 136, 120, 0.16), transparent 32%),
+      radial-gradient(circle at 30% 24%, rgba(194, 95, 159, 0.16), transparent 30%),
+      radial-gradient(circle at 70% 74%, rgba(67, 86, 161, 0.16), transparent 32%),
       var(--color-surface2);
     color: var(--color-text3);
   }
@@ -1735,6 +1751,21 @@ html.dark {
   --ed-lavender-wash: #251e48;
   --ed-sky-wash: #10294a;
   --color-scrim: rgba(5, 9, 22, 0.66);
+  --status-info-text: #c7d1ff;
+  --status-info-border: #3d4c7e;
+  --status-info-bg: rgba(163, 178, 236, 0.12);
+  --status-success-text: #86efac;
+  --status-success-border: #1f5a40;
+  --status-success-bg: rgba(34, 197, 94, 0.12);
+  --status-warning-text: #fcd34d;
+  --status-warning-border: #6b5216;
+  --status-warning-bg: rgba(245, 158, 11, 0.12);
+  --status-danger-text: #fca5a5;
+  --status-danger-border: #6e2a2a;
+  --status-danger-bg: rgba(239, 68, 68, 0.12);
+  --status-accent-text: #dfc5ff;
+  --status-accent-border: #4c3a78;
+  --status-accent-bg: rgba(211, 184, 241, 0.12);
 }
 
 /* ── Operational surfaces (admin, sign-in, dialogs) ──────────────────────
@@ -1743,9 +1774,26 @@ html.dark {
    photo fields here; those stay on public storytelling pages. */
 /* Instrument Serif ships one weight. Admin markup asks for font-serif
    font-bold in many places; render the true face instead of a smeared faux
-   bold. Public pages (body.vsa-editorial-shell) keep their #761 rendering. */
-body:not(.vsa-editorial-shell) {
+   bold. Public pages (.vsa-editorial-shell, set on Layout's wrapper from the
+   first render) keep their #761 rendering. */
+html {
   font-synthesis-weight: none;
+}
+
+.vsa-editorial-shell {
+  font-synthesis-weight: auto;
+}
+
+/* Admin cards stay calm: scrapbook paper and notes (used by ~45 admin panels)
+   render as plain operational cards outside the public shell. No tape strips,
+   no paper shadow; public storytelling pages keep the scrapbook voice. */
+:is(.scrapbook-paper, .scrapbook-note):not(.vsa-editorial-shell *)::before {
+  content: none;
+}
+
+:is(.scrapbook-paper, .scrapbook-note):not(.vsa-editorial-shell *) {
+  border-color: var(--color-border);
+  box-shadow: 0 1px 2px rgba(40, 53, 77, 0.05);
 }
 
 @layer components {

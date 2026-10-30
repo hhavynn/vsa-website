@@ -58,6 +58,7 @@ import {
 import { InternDraftPatch } from '../../data/repos/internCohort';
 import { MemberNameIndex, MemberOption, buildMemberNameIndex } from '../../lib/memberLinkMatching';
 import { suggestMemberLink } from '../../lib/memberLinkSuggestion';
+import { TOAST_OPTIONS } from '../../lib/toastOptions';
 
 const fieldCls =
   'w-full rounded border bg-[var(--color-surface2)] px-3 py-2 text-sm text-[var(--color-text)] focus:border-[var(--brand)] focus:outline-none focus:ring-1 focus:ring-[var(--brand)] disabled:opacity-60';
@@ -591,7 +592,7 @@ export default function AdminInterns() {
   return (
     <>
       <PageTitle title="Intern Cohort" />
-      <Toaster position="top-right" />
+      <Toaster position="top-right" toastOptions={TOAST_OPTIONS} />
 
       <AdminPageHeader
         description={

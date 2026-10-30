@@ -335,7 +335,7 @@ function PublicMemberProfileModal({
                 width={80}
                 height={80}
                 priority
-                className="h-20 w-20 rounded-full border-4 border-white object-cover shadow-md dark:border-zinc-800"
+                className="h-20 w-20 rounded-full border-4 border-white object-cover shadow-md dark:border-[var(--color-surface)]"
                 fallback={<InitialsAvatar name={displayName} size={80} />}
               />
             </div>
@@ -1013,7 +1013,7 @@ function PodiumIndividual({
                 alt=""
                 width={44}
                 height={44}
-                className="h-11 w-11 shrink-0 rounded-full border-2 border-white object-cover dark:border-zinc-800"
+                className="h-11 w-11 shrink-0 rounded-full border-2 border-white object-cover dark:border-[var(--color-surface)]"
                 fallback={<InitialsAvatar name={name} size={44} />}
               />
               <div className="min-w-0 flex-1">
@@ -1095,7 +1095,7 @@ function PodiumIndividual({
                 </div>
 
                 {/* Avatar */}
-                <div className="mx-auto mb-4 h-24 w-24 overflow-hidden rounded-full border-4 border-white shadow-md dark:border-zinc-800">
+                <div className="mx-auto mb-4 h-24 w-24 overflow-hidden rounded-full border-4 border-white shadow-md dark:border-[var(--color-surface)]">
                   <OptimizedImage
                     src={memberAvatars.get(card.entry.id)}
                     alt={`${card.entry.first_name} ${card.entry.last_name}`}

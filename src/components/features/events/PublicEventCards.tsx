@@ -158,7 +158,7 @@ export function PastEventMemoryCard({
             href={linkedAlbum}
             target="_blank"
             rel="noopener noreferrer"
-            className="absolute bottom-2 right-2 inline-flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-sm transition-opacity hover:bg-black/80"
+            className="absolute bottom-2 right-2 inline-flex items-center gap-1.5 rounded-full bg-scrim px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-sm transition-opacity hover:bg-black/80"
             aria-label={`View photos from ${event.name}`}
             onClick={(e) => e.stopPropagation()}
           >
