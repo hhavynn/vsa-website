@@ -28,11 +28,12 @@ export function reviewAceParticipation(
 ):AceParticipationRow[]{
   if(!Number.isInteger(minEvents)||minEvents<1||minEvents>20||eventIds.length<minEvents||eventIds.length>20 ||
     new Set(eventIds).size!==eventIds.length)throw new Error('Explicit valid ACE event policy is required');
+  const eligible = new Set(eventIds);
   const idCount=new Map<string,number>();
   roster.forEach(row=>{if(row.little_member_id)idCount.set(row.little_member_id,(idCount.get(row.little_member_id)??0)+1);});
   return roster.map(row=>{
     const memberId=row.little_member_id;
-    const attended=memberId?(attendance.get(memberId)?.size??0):0;
+    const attended=memberId?Array.from(attendance.get(memberId)??[]).filter(id=>eligible.has(id)).length:0;
     const defaultRow={id:row.id,name:row.little_name,memberId,attended,required:minEvents,remaining:null as number|null};
     if(!memberId || !row.published_ace_member_id)return {...defaultRow,status:'needs-review' as const,reason:'Missing canonical member or published ACE node'};
     if((idCount.get(memberId)??0)>1)return {...defaultRow,status:'needs-review' as const,reason:'Canonical member appears more than once in published cycle'};
