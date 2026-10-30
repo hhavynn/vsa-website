@@ -225,3 +225,20 @@ export class HouseMembershipsRepository {
 }
 
 export const houseMembershipsRepository = new HouseMembershipsRepository();
+
+/**
+ * HEAD-only public existence check. An approved House Reveal creates visible
+ * rows in the existing score-free projection; a denied/unknown read fails closed.
+ * No member IDs, assignments, points or roster rows reach the browser.
+ */
+export async function hasRevealedHouseMemberships(year: number): Promise<boolean> {
+  return withErrorHandling(async () => {
+    const { count, error } = await supabase
+      .from('public_house_memberships')
+      .select('member_id', { count: 'exact', head: true })
+      .eq('academic_year_start', year);
+    if (error) throw error;
+    if (count === null) throw new Error('House Reveal availability count was not returned.');
+    return count > 0;
+  }, 'Failed to check published House Reveal');
+}
