@@ -30,6 +30,7 @@ export interface Top3StoryContent {
   asOfLabel: string;
   handle: string;
   theme: StoryTheme;
+  cohort?: 'members' | 'board';
 }
 
 export interface Top3StoryAssets {
@@ -133,7 +134,7 @@ function drawHeader(ctx: CanvasRenderingContext2D, p: StoryPalette, content: Top
   ctx.fillText('VSA at UCSD', logoX + logoR + 22, rowY + 1);
 
   setFont(ctx, 600, 24, STORY_FONTS.mono);
-  const pillLabel = `${content.yearLabel} LEADERBOARD`;
+  const pillLabel = `${content.yearLabel} ${content.cohort === 'board' ? 'BOARD' : 'LEADERBOARD'}`;
   const pillWidth = ctx.measureText(pillLabel).width + 44;
   drawPill(ctx, pillLabel, STORY_WIDTH - 80 - pillWidth / 2, rowY - 25, {
     color: p.accent,
