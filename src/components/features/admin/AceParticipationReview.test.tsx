@@ -1,9 +1,14 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { AceParticipationReview } from './AceParticipationReview';
+import { QueryClient, QueryClientProvider } from 'react-query';
 import { aceAssignmentsRepository } from '../../../data/repos/aceAssignments';
 import { attendanceReadinessRepository } from '../../../data/repos/attendanceReadiness';
 jest.mock('../../../data/repos/aceAssignments',()=>({aceAssignmentsRepository:{listPublishedCycleLittles:jest.fn()}}));
 jest.mock('../../../data/repos/attendanceReadiness',()=>({attendanceReadinessRepository:{getReadiness:jest.fn(),getVerifiedSelectedAttendance:jest.fn()}}));
+function mount(){
+  const client=new QueryClient({defaultOptions:{queries:{retry:false,cacheTime:0}}});
+  return render(<QueryClientProvider client={client}><AceParticipationReview cycleId="cycle-1" year={2026}/></QueryClientProvider>);
+}
 const readiness={events:[{id:'e1',name:'Example Event',date:'2026-10-10',term_label:'Fall',is_published:true,
   academic_term_id:'term',open_review_rows:0,reconciliation_pending_rows:0,reconciled_at:'2026-10-20'}],
   totalEvents:1,truncated:false,checkedAt:'2026-10-30T00:00:00Z'};
@@ -15,7 +20,7 @@ beforeEach(()=>{
   (attendanceReadinessRepository.getVerifiedSelectedAttendance as jest.Mock).mockResolvedValue(new Map([['m1',new Set(['e1'])]]));
 });
 it('does not assume any requirement or fetch roster before explicit approved event selection',async()=>{
-  render(<AceParticipationReview cycleId="cycle-1" year={2026}/>);
+  mount();
   expect(aceAssignmentsRepository.listPublishedCycleLittles).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button',{name:'Check verified attendance'}));
   fireEvent.click(screen.getByRole('button',{name:'Load current-year event import status'}));
@@ -30,7 +35,7 @@ it('does not assume any requirement or fetch roster before explicit approved eve
 });
 it('a failed member read makes every status unavailable instead of fake zero',async()=>{
   (aceAssignmentsRepository.listPublishedCycleLittles as jest.Mock).mockRejectedValue(new Error('denied'));
-  render(<AceParticipationReview cycleId="cycle-1" year={2026}/>);
+  mount();
   fireEvent.click(screen.getByRole('button',{name:'Check verified attendance'}));
   fireEvent.click(screen.getByRole('button',{name:'Load current-year event import status'}));
   await screen.findByText(/Example Event/);
