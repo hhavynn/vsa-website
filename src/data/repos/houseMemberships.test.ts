@@ -218,20 +218,6 @@ describe('getPublicHousesByMemberId — ended memberships', () => {
 });
 
 
-describe('HEAD-only, score-free published House Reveal detection (#641)', () => {
-  it('uses a year-scoped count and returns no canonical IDs to the client', async () => {
-    supabaseMock.queueResult('public_house_memberships', { data: null, count: 1, error: null });
-    await expect(hasRevealedHouseMemberships(2026)).resolves.toBe(true);
-    const calls = supabaseMock.queriesFor('public_house_memberships')[0].calls;
-    expect(calls).toContainEqual({ method: 'select', args: ['member_id', { count: 'exact', head: true }] });
-    expect(calls).toContainEqual({ method: 'eq', args: ['academic_year_start', 2026] });
-    expect(JSON.stringify(calls)).not.toMatch(/house_yearly_points|score|email|review_note|draft|\*/);
-  });
-  it('stays hidden before Reveal and fails closed on denied access', async () => {
-    supabaseMock.queueResult('public_house_memberships', { data: null, count: 0, error: null });
-    await expect(hasRevealedHouseMemberships(2026)).resolves.toBe(false);
-    supabaseMock.queueResult('public_house_memberships', { data: null, error: postgrestError('permission denied', '42501') });
-    await expect(hasRevealedHouseMemberships(2026)).rejects.toThrow();
 describe('visible leaderboard House affiliation batches (#627/#692)', () => {
   const sourceRow = (id: string, year = 2026, from = '2026-09-01', to: string | null = null) => ({
     member_id: id, academic_year_start: year, effective_start_date: from,
@@ -276,5 +262,22 @@ describe('visible leaderboard House affiliation batches (#627/#692)', () => {
     await expect(houseMembershipsRepository.getPublishedHousesForMemberIds(
       2026,Array.from({length:101},(_,i)=>String(i)), '2026-10-30')).rejects.toThrow(/100/);
     expect(supabaseMock.queriesFor('public_house_memberships')).toHaveLength(0);
+  });
+});
+
+describe('HEAD-only, score-free published House Reveal detection (#641)', () => {
+  it('uses a year-scoped count and returns no canonical IDs to the client', async () => {
+    supabaseMock.queueResult('public_house_memberships', { data: null, count: 1, error: null });
+    await expect(hasRevealedHouseMemberships(2026)).resolves.toBe(true);
+    const calls = supabaseMock.queriesFor('public_house_memberships')[0].calls;
+    expect(calls).toContainEqual({ method: 'select', args: ['member_id', { count: 'exact', head: true }] });
+    expect(calls).toContainEqual({ method: 'eq', args: ['academic_year_start', 2026] });
+    expect(JSON.stringify(calls)).not.toMatch(/house_yearly_points|score|email|review_note|draft|\*/);
+  });
+  it('stays hidden before Reveal and fails closed on denied access', async () => {
+    supabaseMock.queueResult('public_house_memberships', { data: null, count: 0, error: null });
+    await expect(hasRevealedHouseMemberships(2026)).resolves.toBe(false);
+    supabaseMock.queueResult('public_house_memberships', { data: null, error: postgrestError('permission denied', '42501') });
+    await expect(hasRevealedHouseMemberships(2026)).rejects.toThrow();
   });
 });
