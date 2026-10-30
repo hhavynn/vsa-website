@@ -399,7 +399,9 @@
     },
     {
       "path": "src/data/repos/attendanceReadiness.ts",
-      "tables": [],
+      "tables": [
+        "member_event_attendance"
+      ],
       "rpcs": [
         "admin_attest_event_attendance",
         "admin_event_attendance_readiness"
