@@ -1,5 +1,5 @@
 #!/bin/bash
-# Verifies supabase/migrations/20261010120000_vault_backed_image_migration_triggers.sql
+# Verifies supabase/migrations/20261030235727_vault_backed_image_migration_triggers.sql
 # against a disposable LOCAL Postgres (superuser "postgres", trust auth), using the
 # synthetic stub in image-migration-triggers.fixture.sql. Creates and drops its
 # own database (vsa_image_trigger_test) and creates cluster-wide stub roles.
@@ -9,7 +9,7 @@
 #   PGPORT=54329 scripts/sql/image-migration-triggers.test.sh
 set -u
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-MIG="$ROOT/supabase/migrations/20261010120000_vault_backed_image_migration_triggers.sql"
+MIG="$ROOT/supabase/migrations/20261030235727_vault_backed_image_migration_triggers.sql"
 FIXTURE="$ROOT/scripts/sql/image-migration-triggers.fixture.sql"
 HOST="${PGHOST:-127.0.0.1}"
 case "$HOST" in 127.0.0.1|localhost|::1) ;; *) echo "Refusing non-local PGHOST=$HOST"; exit 2 ;; esac
