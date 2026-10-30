@@ -104,10 +104,17 @@ begin
   if tg_op = 'UPDATE' then
     raise exception 'Qualifying events cannot be changed in place; remove the event and add another';
   end if;
+  -- BEFORE triggers run ahead of RLS's WITH CHECK; refuse non-admins first so
+  -- the messages below cannot reveal whether a cycle or event exists.
+  if tg_op = 'INSERT' and not public.is_admin_user(auth.uid()) then
+    raise exception 'Admin access required' using errcode = '42501';
+  end if;
 
+  -- FOR SHARE: a concurrent Lock waits for this write, so nothing slips in after it.
   select * into v_cycle
   from public.ace_assignment_cycles
-  where id = case when tg_op = 'DELETE' then old.cycle_id else new.cycle_id end;
+  where id = case when tg_op = 'DELETE' then old.cycle_id else new.cycle_id end
+  for share;
 
   if tg_op = 'DELETE' then
     -- Deleting the cycle or the event itself cascades here; the freeze must

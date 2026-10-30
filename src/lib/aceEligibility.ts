@@ -217,6 +217,17 @@ export function computeAceEligibility(input: AceEligibilityInput): AceEligibilit
   return { littles, bigs, counts, ...classified };
 }
 
+/** Minimums that no one can meet because too few qualifying events count. */
+export function unreachableMinimums(
+  policy: Pick<AceEligibilityPolicy, 'littleMin' | 'bigMin'>,
+  countableEvents: number,
+): AceEligibilityRole[] {
+  const roles: AceEligibilityRole[] = [];
+  if (countableEvents < policy.littleMin) roles.push('little');
+  if (countableEvents < policy.bigMin) roles.push('big');
+  return roles;
+}
+
 /** Every canonical member the check needs attendance for. */
 export function eligibilityMemberIds(drafts: readonly EligibilityDraft[], nodes: readonly EligibilityNode[]): string[] {
   const nodesById = new Map(nodes.map((node) => [node.id, node]));

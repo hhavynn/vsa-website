@@ -16,6 +16,7 @@ import {
   MAX_QUALIFYING_EVENTS,
   isValidMinimum,
   qualifyingEventProblem,
+  unreachableMinimums,
   type AceEligibilityRole,
   type AceEligibilityRow,
   type AceEligibilityStatus,
@@ -80,8 +81,11 @@ export function AceEligibilityPanel({ cycle, eligibility }: AceEligibilityPanelP
     setBigMin(String(savedBig ?? DEFAULT_BIG_MIN_EVENTS));
     setSelected(new Set(savedKey ? savedKey.split(',') : []));
   }, [cycle.id, savedLittle, savedBig, savedKey]);
+  // Until the saved event ids are read, "not saved" and "not loaded" look the
+  // same; never offer Save over a policy that might exist.
+  const policyKnown = savedEventIds !== null;
   const hasPolicy = !!policy;
-  useEffect(() => setPolicyOpen(!hasPolicy && editable), [cycle.id, hasPolicy, editable]);
+  useEffect(() => setPolicyOpen(policyKnown && !hasPolicy && editable), [cycle.id, policyKnown, hasPolicy, editable]);
 
   const now = useMemo(() => new Date(readiness?.checkedAt ?? Date.now()), [readiness]);
   const choosable = useMemo(
@@ -100,6 +104,8 @@ export function AceEligibilityPanel({ cycle, eligibility }: AceEligibilityPanelP
   const minimumsValid = isValidMinimum(little) && isValidMinimum(big);
   const dirty =
     !policy || little !== savedLittle || big !== savedBig || !sameSet(selected, savedEventIds ?? []);
+  const selectedCountable = Array.from(selected).filter((id) => choosableIds.has(id)).length;
+  const draftUnreachable = minimumsValid ? unreachableMinimums({ littleMin: little, bigMin: big }, selectedCountable) : [];
 
   const save = useMutation(
     () =>
@@ -165,7 +171,9 @@ export function AceEligibilityPanel({ cycle, eligibility }: AceEligibilityPanelP
         </button>
       </div>
 
-      {policy ? (
+      {!policyKnown ? (
+        <p className="font-sans text-xs text-[var(--color-text3)]">{loading ? 'Loading the saved policy…' : 'The saved policy could not be read.'}</p>
+      ) : policy ? (
         <p className="font-sans text-xs text-[var(--color-text2)]">
           Littles need <strong className="text-[var(--color-text)]">{policy.littleMin}</strong>, Bigs need{' '}
           <strong className="text-[var(--color-text)]">{policy.bigMin}</strong> of{' '}
@@ -256,9 +264,16 @@ export function AceEligibilityPanel({ cycle, eligibility }: AceEligibilityPanelP
               {droppedOnSave} saved {droppedOnSave === 1 ? 'event no longer qualifies and will be' : 'events no longer qualify and will be'} removed when you save.
             </p>
           )}
+          {editable && draftUnreachable.length > 0 && (
+            <p role="note" className="font-sans text-xs text-amber-700 dark:text-amber-400">
+              Only {selectedCountable} qualifying {selectedCountable === 1 ? 'event is' : 'events are'} selected, fewer than the{' '}
+              {draftUnreachable.map((role) => (role === 'little' ? 'Little' : 'Big')).join(' and ')} minimum: nobody could meet it,
+              so everyone linked would show as short.
+            </p>
+          )}
           {editable && (
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => save.mutate()} disabled={!minimumsValid || !dirty || save.isLoading || !readiness} className={primaryBtnCls}>
+              <button type="button" onClick={() => save.mutate()} disabled={!policyKnown || !minimumsValid || !dirty || save.isLoading || !readiness} className={primaryBtnCls}>
                 {save.isLoading ? 'Saving…' : policy ? 'Save policy' : 'Save minimums & events'}
               </button>
               {dirty && policy && <span className="font-sans text-[11px] text-[var(--color-text3)]">Unsaved changes. The check below uses the saved policy.</span>}

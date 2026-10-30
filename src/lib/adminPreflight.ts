@@ -7,7 +7,7 @@
 // It never promotes a warning to a blocker: readiness depends only on the
 // blockers the domain itself reported.
 import type { AssignmentPreflight, AssignmentIssue } from './aceAssignments';
-import type { AceEligibilityPolicy, AceEligibilityResult, AceEligibilityRow } from './aceEligibility';
+import { unreachableMinimums, type AceEligibilityPolicy, type AceEligibilityResult, type AceEligibilityRow } from './aceEligibility';
 import type { PreflightResult, PreflightIssue as HouseIssue } from './houseAssignmentDraft';
 import type { RosterPreflight, RosterIssue } from './cabinetRoster';
 import type { InternPreflight, InternPreflightIssue } from './internCohort';
@@ -120,6 +120,17 @@ export function aceEligibilityIssues({ policy, result, error }: AceEligibilityCh
   }
   if (!result) return [];
   const issues: UnifiedIssue[] = [];
+  const countable = result.verifiedEventIds.length + result.unverifiedEventIds.length;
+  const unreachable = unreachableMinimums(policy, countable);
+  if (unreachable.length > 0) {
+    issues.push({
+      id: 'ace-eligibility:unreachable',
+      level: 'warning',
+      title: `Only ${pluralize(countable, 'qualifying event')} counted, fewer than the ${unreachable.map((role) => (role === 'little' ? `Little minimum (${policy.littleMin})` : `Big minimum (${policy.bigMin})`)).join(' and ')}`,
+      detail: 'Nobody can meet that minimum yet, so everyone linked shows as short. Add qualifying events or lower the minimum.',
+      count: 0,
+    });
+  }
   const shortDetail = (row: AceEligibilityRow) => `${row.attended} of ${row.required}`;
   const shortLittles = result.littles.filter((row) => row.status === 'short');
   if (shortLittles.length > 0) {

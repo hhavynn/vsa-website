@@ -229,13 +229,21 @@ describe('eligibility preflight warnings', () => {
   });
 
   it('lists identity reviews, unknowns and saved events that stopped counting', () => {
+    const reachable = { littleMin: 2, bigMin: 2, eventIds: ['e1', 'e9', 'future'] };
     const result = check({
       drafts: [draft('a', null), draft('b', 'm-b')],
-      policy: { ...policy, littleMin: 2, eventIds: ['e1', 'e9', 'future'] },
+      policy: reachable,
       events: [event('e1'), unverified('e9'), event('future', { date: '2026-12-01T00:00:00Z' })],
       attendance: attended({ 'm-b': ['e1'] }),
     });
-    const ids = aceEligibilityIssues({ policy, result, error: null }).map((issue) => issue.id);
+    const ids = aceEligibilityIssues({ policy: reachable, result, error: null }).map((issue) => issue.id);
     expect(ids).toEqual(['ace-eligibility:unknown', 'ace-eligibility:identity', 'ace-eligibility:rejected-events']);
+  });
+
+  it('warns when too few qualifying events count for a minimum to be reachable', () => {
+    const result = check({ drafts: [draft('a', 'm-a')], policy: { littleMin: 4, bigMin: 3, eventIds: ['e1', 'e2', 'e3'] } });
+    const issue = aceEligibilityIssues({ policy: { littleMin: 4, bigMin: 3, eventIds: ['e1', 'e2', 'e3'] }, result, error: null })
+      .find((candidate) => candidate.id === 'ace-eligibility:unreachable');
+    expect(issue).toMatchObject({ level: 'warning', title: 'Only 3 qualifying events counted, fewer than the Little minimum (4)' });
   });
 });

@@ -124,7 +124,12 @@ select pg_temp.check_true('non-admin cannot add a qualifying event directly',
   pg_temp.try_as('00000000-0000-0000-0000-0000000000b2', 'authenticated',
     $q$insert into public.ace_assignment_cycle_events (cycle_id, event_id)
        values ('40000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000001')$q$)
-    like '%row-level security%');
+    like '%Admin access required%');
+select pg_temp.check_true('non-admin probing an unknown cycle learns nothing',
+  pg_temp.try_as('00000000-0000-0000-0000-0000000000b2', 'authenticated',
+    $q$insert into public.ace_assignment_cycle_events (cycle_id, event_id)
+       values ('40000000-0000-0000-0000-0000000000ff', '70000000-0000-0000-0000-0000000000ff')$q$)
+    like '%Admin access required%');
 
 select pg_temp.check_true('admin saves 4/3 with two qualifying events',
   pg_temp.try_as('00000000-0000-0000-0000-0000000000a1', 'authenticated',

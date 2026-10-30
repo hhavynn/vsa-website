@@ -134,3 +134,17 @@ it('shows counts and filters people by status and name', () => {
   expect(within(screen.getByRole('list')).getByText('Sample Big')).toBeInTheDocument();
   expect(within(screen.getByRole('list')).getAllByRole('listitem')).toHaveLength(1);
 });
+
+it('never offers Save while the saved policy is unread, so it cannot overwrite it', () => {
+  mount(cycle('draft', [4, 3]), { policy: null, savedEventIds: null, readiness, result: null, loading: false, error: 'denied' });
+  expect(screen.getByText('The saved policy could not be read.')).toBeInTheDocument();
+  expect(screen.queryByText(/No minimums are saved/)).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Edit qualifying events & minimums' }));
+  expect(screen.getByRole('button', { name: 'Save minimums & events' })).toBeDisabled();
+});
+
+it('warns before saving a minimum that no one could meet', () => {
+  mount(cycle('draft'), { policy: null, savedEventIds: [], readiness, result: null, loading: false, error: null });
+  fireEvent.click(screen.getByRole('checkbox', { name: /Sample GBM/ }));
+  expect(screen.getByText(/Only 1 qualifying event is selected, fewer than the Little and Big minimum/)).toBeInTheDocument();
+});

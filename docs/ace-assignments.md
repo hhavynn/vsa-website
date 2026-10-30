@@ -80,7 +80,9 @@ Per cycle, the ACE Chair saves:
 
 ### Warnings, not blockers
 
-Short people, Unknown people, identity reviews and a missing policy appear in
+Short people, Unknown people, identity reviews, a missing policy, saved events
+that stopped counting, and a minimum larger than the number of counted events
+(nobody could meet it) appear in
 the preflight before Lock and before Publish as **warnings**, and the publish
 confirmation repeats how many people are short. They never disable Lock or
 Publish: mutual requests and approved exceptions exist, and the ACE Chair keeps
