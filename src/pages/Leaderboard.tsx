@@ -972,11 +972,15 @@ function PodiumIndividual({
   top3,
   activeTab,
   memberAvatars,
+  rolesById,
+  selectedYear,
   onSelectMember,
 }: {
   top3: LeaderboardEntry[];
   activeTab: 'points' | 'events';
   memberAvatars: MemberAvatarMap;
+  rolesById: ReadonlyMap<string, PublicMemberRole[]>;
+  selectedYear: SelectedYear | null;
   onSelectMember: (member: LeaderboardEntry) => void;
 }) {
   const shouldReduceMotion = useReducedMotion();
@@ -1053,6 +1057,7 @@ function PodiumIndividual({
                     {name}
                   </span>
                 </ProfileOpener>
+                <PublicMemberRoleBadges roles={rolesForSelectedYear(rolesById, entry.id, selectedYear)} compact className="mt-1.5" />
                 {card.gap !== null && (
                   <div className="mt-0.5 font-mono text-[10px] font-semibold" style={{ color: 'var(--text3)' }}>
                     {card.gap.metric === 'tie'
@@ -1146,7 +1151,7 @@ function PodiumIndividual({
                       {card.entry.first_name} {card.entry.last_name}
                     </span>
                   </ProfileOpener>
-                  <div className="mt-1 font-mono text-[11px] font-bold opacity-60">VSA MEMBER</div>
+                  <PublicMemberRoleBadges roles={rolesForSelectedYear(rolesById, card.entry.id, selectedYear)} compact className="mt-2 justify-center" />
                 </div>
 
                 {/* Score */}
