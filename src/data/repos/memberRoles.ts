@@ -72,6 +72,7 @@ export async function getPublishedBoardMemberIds(academicYearStart: number): Pro
 
     const ids = new Set<string>();
     let foundBoardPosition = false;
+    let foundUnlinkedPosition = false;
     const pageSize = 500;
     for (let start = 0; start < 5000; start += pageSize) {
       const { data, error } = await supabase
@@ -86,9 +87,12 @@ export async function getPublishedBoardMemberIds(academicYearStart: number): Pro
         if (row.category !== 'Executive Board' && row.category !== 'General Board') continue;
         foundBoardPosition = true;
         if (row.member_id) ids.add(row.member_id);
+        else foundUnlinkedPosition = true;
       }
       if (rows.length < pageSize) {
         if (!foundBoardPosition) throw new Error('Published Board roster is not yet available.');
+        // An unlinked officer would otherwise be ranked as a general member.
+        if (foundUnlinkedPosition) throw new Error('Published Board roster has unlinked positions.');
         return ids;
       }
     }

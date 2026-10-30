@@ -91,13 +91,12 @@ describe('bounded public role-source reads (#623/#627)', () => {
 
 
 describe('published Board cohort read (#628)', () => {
-  it('reads only canonical linked Board IDs and excludes intern-only and unlinked officers', async () => {
+  it('reads only canonical linked Board IDs and excludes intern-only rows', async () => {
     supabaseMock.queueResult('cabinet_years', { data: [year], error: null });
     supabaseMock.queueResult('cabinet_members', { data: [
       { id: 'r1', member_id: 'member-board', category: 'Executive Board' },
       { id: 'r2', member_id: 'member-board', category: 'General Board' },
       { id: 'r3', member_id: 'intern-only', category: 'Interns' },
-      { id: 'r4', member_id: null, category: 'Executive Board' },
     ], error: null });
     await expect(getPublishedBoardMemberIds(2026)).resolves.toEqual(new Set(['member-board']));
     expect(supabaseMock.queries().map((q) => q.table)).toEqual(['cabinet_years', 'cabinet_members']);
@@ -134,5 +133,19 @@ describe('published Board cohort read (#628)', () => {
     supabaseMock.queueResult('cabinet_members', { data: null, error: postgrestError('permission denied', '42501') });
     await expect(getPublishedBoardMemberIds(2026)).rejects.toThrow();
     expect(supabaseMock.queriesFor('member_yearly_points')).toHaveLength(0);
+  });
+});
+
+describe('getPublishedBoardMemberIds with unlinked positions', () => {
+  it('refuses to split cohorts while a Board position has no member link', async () => {
+    supabaseMock.queueResult('cabinet_years', { data: [{ id: 'cabinet-year-2024' }], error: null });
+    supabaseMock.queueResult('cabinet_members', {
+      data: [
+        { id: 'c1', member_id: 'linked', category: 'Executive Board' },
+        { id: 'c2', member_id: null, category: 'General Board' },
+      ],
+      error: null,
+    });
+    await expect(getPublishedBoardMemberIds(2024)).rejects.toThrow();
   });
 });
