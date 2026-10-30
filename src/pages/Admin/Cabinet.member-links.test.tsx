@@ -92,7 +92,7 @@ describe('verified published Cabinet links for leaderboard role recognition (#62
     await screen.findByText(/1 linked, 1 need a VSA member link/);
     await userEvent.click(screen.getAllByRole('button', { name: 'Edit' })[0]);
     expect(await screen.findByText('Linked member (not in member directory)')).toBeInTheDocument();
-    expect(screen.getByText('Linked to VSA member')).toBeInTheDocument();
+    expect(screen.getAllByText('Linked to VSA member').length).toBeGreaterThanOrEqual(2);
     expect(writes()).toHaveLength(0);
   });
 
