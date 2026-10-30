@@ -16,6 +16,8 @@ import { useLeaderboardYears } from '../hooks/useLeaderboardYears';
 import { useIndividualLeaderboard, type IndividualLeaderboardMember as Member } from '../hooks/useIndividualLeaderboard';
 import { usePublishedLeaderboardRoles } from '../hooks/usePublishedLeaderboardRoles';
 import { usePublishedBoardRoster } from '../hooks/usePublishedBoardRoster';
+import { usePublishedMemberHouses } from '../hooks/usePublishedMemberHouses';
+import type { PublicMemberHouse } from '../data/repos/houseMemberships';
 import { rankPublishedCohort, type LeaderboardCohort } from '../lib/memberCohorts';
 import { rolesForSelectedYear, type PublicMemberRole } from '../lib/memberRoles';
 import { PublicMemberRoleBadges } from '../components/features/leaderboard/PublicMemberRoleBadges';
@@ -667,6 +669,12 @@ export function Leaderboard() {
   const { data: publishedRoles, isError: rolesUnavailable } = usePublishedLeaderboardRoles(selectedYear, visibleRoleIds);
   const rolesById = publishedRoles ?? new Map<string, PublicMemberRole[]>();
   const getRoles = (memberId: string) => rolesForSelectedYear(rolesById, memberId, selectedYear);
+  // Revealed House affiliation comes from the year-scoped, score-free published
+  // membership view. Only visible canonical IDs are requested in one batch.
+  const { data: publishedHouses, isError: housesUnavailable } = usePublishedMemberHouses(
+    selectedYear, visibleRoleIds, activeView === 'individual',
+  );
+  const revealedHouses = publishedHouses ?? new Map();
   const waitingForInitialYear = selectedYear === null && !defaultYearReady;
 
   if ((waitingForInitialYear || loading) && selectedYear === null) return <LeaderboardSkeleton />;
@@ -819,6 +827,7 @@ export function Leaderboard() {
               activeTab={activeTab}
               memberAvatars={memberAvatars}
               rolesById={rolesById}
+              housesById={revealedHouses}
               selectedYear={selectedYear}
               onSelectMember={setSelectedMember}
             />
@@ -842,6 +851,9 @@ export function Leaderboard() {
               )}
               {selectedYear === 'all' && (
                 <p className="mb-3 font-sans text-xs text-text-secondary">All-Time combines everyone. Select an academic year to see separate Members and Board rankings.</p>
+              )}
+              {housesUnavailable && typeof selectedYear === 'number' && (
+                <p role="status" className="mb-3 font-sans text-xs text-text-secondary">Revealed House badges are temporarily unavailable. Rankings and verified roles are unaffected.</p>
               )}
               {rolesUnavailable && typeof selectedYear === 'number' && (
                 <p role="status" className="mb-3 font-sans text-xs text-[var(--text3)]">Member roles are temporarily unavailable. Individual points and rankings are unaffected.</p>
@@ -928,7 +940,7 @@ export function Leaderboard() {
                           <div className="truncate font-sans text-[11px]" style={{ color: 'var(--text3)' }}>
                             {[entry.year, entry.college].filter(Boolean).join(' • ') || 'VSA Member'}
                           </div>
-                          <PublicMemberRoleBadges roles={getRoles(entry.id)} compact className="mt-1.5" />
+                          <PublicMemberRoleBadges roles={getRoles(entry.id)} house={revealedHouses.get(entry.id)} compact className="mt-1.5" />
                           {/* On phones the gap caption lives under the name so it can
                               wrap instead of squeezing the name/score columns. */}
                           <div className="sm:hidden">
@@ -1054,6 +1066,7 @@ function PodiumIndividual({
   activeTab,
   memberAvatars,
   rolesById,
+  housesById,
   selectedYear,
   onSelectMember,
 }: {
@@ -1061,6 +1074,7 @@ function PodiumIndividual({
   activeTab: 'points' | 'events';
   memberAvatars: MemberAvatarMap;
   rolesById: ReadonlyMap<string, PublicMemberRole[]>;
+  housesById: ReadonlyMap<string, PublicMemberHouse>;
   selectedYear: SelectedYear | null;
   onSelectMember: (member: LeaderboardEntry) => void;
 }) {
@@ -1136,7 +1150,7 @@ function PodiumIndividual({
                     {name}
                   </span>
                 </ProfileOpener>
-                <PublicMemberRoleBadges roles={rolesForSelectedYear(rolesById, entry.id, selectedYear)} compact className="mt-1.5" />
+                <PublicMemberRoleBadges roles={rolesForSelectedYear(rolesById, entry.id, selectedYear)} house={housesById.get(entry.id)} compact className="mt-1.5" />
                 {card.gap !== null && (
                   <div className="mt-0.5 font-mono text-[10px] font-semibold" style={{ color: 'var(--text3)' }}>
                     {card.gap.metric === 'tie'
@@ -1228,7 +1242,7 @@ function PodiumIndividual({
                       {card.entry.first_name} {card.entry.last_name}
                     </span>
                   </ProfileOpener>
-                  <PublicMemberRoleBadges roles={rolesForSelectedYear(rolesById, card.entry.id, selectedYear)} compact className="mt-2 justify-center" />
+                  <PublicMemberRoleBadges roles={rolesForSelectedYear(rolesById, card.entry.id, selectedYear)} house={housesById.get(card.entry.id)} compact className="mt-2 justify-center" />
                 </div>
 
                 {/* Score */}

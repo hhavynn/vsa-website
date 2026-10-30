@@ -115,6 +115,60 @@ export class HouseMembershipsRepository {
   }
 
   /**
+   * Visible leaderboard badges: one bounded, year-scoped public view query for
+   * at most 100 canonical IDs, not one RPC for each row or a full public roster
+   * read. The view is Reveal-gated and excludes House scores/attendance.
+   */
+  async getPublishedHousesForMemberIds(
+    academicYearStart: number,
+    memberIds: readonly string[],
+    onDate: string,
+  ): Promise<Map<string, PublicMemberHouse>> {
+    if (!Number.isInteger(academicYearStart) || academicYearStart < 2000 ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(onDate)) throw new Error('Invalid published House year or date');
+    const ids = Array.from(new Set(memberIds)).sort();
+    if (ids.length > 100) throw new Error('Public House badge lookup exceeds 100 visible members');
+    if (ids.length === 0) return new Map();
+    return withErrorHandling(async () => {
+      const rows: PublicHouseMembershipRow[] = [];
+      const pageSize = 500;
+      for (let offset = 0; ; offset += pageSize) {
+        const { data, error } = await supabase
+          .from('public_house_memberships')
+          .select('member_id,academic_year_start,effective_start_date,effective_end_date,house_profile_id,house_key,display_name,accent_color')
+          .eq('academic_year_start', academicYearStart)
+          .in('member_id', ids)
+          .order('member_id', { ascending: true })
+          .order('effective_start_date', { ascending: true })
+          .range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        const page = (data ?? []) as PublicHouseMembershipRow[];
+        rows.push(...page);
+        if (page.length < pageSize) break;
+      }
+      const grouped = new Map<string, PublicHouseMembershipRow[]>();
+      for (const row of rows) {
+        if (row.academic_year_start !== academicYearStart || !ids.includes(row.member_id)) {
+          throw new Error('Unexpected House badge row for a different year or member');
+        }
+        grouped.set(row.member_id, [...(grouped.get(row.member_id) ?? []), row]);
+      }
+      const badges = new Map<string, PublicMemberHouse>();
+      grouped.forEach((history, memberId) => {
+        const current = pickRow(history, onDate);
+        if (current) badges.set(memberId, {
+          houseProfileId: current.house_profile_id,
+          houseKey: current.house_key,
+          label: current.display_name || current.house_key || 'House',
+          accentColor: current.accent_color,
+          academicYearStart: current.academic_year_start,
+        });
+      });
+      return badges;
+    }, 'Failed to fetch visible published House badges');
+  }
+
+  /**
    * House label per member for the membership in effect on `onDate`.
    *
    * Filtering by academic year alone is not enough. Admin -> Houses handles a

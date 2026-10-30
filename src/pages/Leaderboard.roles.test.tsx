@@ -7,6 +7,13 @@ import type { PublicMemberRole } from '../lib/memberRoles';
 
 let mockRoleMap = new Map<string, PublicMemberRole[]>();
 let mockRolesError = false;
+let mockVisibleHouses = new Map<string, {
+  houseProfileId: string; houseKey: string | null; label: string;
+  accentColor: string | null; academicYearStart: number;
+}>();
+let mockHouseReadError = false;
+const mockHouseReads: Array<{ year: number | 'all' | null; ids: string[] }> = [];
+
 const mockVisibleReads: Array<{ year: number | 'all' | null; ids: string[] }> = [];
 
 jest.mock('../hooks/useAcademicTerms', () => ({
@@ -39,6 +46,15 @@ jest.mock('../hooks/usePublishedLeaderboardRoles', () => ({
     return { data: mockRoleMap, isError: mockRolesError };
   },
 }));
+jest.mock('../hooks/usePublishedMemberHouses', () => ({
+  usePublishedMemberHouses: (year: number | 'all' | null, ids: string[]) => {
+    mockHouseReads.push({ year, ids });
+    return {
+      data: typeof year === 'number' && !mockHouseReadError ? mockVisibleHouses : undefined,
+      isError: mockHouseReadError,
+    };
+  },
+}));
 jest.mock('../components/features/avatar/PhotoRequestSection', () => ({
   PhotoRequestSection: () => null,
 }));
@@ -64,6 +80,9 @@ function mount() {
 beforeEach(() => {
   mockRolesError = false;
   mockVisibleReads.length = 0;
+  mockVisibleHouses = new Map();
+  mockHouseReadError = false;
+  mockHouseReads.length = 0;
   mockRoleMap = new Map([
     ['one', [role('one', 'board', 'Board Member'), role('one', 'cabinet_position', 'President')]],
     ['four', [
@@ -136,5 +155,40 @@ describe('leaderboard badges on ALL members, not only Top 3 (#627)', () => {
     await waitFor(() => expect(mockVisibleReads.some((read) => read.year === 2026 && read.ids.length === 4)).toBe(true));
     const lastYearlyRead = [...mockVisibleReads].reverse().find((read) => read.year === 2026);
     expect(new Set(lastYearlyRead?.ids)).toEqual(new Set(['one', 'two', 'three', 'four']));
+  });
+});
+
+
+describe('revealed House affiliation on visible individual standings (#627/#692)', () => {
+  it('shows a House on rank 4 and phone/desktop podium without inferring a House Parent title', async () => {
+    mockVisibleHouses.set('four', {
+      houseProfileId: 'fictional-hp', houseKey:'fictional', label:'Fictional House',
+      accentColor:'#334455', academicYearStart:2026,
+    });
+    mockVisibleHouses.set('one', {
+      houseProfileId: 'other-hp', houseKey:'other', label:'Another House',
+      accentColor:'#334455', academicYearStart:2026,
+    });
+    mount();
+    const table = await screen.findByRole('table', { name:/Full member standings/ });
+    const row = within(table).getByRole('row', { name:'Rank #4: Cam Four' });
+    expect(within(row).getByText('House · Fictional House')).toBeInTheDocument();
+    expect(within(row).getByText('Events Chair')).toBeInTheDocument();
+    expect(within(row).queryByText(/House Parent/)).not.toBeInTheDocument();
+    expect(screen.getAllByText('House · Another House').length).toBeGreaterThanOrEqual(2);
+    expect(mockHouseReads.some(read => read.year === 2026 &&
+      read.ids.includes('four') && read.ids.includes('one'))).toBe(true);
+    expect(mockHouseReads.length).toBeLessThanOrEqual(4);
+  });
+
+  it('leaves all roles/points visible when optional House source is unavailable', async () => {
+    mockHouseReadError = true;
+    mount();
+    expect(await screen.findByText(/Revealed House badges are temporarily unavailable/)).toBeInTheDocument();
+    const table = await screen.findByRole('table', { name:/Full member standings/ });
+    const row = within(table).getByRole('row', { name:'Rank #4: Cam Four' });
+    expect(within(row).getByText('Board Member')).toBeInTheDocument();
+    expect(within(row).queryByText(/House ·/)).not.toBeInTheDocument();
+    expect(within(row).getByText('10')).toBeInTheDocument();
   });
 });
