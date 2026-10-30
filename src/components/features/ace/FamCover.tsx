@@ -12,9 +12,10 @@ interface PaletteEntry {
 }
 
 const PALETTE: Record<FamAccent, PaletteEntry> = {
-  teal:  { ink: '#1e8878', wash: '#d2efec', deep: '#0f5a4f', cream: '#f5f1ea' },
-  coral: { ink: '#e8623a', wash: '#fde0d4', deep: '#a83a18', cream: '#fdf2eb' },
-  gold:  { ink: '#d4841a', wash: '#fbe8c4', deep: '#7a4806', cream: '#fbf3e2' },
+  // Keys are stored per fam; colors follow the #761 periwinkle / rose / violet family.
+  teal:  { ink: '#4356a1', wash: '#dfe6fb', deep: '#2c3a71', cream: '#f5f5fb' },
+  coral: { ink: '#a94d8a', wash: '#f6dcec', deep: '#73305c', cream: '#fcf3f8' },
+  gold:  { ink: '#7a5fc0', wash: '#e8def8', deep: '#4f3a8a', cream: '#f7f3fd' },
 };
 
 interface FamCoverProps {

@@ -185,8 +185,8 @@ export default function AdminContent() {
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="Admin Content" />
 
-      <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Homepage & Program Content</h1>
+      <div className="vsa-admin-field vsa-ribbon-bottom border-[var(--color-border)] border-b px-5 py-6 sm:px-8 sm:py-7">
+        <h1 className="font-display text-[2rem] font-normal leading-[1.05] tracking-[-0.02em] text-text-primary sm:text-[2.6rem]">Homepage & Program Content</h1>
         <p className="mt-1 max-w-3xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
           Edit the presidents message on <Link to="/" className="font-semibold text-[var(--brand)] hover:underline">the homepage</Link>, plus program links, dates, and status text used by pages like Get Involved, VCN, WNC, and Intern Program.
         </p>
@@ -253,7 +253,7 @@ export default function AdminContent() {
           </div>
 
           <div className="flex flex-wrap gap-2 pt-2">
-            <button type="submit" disabled={loading || saving} className="font-sans font-medium px-5 py-2 rounded text-sm transition-colors disabled:opacity-50" style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none', cursor: saving ? 'default' : 'pointer' }}>
+            <button type="submit" disabled={loading || saving} className="rounded bg-brand-600 px-5 py-2 font-sans text-sm font-medium text-white transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 disabled:cursor-default disabled:opacity-50 dark:bg-brand-300 dark:text-brand-950 dark:hover:bg-brand-200">
               {saving ? 'Saving...' : 'Save Content'}
             </button>
             <button type="button" disabled={loading || saving} onClick={() => { setForm(DEFAULT_PRESIDENTS_CONTENT); setPhotoFile(null); setPhotoPreview(''); }}

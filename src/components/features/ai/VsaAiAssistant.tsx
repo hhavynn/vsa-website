@@ -200,7 +200,7 @@ export function VsaAiAssistant() {
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white shadow-md dark:bg-brand-400 dark:text-zinc-950">
+                  <span className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white shadow-md dark:bg-brand-400 dark:text-brand-950">
                     <ChatSparkIcon className="h-4 w-4" />
                     <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-[var(--color-surface2)] bg-amber-300" />
                   </span>
@@ -298,7 +298,7 @@ export function VsaAiAssistant() {
                       <div
                         className={`rounded-2xl px-3.5 py-2.5 font-sans text-sm leading-6 ${
                           message.role === 'user'
-                            ? 'rounded-br-md bg-brand-600 text-white shadow-[0_8px_22px_rgba(79,70,229,0.22)] dark:bg-brand-400 dark:text-zinc-950'
+                            ? 'rounded-br-md bg-brand-600 text-white shadow-[0_8px_22px_rgba(79,70,229,0.22)] dark:bg-brand-400 dark:text-brand-950'
                             : `rounded-bl-md border ${assistantToneClasses(message.status)}`
                         }`}
                       >
@@ -467,7 +467,7 @@ export function VsaAiAssistant() {
                 whileTap={shouldReduceMotion ? undefined : { scale: 0.95 }}
                 type="submit"
                 disabled={loading || input.trim().length === 0}
-                className="inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white shadow-md transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-brand-400 dark:text-zinc-950 dark:hover:bg-brand-300"
+                className="inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white shadow-md transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-brand-400 dark:text-brand-950 dark:hover:bg-brand-300"
                 aria-label="Send Ask VSA message"
               >
                 <SendIcon />

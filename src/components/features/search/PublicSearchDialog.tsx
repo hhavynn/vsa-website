@@ -85,7 +85,7 @@ export default function PublicSearchDialog({ onClose }: PublicSearchDialogProps)
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/60 backdrop-blur-sm sm:px-4 sm:pt-[12vh]"
+      className="fixed inset-0 z-[70] flex items-start justify-center bg-scrim backdrop-blur-sm sm:px-4 sm:pt-[12vh]"
       onMouseDown={(event) => event.target === event.currentTarget && onClose()}
     >
       <div

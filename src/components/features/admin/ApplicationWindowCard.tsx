@@ -11,10 +11,10 @@ import { ApplicationLink } from '../../../types';
 
 const STATE_COLOR: Record<WindowState, string> = {
   open: 'var(--brand)',
-  scheduled: '#b45309',
+  scheduled: 'var(--status-warning-text)',
   closed: 'var(--color-text3)',
   disabled: 'var(--color-text3)',
-  misconfigured: '#dc2626',
+  misconfigured: 'var(--status-danger-text)',
 };
 
 const actionCls = 'rounded border px-2.5 py-1.5 font-sans text-xs';
@@ -60,7 +60,7 @@ export function ApplicationWindowCard({ link, now, selected, onEdit, onToggle, o
             {isPublic ? 'Students can reach the form now' : 'Not public'}
           </p>
           {closingSoon && (
-            <p className="mt-1 font-sans text-xs font-semibold" style={{ color: '#b45309' }}>
+            <p className="mt-1 font-sans text-xs font-semibold" style={{ color: 'var(--status-warning-text)' }}>
               Closes {relativeDayPhrase(closingSoon.daysUntilClose)}
             </p>
           )}
@@ -78,7 +78,7 @@ export function ApplicationWindowCard({ link, now, selected, onEdit, onToggle, o
       {issues.length > 0 && (
         <ul className="mt-2 space-y-1" aria-label="Problems with this window">
           {issues.map((issue) => (
-            <li key={issue.code} className="font-sans text-xs" style={{ color: issue.severity === 'error' ? '#dc2626' : '#b45309' }}>
+            <li key={issue.code} className="font-sans text-xs" style={{ color: issue.severity === 'error' ? 'var(--status-danger-text)' : 'var(--status-warning-text)' }}>
               {issue.severity === 'error' ? 'Problem: ' : 'Heads up: '}
               {issue.message}
             </li>
@@ -93,7 +93,7 @@ export function ApplicationWindowCard({ link, now, selected, onEdit, onToggle, o
         <button type="button" onClick={() => onToggle(link)} className={actionCls} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
           {link.is_enabled ? 'Disable' : 'Enable'}
         </button>
-        <button type="button" onClick={() => onDelete(link)} className={actionCls} style={{ borderColor: 'var(--color-border)', color: '#dc2626' }}>
+        <button type="button" onClick={() => onDelete(link)} className={actionCls} style={{ borderColor: 'var(--color-border)', color: 'var(--status-danger-text)' }}>
           Delete
         </button>
       </div>
