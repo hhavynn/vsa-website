@@ -144,7 +144,7 @@ describe('Admin Overview health scan', () => {
       expect(within(queue).getByRole('link', { name: /2 Ask VSA responses need review/ })).toHaveAttribute('href', '/admin/ai-feedback?filter=unresolved');
       expect(within(queue).getByRole('link', { name: /1 open data-rights request/ })).toHaveAttribute('href', '/admin/data-rights?filter=open');
       expect(within(queue).getByRole('link', { name: /1 unpublished event in the next 14 days/ })).toHaveAttribute('href', '/admin/events?filter=draft');
-      expect(within(queue).queryByText('You’re all caught up')).not.toBeInTheDocument();
+      expect(within(queue).queryByText('No counted items need attention')).not.toBeInTheDocument();
     });
 
     it('shows one aggregate content health count that links to the Health page, with no details', async () => {
@@ -158,7 +158,7 @@ describe('Admin Overview health scan', () => {
 
     it('says the admin is all caught up when nothing is waiting', async () => {
       renderOverview();
-      expect(await screen.findByText('You’re all caught up')).toBeInTheDocument();
+      expect(await screen.findByText('No counted items need attention')).toBeInTheDocument();
     });
 
     it('does not say caught up when a count could not be loaded', async () => {
@@ -166,7 +166,7 @@ describe('Admin Overview health scan', () => {
       renderOverview();
 
       await screen.findByText('820');
-      expect(screen.queryByText('You’re all caught up')).not.toBeInTheDocument();
+      expect(screen.queryByText('No counted items need attention')).not.toBeInTheDocument();
       expect(screen.getByText(/Could not check: photo requests/)).toBeInTheDocument();
     });
   });
