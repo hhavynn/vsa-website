@@ -91,9 +91,10 @@ export function getRoleReviewStatus(
   if (!source) return 'source-review';
   if (source.cabinet_year_id !== yearId || !belongsToRole(source, role)) return 'conflict';
   if (selectedSourceIds.filter((id) => id === source.id).length > 1) return 'conflict';
+  if (source.member_id && source.member_id !== selectedMemberId) return 'conflict';
   if (normalizeMemberName(row.name) !== normalizeMemberName(source.name) ||
     (canonicalMemberName && normalizeMemberName(row.name) !== normalizeMemberName(canonicalMemberName))) return 'name-mismatch';
   if (source.member_id === selectedMemberId) return 'already-linked';
-  if (source.member_id) return 'conflict';
+
   return 'ready';
 }
