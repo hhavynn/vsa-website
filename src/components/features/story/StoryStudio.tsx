@@ -73,9 +73,10 @@ export function StoryStudio({ title, description, draw, fileName, status, tone =
       ariaLabel={title}
       className="border border-[var(--color-border)] bg-[var(--color-surface)] sm:max-w-3xl"
     >
-      <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] px-5 py-4">
+      <div className="vsa-admin-field vsa-ribbon-bottom flex items-start justify-between gap-4 border-b border-[var(--color-border)] px-5 py-4">
         <div className="min-w-0">
-          <h2 className="font-serif text-2xl text-[var(--color-text)]">{title}</h2>
+          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text3)]">Instagram Story · 1080 × 1920</p>
+          <h2 className="mt-1 font-display text-3xl font-normal leading-none text-[var(--color-text)]">{title}</h2>
           {description && <p className="mt-1 font-sans text-xs text-[var(--color-text2)]">{description}</p>}
         </div>
         <Button variant="ghost" size="sm" onClick={onClose} aria-label="Close story generator">
@@ -87,8 +88,11 @@ export function StoryStudio({ title, description, draw, fileName, status, tone =
         <div className="mx-auto w-full max-w-[300px]">
           <div
             className={cn(
-              'relative aspect-[9/16] w-full overflow-hidden rounded-lg border border-[var(--color-border)]',
-              tone === 'dark' ? 'bg-[#0d1a20] text-[#e4d8c8]' : 'bg-[#f5f1ea] text-[#142028]',
+              // Matches each story field while the canvas is still painting.
+              'relative aspect-[9/16] w-full overflow-hidden rounded-xl border border-[var(--color-border)] shadow-[0_18px_44px_rgba(51,65,112,0.22)]',
+              tone === 'dark'
+                ? 'bg-[linear-gradient(160deg,#2747b4,#4b56c6_50%,#6a55bd)] text-white'
+                : 'bg-[linear-gradient(160deg,#cfe3fb,#d9dcf7_50%,#eedff4)] text-[#24305a]',
             )}
           >
             <canvas
@@ -106,8 +110,8 @@ export function StoryStudio({ title, description, draw, fileName, status, tone =
             )}
             {showSafeZones && !status && (
               <>
-                <div aria-hidden className="absolute inset-x-0 top-0 h-[13.02%] border-b border-dashed border-coral-400 bg-coral-500/25" />
-                <div aria-hidden className="absolute inset-x-0 bottom-0 h-[13.02%] border-t border-dashed border-coral-400 bg-coral-500/25" />
+                <div aria-hidden className="absolute inset-x-0 top-0 h-[13.02%] border-b-2 border-dashed border-rose-400 bg-rose-500/25" />
+                <div aria-hidden className="absolute inset-x-0 bottom-0 h-[13.02%] border-t-2 border-dashed border-rose-400 bg-rose-500/25" />
               </>
             )}
           </div>

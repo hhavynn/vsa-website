@@ -557,13 +557,13 @@ export default function AdminApplications() {
               Dates and times are Pacific Time (PT, San Diego), wherever you are editing from. Due time defaults to 11:59 PM PT unless you change it.
             </p>
             {showPastOpen && (
-              <p role="status" className="rounded border px-3 py-2 font-sans text-xs" style={{ borderColor: '#d97706', color: '#b45309', background: 'var(--color-surface2)' }}>
+              <p role="status" className="rounded border px-3 py-2 font-sans text-xs" style={{ borderColor: 'var(--status-warning-border)', color: 'var(--status-warning-text)', background: 'var(--color-surface2)' }}>
                 The open time ({formatPacificDateTime(draft.open_at)}) is already in the past.
                 {watched.is_enabled ? ' This window opens for students as soon as you save.' : ' Once this window is enabled, it opens immediately.'}
               </p>
             )}
             {liveIssues.filter((issue) => issue.severity === 'error').map((issue) => (
-              <p key={issue.code} role="status" className="font-sans text-xs" style={{ color: '#dc2626' }}>
+              <p key={issue.code} role="status" className="font-sans text-xs" style={{ color: 'var(--status-danger-text)' }}>
                 {issue.message}
               </p>
             ))}

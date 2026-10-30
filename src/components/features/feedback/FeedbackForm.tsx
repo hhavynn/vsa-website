@@ -14,8 +14,8 @@ interface FeedbackFormProps {
   defaultTitle?: string;
 }
 
-const inputCls = 'w-full touch:min-h-11 px-2 py-1 border border-zinc-300 dark:border-zinc-700 rounded bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 placeholder:text-zinc-400 dark:placeholder:text-zinc-600';
-const labelCls = 'block text-xs font-medium text-zinc-500 uppercase tracking-widest mb-1';
+const inputCls = 'w-full touch:min-h-11 px-2 py-1 border border-[var(--color-border)] rounded bg-[var(--color-input)] text-text-primary text-sm focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/30 dark:focus:border-brand-300 dark:focus:ring-brand-300/30 placeholder:text-text-muted';
+const labelCls = 'block text-xs font-medium text-text-muted uppercase tracking-widest mb-1';
 
 export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel, defaultType = 'feature', defaultTitle = '' }) => {
   const [invalidAttempt, setInvalidAttempt] = useState(0);

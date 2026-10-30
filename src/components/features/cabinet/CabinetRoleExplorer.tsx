@@ -126,7 +126,7 @@ export function CabinetRoleExplorer() {
           onClick={() => setActiveGroup('All')}
           className={`touch:min-h-11 rounded-full px-4 py-1.5 font-sans text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 ${
             activeGroup === 'All'
-              ? 'bg-brand-600 text-white dark:bg-brand-400 dark:text-zinc-950'
+              ? 'bg-brand-600 text-white dark:bg-brand-400 dark:text-brand-950'
               : 'border bg-[var(--color-surface)] text-[var(--color-text2)] hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)]'
           }`}
           style={{ borderColor: activeGroup === 'All' ? 'transparent' : 'var(--color-border)' }}
@@ -139,7 +139,7 @@ export function CabinetRoleExplorer() {
             onClick={() => setActiveGroup(group)}
             className={`touch:min-h-11 rounded-full px-4 py-1.5 font-sans text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 ${
               activeGroup === group
-                ? 'bg-brand-600 text-white dark:bg-brand-400 dark:text-zinc-950'
+                ? 'bg-brand-600 text-white dark:bg-brand-400 dark:text-brand-950'
                 : 'border bg-[var(--color-surface)] text-[var(--color-text2)] hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)]'
             }`}
             style={{ borderColor: activeGroup === group ? 'transparent' : 'var(--color-border)' }}

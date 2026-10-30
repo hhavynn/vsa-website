@@ -4,6 +4,15 @@ import { AceAssignmentCycle, AceAssignmentDraft, AceAssignmentStatus } from '../
 import { ValidationError, withErrorHandling } from '../errors';
 import { DraftSeed, canTransitionCycle } from '../../lib/aceAssignments';
 
+/** Admin-private published-cycle Little roster; deliberately excludes draft notes/contacts. */
+export interface PublishedAceLittle {
+  id: string;
+  little_name: string;
+  little_member_id: string | null;
+  big_ace_member_id: string | null;
+  published_ace_member_id: string | null;
+}
+
 export interface PublishResult {
   cycleId: string;
   /** Nodes this call created; 0 when the cycle was already published. */
@@ -85,6 +94,34 @@ export class AceAssignmentsRepository {
       if (!data) throw new ValidationError('This cycle changed while you were editing. Refresh and try again.');
       return data as AceAssignmentCycle;
     }, 'Failed to update assignment cycle');
+  }
+
+  /**
+   * Read-only reviewed participation roster for one PUBLISHED ACE cycle.
+   * All draft pages are read, but notes and imported application fields are excluded.
+   * A missing/locked cycle, row read error or later-page failure blocks evaluation.
+   */
+  async listPublishedCycleLittles(cycleId: string, year: number): Promise<PublishedAceLittle[]> {
+    return withErrorHandling(async () => {
+      const { data: cycle, error: cycleError } = await supabase
+        .from('ace_assignment_cycles').select('id,status,academic_year_start')
+        .eq('id', cycleId).single();
+      if (cycleError) throw cycleError;
+      if (!cycle || cycle.status !== 'published' || cycle.academic_year_start !== year) {
+        throw new ValidationError('ACE cycle is not published for the chosen year.');
+      }
+      const roster: PublishedAceLittle[] = [];
+      for (let from=0;;from+=500) {
+        const {data,error} = await supabase.from('ace_assignment_drafts')
+          .select('id,little_name,little_member_id,big_ace_member_id,published_ace_member_id')
+          .eq('cycle_id',cycleId).order('id',{ascending:true}).range(from,from+499);
+        if (error) throw error;
+        const page=(data??[]) as PublishedAceLittle[];
+        roster.push(...page);
+        if (page.length<500) break;
+      }
+      return roster;
+    }, 'Failed to load complete published ACE participation roster');
   }
 
   async listDrafts(cycleId: string): Promise<AceAssignmentDraft[]> {

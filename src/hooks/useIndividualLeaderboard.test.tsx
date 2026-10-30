@@ -14,6 +14,9 @@ jest.mock('../hooks/useAcademicTerms', () => ({
 jest.mock('../hooks/useLeaderboardYears', () => ({
   useLeaderboardYears: () => ({ yearsWithData: mockYearsWithData, loading: false }),
 }));
+jest.mock('../hooks/usePublishedLeaderboardRoles', () => ({
+  usePublishedLeaderboardRoles: () => ({ data: new Map(), isError: false }),
+}));
 jest.mock('../hooks/useMemberAvatars', () => ({
   useMemberAvatars: () => new Map(),
 }));
