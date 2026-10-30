@@ -3,13 +3,15 @@ import { useLocation } from 'react-router-dom';
 
 // Owns "is the search dialog open" for the public shell, and the global
 // shortcuts that open it (Cmd/Ctrl+K, and "/" outside text fields). The dialog
-// itself is lazy-loaded the first time it opens.
+// itself is lazy-loaded the first time it opens. The shell also wraps the admin,
+// where Cmd/Ctrl+K belongs to AdminQuickSearch, so the shortcuts are off there.
 
 const PublicSearchDialog = lazy(() => import('./PublicSearchDialog'));
 
 interface PublicSearchContextValue {
   open: () => void;
   isOpen: boolean;
+  shortcutsEnabled: boolean;
 }
 
 const PublicSearchContext = createContext<PublicSearchContextValue | null>(null);
@@ -24,9 +26,12 @@ function isEditable(target: EventTarget | null): boolean {
   return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 }
 
+const isAdminPath = (pathname: string) => pathname === '/admin' || pathname.startsWith('/admin/');
+
 export function PublicSearchProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const { pathname } = useLocation();
+  const shortcutsEnabled = !isAdminPath(pathname);
   const open = useCallback(() => setIsOpen(true), []);
   const close = useCallback(() => setIsOpen(false), []);
 
@@ -34,6 +39,7 @@ export function PublicSearchProvider({ children }: { children: ReactNode }) {
   useEffect(() => setIsOpen(false), [pathname]);
 
   useEffect(() => {
+    if (!shortcutsEnabled) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
@@ -45,9 +51,9 @@ export function PublicSearchProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [shortcutsEnabled]);
 
-  const value = useMemo(() => ({ open, isOpen }), [open, isOpen]);
+  const value = useMemo(() => ({ open, isOpen, shortcutsEnabled }), [open, isOpen, shortcutsEnabled]);
 
   return (
     <PublicSearchContext.Provider value={value}>

@@ -44,7 +44,7 @@ export function FeaturedExternal({ event }: { event: ExternalEvent }) {
 
         <h3
           id={titleId}
-          className="font-serif text-3xl leading-tight text-text-primary sm:text-4xl"
+          className="min-w-0 break-words font-serif text-3xl leading-tight text-text-primary sm:text-4xl"
         >
           {event.title}
         </h3>
@@ -57,7 +57,7 @@ export function FeaturedExternal({ event }: { event: ExternalEvent }) {
           </p>
         )}
         {event.ride_info && (
-          <p className="font-sans text-sm text-text-secondary">
+          <p className="break-words font-sans text-sm text-text-secondary">
             <span className="font-semibold text-text-primary">Rides: </span>
             {event.ride_info}
           </p>

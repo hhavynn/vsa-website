@@ -1,7 +1,7 @@
 import { CalendarItem } from '../../../utils/calendar';
 import { formatEventDateRange, formatEventTimeRange, formatEventTime } from '../../../lib/eventTime';
 import { formatDateOnly } from '../../../lib/dateOnly';
-import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
+import { OptimizedImage } from '../../common/OptimizedImage';
 import { AddToGoogleCalendarLink } from './AddToGoogleCalendarLink';
 import { getItemColor } from './calendarTheme';
 import { readableInk } from '../../../lib/readableInk';
@@ -95,11 +95,14 @@ export function CalendarItemCard({ item, index, onSelect }: Props) {
       <div className="flex items-center gap-3 sm:flex-col sm:items-end sm:justify-between">
         {thumb && (
           <div className="scrapbook-photo hidden h-14 w-20 shrink-0 rotate-1 overflow-hidden lg:block" aria-hidden>
-            <img
-              src={getSupabaseImageUrl(thumb, { width: 240 }) || thumb}
+            <OptimizedImage
+              src={thumb}
               alt=""
+              width={80}
+              height={56}
+              widths={[240]}
               className="h-full w-full object-cover"
-              loading="lazy"
+              fallback={<div className="h-full w-full bg-[var(--color-surface2)]" />}
             />
           </div>
         )}

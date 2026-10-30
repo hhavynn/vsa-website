@@ -160,7 +160,7 @@ export function AceLinkReviewPanel({ items, onApply, onLinkOne, onClose, busy }:
             type="button"
             onClick={() => onApply(toApply)}
             disabled={busy || toApply.length === 0}
-            className="rounded border-0 bg-[var(--color-text)] px-3 py-1.5 text-xs font-medium text-[var(--color-bg)] disabled:opacity-50"
+            className="rounded border-0 bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700 dark:bg-brand-300 dark:text-brand-950 dark:hover:bg-brand-200 disabled:opacity-50"
           >
             {busy
               ? 'Linking…'

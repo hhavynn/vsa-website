@@ -35,7 +35,7 @@ export function MemberWorkflowDialog({
       onClick={(event) => {
         if (event.target === event.currentTarget && !busy) onClose();
       }}
-      className="m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-lg overflow-y-auto rounded-lg border border-border-strong bg-surface p-0 text-text-primary backdrop:bg-black/60"
+      className="m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-lg overflow-y-auto rounded-lg border border-border-strong bg-surface p-0 text-text-primary backdrop:bg-scrim"
     >
       <div className="p-5 sm:p-6">{children}</div>
     </dialog>

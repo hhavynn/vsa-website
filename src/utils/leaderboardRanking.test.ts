@@ -180,3 +180,45 @@ describe('isWithinTop', () => {
     expect(isWithinTop({ rank: 11, tiedCount: 1 }, 10)).toBe(false);
   });
 });
+
+describe('cross-year ranking characterization (#293): same canonical member, separate annual totals', () => {
+  it('year-scoped lists rank by their own points and then events, never by all-time totals', () => {
+    // The two datasets represent separate selected-year view results,
+    // not synthetic re-aggregation of attendance or an assumed SQL rule.
+    const prior = [
+      member('alpha','Nguyen',0,0),
+      member('bravo','Tran',10,3),
+      member('charlie','Le',10,2),
+    ];
+    const current = [
+      member('alpha','Nguyen',15,2),
+      member('bravo','Tran',0,0),
+      member('charlie','Le',15,4),
+    ];
+    const priorRank=rankMembers(prior);
+    const currentRank=rankMembers(current);
+    expect(priorRank.map(({id,rank})=>[id,rank])).toEqual([
+      ['bravo',1],['charlie',2],['alpha',3],
+    ]);
+    expect(currentRank.map(({id,rank})=>[id,rank])).toEqual([
+      ['charlie',1],['alpha',2],['bravo',3],
+    ]);
+    // Re-reading an older year is stable even if a newer year was displayed.
+    expect(rankMembers(prior)).toEqual(priorRank);
+    expect(prior.map(x=>x.points)).toEqual([0,10,10]);
+  });
+  it('keeps zero-event members, ties in the middle, and standard competition ranks', () => {
+    const annual = [
+      member('last','Z',0,0),
+      member('top','A',20,3),
+      member('tied2','C',6,2),
+      member('tied1','B',6,2),
+      member('after','D',6,1),
+    ];
+    expect(rankMembers(annual).map(({id,rank,tiedCount})=>[id,rank,tiedCount]))
+      .toEqual([
+        ['top',1,1],['tied1',2,2],['tied2',2,2],
+        ['after',4,1],['last',5,1],
+      ]);
+  });
+});
