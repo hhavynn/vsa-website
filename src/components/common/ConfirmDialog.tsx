@@ -74,7 +74,7 @@ export function DialogFrame({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 p-4 sm:items-center"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-scrim p-4 backdrop-blur-[2px] sm:items-center"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !lockedRef.current) onCloseRef.current();
       }}
@@ -85,7 +85,7 @@ export function DialogFrame({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className={cn('bg-surface border-border-strong text-text-primary', 'max-h-[90vh] w-full overflow-y-auto rounded-lg border p-5 shadow-2xl', wide ? 'max-w-xl' : 'max-w-md', panelClassName)}
+        className={cn('vsa-ribbon-top bg-surface border-[var(--color-border)] text-text-primary', 'max-h-[90vh] w-full overflow-y-auto rounded-lg border p-5 shadow-[0_24px_64px_rgba(22,30,61,0.26)] sm:p-6', wide ? 'max-w-xl' : 'max-w-md', panelClassName)}
       >
         {children}
       </div>
@@ -101,7 +101,7 @@ export function dialogPrimaryCls(danger: boolean): string {
     'rounded border-0 px-4 py-2 font-sans text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
     danger
       ? 'bg-red-700 hover:bg-red-800 focus-visible:ring-red-600 dark:bg-red-500 dark:hover:bg-red-400'
-      : 'bg-brand-600 hover:bg-brand-700 focus-visible:ring-brand-600 dark:bg-brand-400 dark:text-[#050810]',
+      : 'bg-brand-600 hover:bg-brand-700 focus-visible:ring-brand-600 dark:bg-brand-300 dark:text-brand-950 dark:hover:bg-brand-200',
   );
 }
 
@@ -205,7 +205,7 @@ export function ConfirmDialog({
       locked={busy}
       initialFocusRef={needsText ? inputRef : cancelRef}
     >
-      <h2 id={titleId} className="font-serif text-xl font-bold text-text-primary">
+      <h2 id={titleId} className="font-display text-2xl font-normal leading-tight text-text-primary">
         {title}
       </h2>
       <div id={descriptionId} className="mt-2 font-sans text-sm text-text-secondary">
@@ -238,7 +238,7 @@ export function ConfirmDialog({
             disabled={busy}
             autoComplete="off"
             spellCheck={false}
-            className="mt-1 w-full rounded border bg-transparent px-3 py-2 font-mono text-sm border-border-strong text-text-primary"
+            className="mt-1 w-full rounded border bg-[var(--color-input)] px-3 py-2 font-mono text-sm border-border-strong text-text-primary focus:border-brand-600 focus:outline-none dark:focus:border-brand-400"
           />
         </div>
       )}

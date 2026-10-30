@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { ApplicationCTA } from './ApplicationCTA';
+import { ApplicationCTA, publicApplicationAtTime } from './ApplicationCTA';
 import { supabaseMock } from '../../test-utils/supabaseMock';
 
 jest.mock('../../lib/supabase', () => ({
@@ -43,6 +43,9 @@ function renderCTA() {
     </QueryClientProvider>
   );
 }
+
+// Each clock spy is restored even when an assertion fails.
+afterEach(() => jest.restoreAllMocks());
 
 describe('ApplicationCTA message precedence', () => {
   beforeEach(() => supabaseMock.reset());
@@ -95,6 +98,8 @@ describe('ApplicationCTA message precedence', () => {
   });
 
   it('points closed-window visitors to a different genuinely open program page, never its form URL', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-28T12:00:00Z'));
+
     supabaseMock.setDefault('public_application_links', {
       data: [
         linkRow({ status: 'closed' }),
@@ -109,6 +114,8 @@ describe('ApplicationCTA message precedence', () => {
   });
 
   it('does not suggest other programs when this application window is already open', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-28T12:00:00Z'));
+
     supabaseMock.setDefault('public_application_links', {
       data: [
         linkRow({ status: 'open', target_url: 'https://open-form.invalid/house' }),
@@ -120,3 +127,101 @@ describe('ApplicationCTA message precedence', () => {
     expect(await screen.findByRole('link', { name: /Apply for a House/i })).toHaveAttribute('href', 'https://open-form.invalid/house');
     expect(screen.queryByRole('complementary', { name: /Other open VSA opportunities/i })).not.toBeInTheDocument();
   });
+
+describe('public closed-window next steps and cached form safety (#276)', () => {
+  beforeEach(() => supabaseMock.reset());
+
+  it('links to an actually scheduled different program without ever exposing its future form URL', async () => {
+    supabaseMock.setDefault('public_application_links', {
+      data: [
+        linkRow({ status: 'closed', target_url: 'https://closed-form.invalid/private' }),
+        linkRow({
+          id: 'ace-upcoming',
+          application_key: 'ace_application',
+          title: 'ACE Application',
+          status: 'not_open',
+          open_at: '2099-03-15T00:00:00Z',
+          due_at: '2099-03-22T00:00:00Z',
+          target_url: 'https://future-form.invalid/hidden',
+          before_open_message: null,
+          sort_order: 40,
+        }),
+      ],
+      error: null,
+    });
+    const { container } = renderCTA();
+    expect(await screen.findByRole('complementary', { name: 'Upcoming VSA application windows' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'ACE Application' })).toHaveAttribute('href', '/ace');
+    expect(screen.getByText(/Scheduled to open Mar 14, 2099/i)).toBeInTheDocument();
+    expect(container.innerHTML).not.toContain('future-form.invalid');
+    expect(container.innerHTML).not.toContain('closed-form.invalid');
+  });
+
+  it('does not advertise a date for an invalid or past opening, or for disabled future forms', async () => {
+    supabaseMock.setDefault('public_application_links', {
+      data: [
+        linkRow({ status: 'closed', target_url: null }),
+        linkRow({
+          id: 'future-invalid',
+          application_key: 'ace_application',
+          status: 'not_open',
+          open_at: 'not-a-date',
+          target_url: null,
+        }),
+        linkRow({
+          id: 'future-disabled',
+          application_key: 'intern_application',
+          status: 'not_open',
+          is_enabled: false,
+          open_at: '2099-03-15T00:00:00Z',
+          target_url: null,
+        }),
+      ],
+      error: null,
+    });
+    renderCTA();
+    expect(await screen.findByText('House applications have closed for fall.')).toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'Upcoming VSA application windows' })).not.toBeInTheDocument();
+  });
+
+  it('displays an unavailable state on any public query failure rather than falsely declaring the window closed', async () => {
+    supabaseMock.setDefault('public_application_links', {
+      data: null,
+      error: { message: 'permission denied', code: '42501' },
+    });
+    renderCTA();
+    expect(await screen.findByText(/Application availability cannot be confirmed right now/i)).toBeInTheDocument();
+    expect(screen.queryByText('Page fallback: closed.')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Instagram' })).toHaveAttribute('href', expect.stringContaining('instagram.com'));
+  });
+
+  it('drops a cached form URL once its window closes without promoting any not-open row', () => {
+    const row = linkRow({
+      status: 'open',
+      open_at: '2026-10-29T15:00:00Z',
+      due_at: '2026-10-29T18:00:00Z',
+      target_url: 'https://open-form.invalid/private',
+    });
+    const withinWindow = publicApplicationAtTime(row as any, new Date('2026-10-29T17:00:00Z'));
+    expect(withinWindow.status).toBe('open');
+    expect(withinWindow.target_url).toBe('https://open-form.invalid/private');
+
+    const expired = publicApplicationAtTime(row as any, new Date('2026-10-29T18:00:01Z'));
+    expect(expired.status).toBe('closed');
+    expect(expired.target_url).toBeNull();
+
+    const upcoming = publicApplicationAtTime(
+      { ...row, status: 'not_open', target_url: null } as any,
+      new Date('2026-10-30T17:00:00Z'),
+    );
+    expect(upcoming.status).toBe('not_open');
+    expect(upcoming.target_url).toBeNull();
+
+    const disabled = publicApplicationAtTime(
+      { ...row, is_enabled: false } as any,
+      new Date('2026-10-29T17:00:00Z'),
+    );
+    expect(disabled.status).toBe('disabled');
+    expect(disabled.target_url).toBeNull();
+  });
+});

@@ -5,15 +5,15 @@ import { CalendarCategory, CalendarItem } from '../../../utils/calendar';
 // is the most common category, so it gets a real accent rather than a gray
 // that reads as disabled on the month board.
 const CATEGORY_COLORS: Record<CalendarCategory, string> = {
-  gbm: '#1e8878',
+  gbm: '#4356a1',
   mixer: '#3b82f6',
   vcn: '#a855f7',
-  wildn_culture: '#e8623a',
+  wildn_culture: '#c2569a',
   winter_retreat: '#0ea5e9',
   external_event: '#64748b',
   other: '#b8436f',
-  house: '#d4841a',
-  application: '#d4841a',
+  house: '#c98a1e',
+  application: '#c98a1e',
 };
 
 export function getItemColor(item: CalendarItem): string {

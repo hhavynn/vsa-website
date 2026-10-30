@@ -672,3 +672,30 @@ describe('LeaderboardRepository.getYearsWithData', () => {
     await expect(leaderboardRepository.getYearsWithData()).rejects.toBeInstanceOf(DatabaseError);
   });
 });
+
+describe('academic year isolation: simultaneous past/current queries (#293)', () => {
+  it('always uses the explicitly requested year, even when responses arrive in a different order', async () => {
+    const oldRow = { ...memberRow, academic_year_start: 2024, academic_year_end: 2025, total_points: 7, events_attended: 1 };
+    const currentRow = { ...memberRow, academic_year_start: 2026, academic_year_end: 2027, total_points: 29, events_attended: 5 };
+    supabaseMock.queueResult('member_yearly_points', {data:[oldRow],error:null});
+    supabaseMock.queueResult('member_yearly_points', {data:[currentRow],error:null});
+    const old=await leaderboardRepository.getYearlyLeaderboard(2024);
+    const current=await leaderboardRepository.getYearlyLeaderboard(2026);
+    expect(old).toEqual([oldRow]);
+    expect(current).toEqual([currentRow]);
+    expect(supabaseMock.filtersFor('member_yearly_points')).toEqual([
+      ['academic_year_start',2024],['academic_year_start',2026],
+    ]);
+    expect(supabaseMock.queriesFor('member_event_attendance')).toHaveLength(0);
+    expect(supabaseMock.queriesFor('house_yearly_points')).toHaveLength(0);
+  });
+  it('year-specific source errors never silently display the cached rows from a different year', async () => {
+    supabaseMock.queueResult('member_yearly_points',{data:[memberRow],error:null});
+    supabaseMock.queueResult('member_yearly_points',{data:null,error:denied()});
+    await expect(leaderboardRepository.getYearlyLeaderboard(2025)).resolves.toEqual([memberRow]);
+    await expect(leaderboardRepository.getYearlyLeaderboard(2026)).rejects.toBeInstanceOf(DatabaseError);
+    expect(supabaseMock.filtersFor('member_yearly_points')).toEqual([
+      ['academic_year_start',2025],['academic_year_start',2026],
+    ]);
+  });
+});

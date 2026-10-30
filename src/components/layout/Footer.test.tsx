@@ -43,4 +43,23 @@ describe('Footer public destinations', () => {
     const hrefs = screen.getAllByRole('link').map((link) => link.getAttribute('href') ?? '');
     expect(hrefs.filter((href) => href.startsWith('/admin'))).toEqual([]);
   });
+
+  it('uses the same editorial footer on public and admin routes', () => {
+    const { unmount } = render(
+      <MemoryRouter initialEntries={['/events']}>
+        <Footer />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('contentinfo')).toHaveClass('editorial-footer');
+    unmount();
+
+    render(
+      <MemoryRouter initialEntries={['/admin/events']}>
+        <Footer />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('contentinfo')).toHaveClass('editorial-footer');
+    expect(screen.getByRole('link', { name: 'Find My Points' })).toHaveAttribute('href', '/points');
+    expect(screen.getAllByRole('navigation')).toHaveLength(3);
+  });
 });

@@ -109,6 +109,10 @@
       "page": "src/pages/SignIn.tsx"
     },
     {
+      "path": "/admin/member-roles",
+      "page": "src/pages/Admin/MemberRoles.tsx"
+    },
+    {
       "path": "/admin/members",
       "page": "src/pages/Admin/Members.tsx"
     },
@@ -395,7 +399,9 @@
     },
     {
       "path": "src/data/repos/attendanceReadiness.ts",
-      "tables": [],
+      "tables": [
+        "member_event_attendance"
+      ],
       "rpcs": [
         "admin_attest_event_attendance",
         "admin_event_attendance_readiness"
@@ -509,6 +515,13 @@
       "tables": [
         "house_page_assets",
         "published_house_page_assets"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/houseAssignmentCoverage.ts",
+      "tables": [
+        "house_assignment_drafts"
       ],
       "rpcs": []
     },
@@ -687,6 +700,13 @@
       "path": "src/data/repos/resourceLinks.ts",
       "tables": [
         "resource_links"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/roleReview.ts",
+      "tables": [
+        "cabinet_members"
       ],
       "rpcs": []
     },
@@ -910,6 +930,7 @@
       ],
       "repositories": [
         "src/data/repos/houseAssets.ts",
+        "src/data/repos/houseAssignmentCoverage.ts",
         "src/data/repos/houseAssignments.ts",
         "src/data/repos/houseEvents.ts",
         "src/data/repos/houseMembershipWrites.ts",

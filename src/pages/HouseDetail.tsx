@@ -268,9 +268,9 @@ export function HouseDetail() {
   return (
     <>
       <PageTitle title={`${label} House`} />
-      {isDegraded && <DegradedModeBanner sourceName="house" />}
       <PublicBreadcrumbs context={{ currentYear, houseLabel: label }} />
-      <div className="vsa-page-hero">
+      {isDegraded && <DegradedModeBanner sourceName="house" />}
+      <div className="vsa-page-hero vsa-page-hero--blush">
         <div className="vsa-container relative z-10">
           <Link to={backHref} className="font-mono text-[11px] uppercase tracking-wider text-brand-600 dark:text-brand-400">
             ← Back to House Program

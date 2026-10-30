@@ -56,7 +56,7 @@ export function FirstExternalGuide() {
             key={step.title}
             className="flex gap-3 rounded-lg border border-[var(--color-border)] bg-surface p-4 lg:flex-col"
           >
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-600 font-sans text-xs font-bold text-white dark:bg-brand-400 dark:text-[#050810]">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-600 font-sans text-xs font-bold text-white dark:bg-brand-400 dark:text-brand-950">
               {index + 1}
             </span>
             <div className="space-y-1">

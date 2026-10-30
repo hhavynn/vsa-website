@@ -228,7 +228,7 @@ describe('next to This Week in VSA', () => {
     );
 
     expect(await screen.findByText('VSA is on summer break')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /This Week/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /This week/i })).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Applications closing soon' })).not.toBeInTheDocument();
   });
 });

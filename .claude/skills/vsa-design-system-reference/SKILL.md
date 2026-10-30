@@ -23,6 +23,18 @@ Note: the **`impeccable`** design skill (generic frontend-craft playbook) is ins
 
 ## 1. Color tokens (tailwind.config.js — the only place brand colors change)
 
+> **Palette update (2026-10-29, sitewide unification on top of PR #761):** the
+> teal/parchment values below are **historical**. `:root` / `html.dark` in
+> `src/index.css` now hold the periwinkle/lavender *operational* palette
+> (admin, sign-in, portaled dialogs), and `.vsa-editorial-shell` in
+> `src/styles/public-editorial.css` layers the public editorial treatment on top.
+> `brand-*` is an RGB-channel ramp (`--vsa-brand-*`), so `brand-600/20` works;
+> use `bg-scrim` for dialog backdrops. Shared admin patterns: `.vsa-admin-field`,
+> `.vsa-admin-sky`, `.vsa-ribbon-top/bottom`. Display headings use
+> `font-display` (Instrument Serif). Campaign status lives in
+> `docs/design/sitewide-ui-coverage.md`. The token *names* and rules in this
+> section are unchanged.
+
 ### Brand palettes (hex literals in `tailwind.config.js`)
 
 | Palette | Steps | Anchors | Role |

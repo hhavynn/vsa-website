@@ -1,7 +1,7 @@
 // Identity resolution in the attendance import UI, through the atomic import
 // function. Synthetic members only; no network.
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import toast from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import { QueryClient, QueryClientProvider } from "react-query";
 import AdminImport from "./Import";
 import { supabaseMock } from "../../test-utils/supabaseMock";
@@ -75,6 +75,7 @@ async function preview(rows: string[]) {
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <MemoryRouter>
         <AdminImport />
+        <Toaster />
       </MemoryRouter>
     </QueryClientProvider>,
   );

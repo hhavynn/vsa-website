@@ -385,7 +385,7 @@ export function RecoveryWorkspace() {
                 className={cn(
                   'rounded-full border px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:focus-visible:ring-brand-400',
                   view === key
-                    ? 'border-brand-600 bg-brand-600 text-white dark:border-brand-400 dark:bg-brand-400 dark:text-[#050810]'
+                    ? 'border-brand-600 bg-brand-600 text-white dark:border-brand-400 dark:bg-brand-400 dark:text-brand-950'
                     : 'border-[var(--color-border)] text-[var(--color-text2)] hover:bg-[var(--color-surface2)]',
                 )}
               >

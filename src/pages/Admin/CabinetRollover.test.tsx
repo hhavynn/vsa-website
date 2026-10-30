@@ -10,7 +10,7 @@ import { CabinetRosterCycle, CabinetRosterDraft } from '../../lib/cabinetRoster'
 
 jest.mock('react-hot-toast', () => {
   const toast = Object.assign(jest.fn(), { success: jest.fn(), error: jest.fn() });
-  return { __esModule: true, default: toast, Toaster: () => null };
+  return { __esModule: true, default: toast };
 });
 jest.mock('react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: jest.fn() }),

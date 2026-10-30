@@ -14,7 +14,7 @@ export default function Privacy() {
   return (
     <>
       <PageTitle title="Privacy Notice" />
-      <div className="bg-[var(--color-bg)] px-4 py-14 sm:py-20">
+      <div className="vsa-dock-clear bg-[var(--color-bg)] px-4 py-14 sm:py-20">
         <article className="mx-auto max-w-3xl">
           <p className="font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-brand-600 dark:text-brand-400">
             Privacy and data use

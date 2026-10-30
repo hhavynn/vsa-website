@@ -4,35 +4,36 @@
    ───────────────────────────────────────────────────────────────── */
 
 .ace-app {
-  /* Light (default) */
-  --bg:           #f5f1ea;
-  --bg-2:         #fdf7f0;
+  /* Light (default): the #761 paper, ink and periwinkle family. The token
+     names keep their old roles (brand / accent / gold) so markup is stable. */
+  --bg:           #faf9f5;
+  --bg-2:         #f0eef9;
   --surface:      #ffffff;
-  --surface-2:    #fdf7f0;
-  --surface-ink:  #142028;
-  --surface-ink-2:#1c2e36;
-  --border:       rgba(196,184,168,0.55);
-  --border-soft:  rgba(196,184,168,0.4);
-  --border-strong:#c4b8a8;
-  --text:         #142028;
-  --text-2:       #4a6b68;
-  --text-3:       #556f6c;
-  --text-on-ink:  #f5f1ea;
-  --text-on-ink-muted: rgba(245,241,234,0.7);
-  --brand:        #1e8878;
-  --brand-strong: #0f5a4f;
-  --brand-text:   #0f5a4f;
-  --brand-soft:   #d2efec;
-  --accent:       #e8623a;
-  --accent-soft:  #fde0d4;
-  --accent-strong:#a83a18;
-  --text-on-accent:#061014;
-  --gold:         #d4841a;
-  --gold-soft:    #fbe8c4;
-  --gold-strong:  #7a4806;
-  --shadow-card:  0 1px 0 rgba(196,184,168,0.4), 0 8px 24px rgba(20,32,40,0.04);
-  --shadow-cardh: 0 1px 0 rgba(196,184,168,0.4), 0 16px 36px rgba(20,32,40,0.12);
-  --shadow-sheet: 0 -20px 60px rgba(20,32,40,0.25);
+  --surface-2:    #f0eef9;
+  --surface-ink:  #28354d;
+  --surface-ink-2:#36456a;
+  --border:       rgba(188,188,214,0.6);
+  --border-soft:  rgba(188,188,214,0.42);
+  --border-strong:#bbb7d0;
+  --text:         #28354d;
+  --text-2:       #4d5871;
+  --text-3:       #5c6680;
+  --text-on-ink:  #faf9f5;
+  --text-on-ink-muted: rgba(250,249,245,0.72);
+  --brand:        #4356a1;
+  --brand-strong: #2c3a71;
+  --brand-text:   #36478a;
+  --brand-soft:   #e5e9fd;
+  --accent:       #a94d8a;
+  --accent-soft:  #f6dcec;
+  --accent-strong:#8a3a6c;
+  --text-on-accent:#ffffff;
+  --gold:         #7a5fc0;
+  --gold-soft:    #ece4f8;
+  --gold-strong:  #4f3a8a;
+  --shadow-card:  0 1px 0 rgba(188,188,214,0.45), 0 8px 24px rgba(51,65,112,0.05);
+  --shadow-cardh: 0 1px 0 rgba(188,188,214,0.45), 0 16px 36px rgba(51,65,112,0.13);
+  --shadow-sheet: 0 -20px 60px rgba(22,30,61,0.25);
 
   container-type: inline-size;
   container-name: ace;
@@ -45,34 +46,34 @@
 }
 
 .ace-app.is-dark {
-  --bg:           #080e14;
-  --bg-2:         #0d1a20;
-  --surface:      #0d1a20;
-  --surface-2:    #122430;
-  --surface-ink:  #0a1218;
-  --surface-ink-2:#122430;
-  --border:       #1a3038;
-  --border-soft:  rgba(42,72,80,0.55);
-  --border-strong:#2a4850;
-  --text:         #e4d8c8;
-  --text-2:       #8eb0aa;
-  --text-3:       #6c928d;
-  --text-on-ink:  #e4d8c8;
-  --text-on-ink-muted: rgba(228,216,200,0.66);
-  --brand:        #3bbdb5;
-  --brand-strong: #0d6a62;
-  --brand-text:   #6cd8d1;
-  --brand-soft:   rgba(59,189,181,0.16);
-  --accent:       #f07858;
-  --accent-soft:  rgba(240,120,88,0.18);
-  --accent-strong:#f29279;
-  --text-on-accent:#061014;
-  --gold:         #e8a838;
-  --gold-soft:    rgba(232,168,56,0.16);
-  --gold-strong:  #f0bf60;
-  --shadow-card:  0 1px 0 rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.3);
-  --shadow-cardh: 0 1px 0 rgba(0,0,0,0.4), 0 16px 36px rgba(0,0,0,0.5);
-  --shadow-sheet: 0 -20px 60px rgba(0,0,0,0.6);
+  --bg:           #101a31;
+  --bg-2:         #1b2843;
+  --surface:      #1b2843;
+  --surface-2:    #243354;
+  --surface-ink:  #0c1426;
+  --surface-ink-2:#243354;
+  --border:       #3b4a6e;
+  --border-soft:  rgba(59,74,110,0.55);
+  --border-strong:#617091;
+  --text:         #f4f0fc;
+  --text-2:       #c6cee6;
+  --text-3:       #9fabca;
+  --text-on-ink:  #f4f0fc;
+  --text-on-ink-muted: rgba(244,240,252,0.68);
+  --brand:        #a3b2ec;
+  --brand-strong: #36478a;
+  --brand-text:   #c7d1ff;
+  --brand-soft:   rgba(163,178,236,0.16);
+  --accent:       #ebb4da;
+  --accent-soft:  rgba(235,180,218,0.18);
+  --accent-strong:#f2c6e4;
+  --text-on-accent:#16213f;
+  --gold:         #c9b6f0;
+  --gold-soft:    rgba(201,182,240,0.16);
+  --gold-strong:  #dac8f3;
+  --shadow-card:  0 1px 0 rgba(0,0,0,0.32), 0 8px 24px rgba(0,0,0,0.24);
+  --shadow-cardh: 0 1px 0 rgba(0,0,0,0.32), 0 16px 36px rgba(0,0,0,0.4);
+  --shadow-sheet: 0 -20px 60px rgba(0,0,0,0.5);
 }
 
 .ace-app a { color: inherit; text-decoration: none; }
@@ -123,18 +124,18 @@
   border: 1px solid;
 }
 .ace-app .ace-pill-default { background: var(--surface-2); color: var(--text); border-color: var(--border); }
-.ace-app .ace-pill-teal  { background: var(--brand-soft);  color: var(--brand-strong);  border-color: rgba(30,136,120,0.25); }
-.ace-app .ace-pill-coral { background: var(--accent-soft); color: var(--accent-strong); border-color: rgba(232,98,58,0.25); }
-.ace-app .ace-pill-gold  { background: var(--gold-soft);   color: var(--gold-strong);   border-color: rgba(212,132,26,0.25); }
+.ace-app .ace-pill-teal  { background: var(--brand-soft);  color: var(--brand-strong);  border-color: rgba(67,86,161,0.25); }
+.ace-app .ace-pill-coral { background: var(--accent-soft); color: var(--accent-strong); border-color: rgba(169,77,138,0.25); }
+.ace-app .ace-pill-gold  { background: var(--gold-soft);   color: var(--gold-strong);   border-color: rgba(122,95,192,0.25); }
 .ace-app .ace-pill-live  { background: var(--brand-strong); color: var(--text-on-ink); border-color: var(--brand-strong); }
 .ace-app .ace-pill-dot {
   width: 6px; height: 6px; border-radius: 999px;
   background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.28);
 }
-.ace-app.is-dark .ace-pill-live  { background: var(--brand); color: #061013; border-color: var(--brand); }
-.ace-app.is-dark .ace-pill-teal  { color: #b0eee9; }
-.ace-app.is-dark .ace-pill-coral { color: #f7c4b1; }
-.ace-app.is-dark .ace-pill-gold  { color: #f2d088; }
+.ace-app.is-dark .ace-pill-live  { background: var(--brand); color: #16213f; border-color: var(--brand); }
+.ace-app.is-dark .ace-pill-teal  { color: #d6defe; }
+.ace-app.is-dark .ace-pill-coral { color: #f6d3ea; }
+.ace-app.is-dark .ace-pill-gold  { color: #e3d6fb; }
 
 /* ── Buttons ─────────────────────────────────────────────────── */
 .ace-app .ace-btn {
@@ -145,10 +146,10 @@
   min-height: 44px; text-decoration: none;
 }
 .ace-app .ace-btn-primary {
-  background: var(--brand-strong); color: #f8fbfb; border-color: var(--brand-strong);
+  background: var(--brand-strong); color: #ffffff; border-color: var(--brand-strong);
 }
 .ace-app .ace-btn-primary:hover { transform: translateY(-1px); background: var(--brand-strong); border-color: var(--brand-strong); }
-.ace-app.is-dark .ace-btn-primary { background: var(--brand); color: #061013; border-color: var(--brand); }
+.ace-app.is-dark .ace-btn-primary { background: var(--brand); color: #16213f; border-color: var(--brand); }
 .ace-app .ace-btn-secondary {
   background: transparent; color: var(--text); border-color: var(--border-strong);
 }
@@ -186,7 +187,7 @@
   font-family: "DM Sans", sans-serif; font-size: 14.5px; font-weight: 600; color: var(--text);
 }
 .ace-app .ace-rolerow-viet {
-  font-family: "DM Serif Display", serif; font-style: italic;
+  font-family: "Instrument Serif", "DM Serif Display", serif; font-style: italic;
   font-size: 14px; color: var(--text-2);
 }
 .ace-app .ace-rolerow-desc {
@@ -260,13 +261,13 @@
   font-size: 13px;
 }
 .ace-app .ace-ghost-grid {
-  --ghost-bg:        #fcfaf6;
-  --ghost-edge:      rgba(122,104,82,0.7);
-  --ghost-lift:      rgba(20,32,40,0.08);
+  --ghost-bg:        #f7f6fc;
+  --ghost-edge:      rgba(108,98,141,0.6);
+  --ghost-lift:      rgba(51,65,112,0.08);
   --ghost-body:      #ffffff;
-  --ghost-body-edge: rgba(20,32,40,0.3);
-  --ghost-face:      #142028;
-  --ghost-glow:      rgba(20,32,40,0.18);
+  --ghost-body-edge: rgba(40,53,77,0.3);
+  --ghost-face:      #28354d;
+  --ghost-glow:      rgba(67,86,161,0.18);
   --ghost-hem:       10px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -275,13 +276,13 @@
   padding-bottom: var(--ghost-hem);
 }
 .ace-app.is-dark .ace-ghost-grid {
-  --ghost-bg:        #0f1c24;
-  --ghost-edge:      rgba(228,216,200,0.34);
-  --ghost-lift:      rgba(59,189,181,0.12);
-  --ghost-body:      #eae0d2;
-  --ghost-body-edge: rgba(228,216,200,0.5);
-  --ghost-face:      #0a1218;
-  --ghost-glow:      rgba(228,216,200,0.32);
+  --ghost-bg:        #17223d;
+  --ghost-edge:      rgba(241,238,251,0.3);
+  --ghost-lift:      rgba(163,178,236,0.12);
+  --ghost-body:      #e9e7f6;
+  --ghost-body-edge: rgba(241,238,251,0.45);
+  --ghost-face:      #101a31;
+  --ghost-glow:      rgba(199,209,255,0.3);
 }
 .ace-app .ace-ghost-card {
   position: relative;
@@ -390,7 +391,7 @@
   padding: 2px 12px 4px;
 }
 .ace-app .ace-ghost-name {
-  font-family: "DM Serif Display", serif;
+  font-family: "Instrument Serif", "DM Serif Display", serif;
   font-size: 18px;
   line-height: 1.1;
   letter-spacing: -0.01em;
@@ -458,7 +459,7 @@
   box-shadow: var(--shadow-card);
 }
 .ace-app .ace-step-num {
-  font-family: "DM Serif Display", serif; font-size: 26px; line-height: 1;
+  font-family: "Instrument Serif", "DM Serif Display", serif; font-size: 26px; line-height: 1;
   color: var(--text-3); letter-spacing: -0.02em;
 }
 .ace-app .ace-step-t { margin: 8px 0 4px; font-size: 14.5px; font-weight: 600; color: var(--text); }
@@ -490,7 +491,7 @@
   font-size: 16px; font-weight: 700; line-height: 1; flex-shrink: 0;
 }
 .ace-app .ace-faq-row.is-open .ace-faq-plus { background: var(--brand-strong); color: #fff; }
-.ace-app.is-dark .ace-faq-row.is-open .ace-faq-plus { background: var(--brand); color: #061013; }
+.ace-app.is-dark .ace-faq-row.is-open .ace-faq-plus { background: var(--brand); color: #16213f; }
 .ace-app .ace-faq-a {
   padding: 0 16px 16px;
   font-size: 13.5px; line-height: 1.65; color: var(--text-2);
@@ -546,7 +547,7 @@
 .ace-app .ace-sheet-eyebrow-gold  { color: var(--gold-strong); }
 .ace-app .ace-sheet-title {
   margin-top: 2px;
-  font-family: "DM Serif Display", serif; font-size: 26px; line-height: 1;
+  font-family: "Instrument Serif", "DM Serif Display", serif; font-size: 26px; line-height: 1;
   letter-spacing: -0.02em; color: var(--text);
 }
 .ace-app .ace-sheet-viet { font-style: italic; }
@@ -781,7 +782,7 @@
 .ace-app .ace-rail-avatar {
   width: 52px; height: 52px; border-radius: 16px;
   display: flex; align-items: center; justify-content: center;
-  font-family: "DM Serif Display", serif; font-style: italic; font-size: 26px;
+  font-family: "Instrument Serif", "DM Serif Display", serif; font-style: italic; font-size: 26px;
   border: 2px solid; flex-shrink: 0; color: #fff;
   overflow: hidden;
 }
@@ -815,7 +816,7 @@
 .ace-app .ace-rail-chip-dot {
   width: 22px; height: 22px; border-radius: 999px;
   display: inline-flex; align-items: center; justify-content: center;
-  font-family: "DM Serif Display", serif; font-style: italic; font-size: 12px;
+  font-family: "Instrument Serif", "DM Serif Display", serif; font-style: italic; font-size: 12px;
   color: #fff; flex-shrink: 0;
 }
 .ace-app .ace-rail-chip-dot-teal  { background: var(--brand-strong); }
@@ -866,7 +867,7 @@
 .ace-app .ace-rail-lineage-name:hover { color: var(--text); }
 .ace-app .ace-rail-lineage-name:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 4px; }
 .ace-app .ace-rail-lineage-current {
-  font-family: "DM Serif Display", Georgia, serif; font-style: italic;
+  font-family: "Instrument Serif", "DM Serif Display", Georgia, serif; font-style: italic;
   font-size: 15px; color: var(--text);
   padding: 2px 8px; border-radius: 999px;
   background: var(--brand-soft);
@@ -1004,7 +1005,7 @@
   border: 1px solid var(--border-strong);
   border-radius: 999px;
   background: var(--surface);
-  box-shadow: 0 2px 8px rgba(20,32,40,0.12);
+  box-shadow: 0 2px 8px rgba(40,53,77,0.12);
 }
 .ace-app .ace-famtabs-rail.has-end:not(.has-start) .ace-famtabs-more-end svg {
   animation: ace-more-nudge 1.4s ease-in-out 0.6s 3;
@@ -1054,7 +1055,7 @@
 .ace-app .ace-famtabs-tab-gold.is-active::after  { background: var(--gold); }
 
 .ace-app .ace-famtabs-tab-viet {
-  font-family: "DM Serif Display", serif;
+  font-family: "Instrument Serif", "DM Serif Display", serif;
   font-style: italic;
   font-size: 12px;
   opacity: 0.65;
@@ -1092,7 +1093,7 @@
 .ace-app .ace-sheet-icon { width: 44px; height: 44px; border: 1px solid var(--border-strong); }
 
 .ace-app .ace-famtabs-panel-name {
-  font-family: "DM Serif Display", serif;
+  font-family: "Instrument Serif", "DM Serif Display", serif;
   font-size: 24px;
   line-height: 1.05;
   letter-spacing: -0.02em;
@@ -1105,7 +1106,7 @@
 .ace-app.is-dark .ace-famtabs-panel-name-coral { color: var(--accent-strong); }
 .ace-app.is-dark .ace-famtabs-panel-name-gold  { color: var(--gold-strong); }
 .ace-app .ace-famtabs-panel-viet {
-  font-family: "DM Serif Display", serif;
+  font-family: "Instrument Serif", "DM Serif Display", serif;
   font-style: italic;
   font-size: 15px;
   color: var(--text-2);
@@ -1152,7 +1153,7 @@
   width: 46px; height: 46px; border-radius: 14px;
   flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  font-family: "DM Serif Display", serif; font-style: italic; font-size: 20px;
+  font-family: "Instrument Serif", "DM Serif Display", serif; font-style: italic; font-size: 20px;
   color: #fff; font-weight: 400;
   overflow: hidden;
 }
@@ -1254,7 +1255,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: "DM Serif Display", serif;
+  font-family: "Instrument Serif", "DM Serif Display", serif;
   font-size: 18px;
   line-height: 1.15;
   color: var(--text);

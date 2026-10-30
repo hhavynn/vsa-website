@@ -127,8 +127,8 @@ export function Top3StoryDialog({ onClose }: { onClose: () => void }) {
             <label key={size} className={cn(
               'flex min-h-11 cursor-pointer items-center justify-center rounded border px-2 py-2 font-sans text-sm font-semibold focus-within:ring-2 focus-within:ring-brand-600',
               limit === size
-                ? 'border-brand-600 bg-brand-600/10 text-text-primary'
-                : 'border-border-strong text-text-secondary',
+                ? 'border-brand-600 bg-brand-50 text-brand-800 dark:border-brand-300 dark:bg-brand-900/50 dark:text-brand-100'
+                : 'border-[var(--color-border)] text-text-secondary hover:bg-[var(--color-surface2)]',
             )}>
               <input type="radio" className="sr-only" name="story-limit" checked={limit === size} onChange={() => setLimit(size)} />
               Top {size}
@@ -158,7 +158,7 @@ export function Top3StoryDialog({ onClose }: { onClose: () => void }) {
                   'flex cursor-pointer items-center justify-center gap-2 rounded border px-3 py-2 font-sans text-sm font-semibold transition-colors',
                   'focus-within:ring-2 focus-within:ring-brand-600 dark:focus-within:ring-brand-400',
                   selected
-                    ? 'border-brand-600 bg-brand-600/5 text-[var(--color-text)] dark:border-brand-400 dark:bg-brand-400/10'
+                    ? 'border-brand-600 bg-brand-50 text-[var(--color-text)] dark:border-brand-300 dark:bg-brand-900/50'
                     : 'border-[var(--color-border)] text-[var(--color-text2)] hover:bg-[var(--color-surface2)]',
                 )}
               >
@@ -173,8 +173,10 @@ export function Top3StoryDialog({ onClose }: { onClose: () => void }) {
                 <span
                   aria-hidden
                   className={cn(
-                    'h-3.5 w-3.5 rounded-full border border-[var(--color-border-strong)]',
-                    option.id === 'dark' ? 'bg-[#0d1a20]' : 'bg-[#f5f1ea]',
+                    'h-4 w-4 rounded-full border border-[var(--color-border-strong)]',
+                    option.id === 'dark'
+                      ? 'bg-[linear-gradient(140deg,#2747b4,#6a55bd)]'
+                      : 'bg-[linear-gradient(140deg,#cfe3fb,#eedff4)]',
                   )}
                 />
                 {option.label}
@@ -198,7 +200,7 @@ export function Top3StoryDialog({ onClose }: { onClose: () => void }) {
                   'flex cursor-pointer items-center gap-3 rounded border px-3 py-2.5 transition-colors',
                   'focus-within:ring-2 focus-within:ring-brand-600 dark:focus-within:ring-brand-400',
                   selected
-                    ? 'border-brand-600 bg-brand-600/5 dark:border-brand-400 dark:bg-brand-400/10'
+                    ? 'border-brand-600 bg-brand-50 dark:border-brand-300 dark:bg-brand-900/50'
                     : 'border-[var(--color-border)] hover:bg-[var(--color-surface2)]',
                 )}
               >
