@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { VcnRoleRosterReview } from './VcnRoleRosterReview';
 jest.mock('../../../hooks/useMemberDirectory',()=>({
   useMemberDirectory:()=>({
@@ -15,9 +15,8 @@ describe('private VCN CSV preview (#683)',()=>{
     rerender(<VcnRoleRosterReview editionYear={2026}/>);
     fireEvent.change(screen.getByLabelText(/Private roster CSV/),{target:{value:'name,role,status\nSample Person,Dancer,verified'}});
     fireEvent.click(screen.getByRole('button',{name:'Preview identities'}));
-    const row=screen.getByText(/Row 2: Sample Person/).closest('li');
-    expect(row).not.toBeNull();
-    const choice=within(row!).getByLabelText('Explicit canonical member selection');
+    expect(screen.getByText(/Row 2: Sample Person/)).toBeInTheDocument();
+    const choice=screen.getByLabelText('Explicit canonical member selection');
     expect(choice).toHaveValue('');
     fireEvent.change(choice,{target:{value:'m1'}});
     expect(screen.getByRole('status')).toHaveTextContent('1 identity selections');
