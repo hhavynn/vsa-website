@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { aceAssignmentsRepository } from '../../../data/repos/aceAssignments';
+import { getLosAngelesDateOnly } from '../../../utils/losAngelesDate';
 import { attendanceReadinessRepository, type AttendanceReadiness } from '../../../data/repos/attendanceReadiness';
 import { isAceEventAttendanceVerified, reviewAceParticipation, type AceParticipationRow } from '../../../lib/aceParticipationReview';
 
@@ -46,7 +47,7 @@ export function AceParticipationReview({cycleId,year}:{cycleId:string;year:numbe
         throw new Error('Select 1–20 eligible events and a valid minimum; no ACE requirement is assumed.');
       const checkedEvents=ids.map(id=>events.events.find(event=>event.id===id));
       if(checkedEvents.some(event=>!event))throw new Error('Selected event is no longer in the reviewed year');
-      const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+      const today=getLosAngelesDateOnly();
       if(checkedEvents.some(event=>!event?.date || event.date>today))throw new Error('Select completed, dated events only; upcoming or undated events cannot count as missed attendance');
       const sourceReady=checkedEvents.every(event=>event && isAceEventAttendanceVerified(event));
       const roster=await aceAssignmentsRepository.listPublishedCycleLittles(cycleId,year);
