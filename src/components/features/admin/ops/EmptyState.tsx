@@ -12,7 +12,7 @@ export interface EmptyStateProps {
 /** Replaces "No records." with what is missing and the one button that fixes it. */
 export function EmptyState({ title, description, action }: EmptyStateProps) {
   const btn =
-    'mt-3 inline-flex rounded border-0 bg-brand-600 px-4 py-2 font-sans text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:opacity-50 dark:bg-brand-400 dark:text-[#050810]';
+    'mt-3 inline-flex rounded border-0 bg-brand-600 px-4 py-2 font-sans text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:opacity-50 dark:bg-brand-400 dark:text-brand-950';
   return (
     <div className="rounded border border-dashed border-[var(--color-border)] px-6 py-8 text-center">
       <p className="font-serif text-lg font-bold text-text-primary">{title}</p>

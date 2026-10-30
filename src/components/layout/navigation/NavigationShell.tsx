@@ -7,23 +7,15 @@ import { MobileDrawer } from './MobileDrawer';
 import { PublicSearchButton } from '../../features/search/PublicSearchButton';
 import { usePublicEditorialRoute } from '../publicEditorialTheme';
 
-function FindMyPointsShortcut({ editorial }: { editorial: boolean }) {
+function FindMyPointsShortcut() {
   const { pathname } = useLocation();
   const active = pathname === '/points';
-  const tone = editorial
-    ? active
-      ? 'border-ed-ink bg-ed-ink text-ed-on-ink'
-      : 'border-ed-line text-ed-ink hover:border-ed-ink'
-    : active
-      ? 'border-[var(--brand)] bg-[var(--brand)] text-[var(--color-on-brand)]'
-      : 'border-[var(--border2)] text-[var(--text2)] hover:border-[var(--brand)] hover:text-[var(--brand)]';
+  const tone = active ? 'border-ed-ink bg-ed-ink text-ed-on-ink' : 'border-ed-line text-ed-ink hover:border-ed-ink';
   return (
     <Link
       to="/points"
       aria-label="Find My Points"
-      className={`flex items-center gap-1.5 border px-3 py-1.5 font-sans text-[12.5px] font-bold transition-colors duration-150 ${
-        editorial ? 'rounded-none' : 'rounded-full'
-      } ${tone}`}
+      className={`flex items-center gap-1.5 rounded-none border px-3 py-1.5 font-sans text-[12.5px] font-bold transition-colors duration-150 ${tone}`}
     >
       <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <circle cx="12" cy="12" r="8" strokeWidth={1.8} />
@@ -38,7 +30,8 @@ function FindMyPointsShortcut({ editorial }: { editorial: boolean }) {
 export const NavigationShell = memo(function NavigationShell() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const closeMobileMenu = useCallback(() => setIsMobileMenuOpen(false), []);
-  const editorial = usePublicEditorialRoute();
+  // The Join VSA call to action is for visitors, not admin workflows.
+  const publicRoute = usePublicEditorialRoute();
 
   return (
     <nav
@@ -51,7 +44,7 @@ export const NavigationShell = memo(function NavigationShell() {
         WebkitBackdropFilter: 'blur(16px)',
       }}
     >
-      <div className={editorial ? 'mx-auto max-w-[1600px] px-4 sm:px-[4vw]' : 'mx-auto max-w-[1280px] px-4 sm:px-6'}>
+      <div className="mx-auto max-w-[1600px] px-4 sm:px-[4vw]">
         <div className="flex h-[60px] items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-4 lg:gap-8">
             <NavLogo />
@@ -66,7 +59,7 @@ export const NavigationShell = memo(function NavigationShell() {
               aria-expanded={isMobileMenuOpen}
               aria-controls="mobile-navigation-drawer"
               aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-              className={`flex h-11 w-11 items-center justify-center border border-[var(--border2)] bg-[var(--surface2)] ${editorial ? 'rounded-none' : 'rounded-lg'} text-[var(--text2)] shadow-[0_1px_0_rgba(196,184,168,0.35)] transition-colors duration-150 hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:focus-visible:ring-brand-400`}
+              className={`flex h-11 w-11 items-center justify-center border border-[var(--border2)] bg-[var(--surface2)] rounded-none text-[var(--text2)] transition-colors duration-150 hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:focus-visible:ring-brand-400`}
             >
               {isMobileMenuOpen ? (
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -82,9 +75,9 @@ export const NavigationShell = memo(function NavigationShell() {
 
           <div className="hidden items-center gap-2.5 md:flex">
             <PublicSearchButton />
-            <FindMyPointsShortcut editorial={editorial} />
+            <FindMyPointsShortcut />
             <UserMenu />
-            {editorial && (
+            {publicRoute && (
               // Figma .nav-cta — square ink button.
               <Link
                 to="/get-involved"

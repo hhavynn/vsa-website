@@ -166,14 +166,15 @@ html.dark .vsa-halftone::before {
 }
 
 /* Figma footer: periwinkle in light mode, deep navy in dark. */
-.vsa-editorial-shell .editorial-footer {
+/* Unscoped: the footer is shared chrome on every route. */
+.editorial-footer {
   background: var(--ed-footer);
   /* Periwinkle is darker than cream: deepen secondary ink to keep 4.5:1. */
   --ed-muted: #3e4a66;
   --color-text2: #3e4a66;
 }
 
-html.dark .vsa-editorial-shell .editorial-footer {
+html.dark .editorial-footer {
   --ed-muted: #bfcbe4;
   --color-text2: #d5dcf0;
 }
@@ -802,16 +803,16 @@ html .vsa-editorial-shell .gallery-memory-card--camera {
   transform: none;
 }
 
-/* Program landing pages reuse EditorialHero (ACE keeps its bespoke hero).
-   The default program hero takes a flat sky wash and the ribbon; the stage
+/* Program landing pages and ACE reuse EditorialHero (ACE keeps its bespoke
+   layout and watermark, in the same palette). The default program hero takes a flat sky wash and the ribbon; the stage
    tone (VCN, Wild N' Culture) is a blue→violet field like the homepage
    hero, with every text, button and border token re-pointed to read on it. */
-.vsa-editorial-shell .program-app .editorial-hero {
+.vsa-editorial-shell :is(.program-app, .ace-app) .editorial-hero {
   background: linear-gradient(180deg, var(--ed-sky-wash) 0%, var(--ed-lavender-wash) 100%);
   border-bottom: 0;
 }
 
-.vsa-editorial-shell .program-app .editorial-hero::after {
+.vsa-editorial-shell :is(.program-app, .ace-app) .editorial-hero::after {
   inset: auto 0 0;
   top: auto;
   height: 5px;
@@ -821,12 +822,12 @@ html .vsa-editorial-shell .gallery-memory-card--camera {
   opacity: 1;
 }
 
-.vsa-editorial-shell .program-app .editorial-hero-grain {
+.vsa-editorial-shell :is(.program-app, .ace-app) .editorial-hero-grain {
   display: none;
 }
 
-.vsa-editorial-shell .program-app .editorial-hero-title,
-.vsa-editorial-shell .program-app .editorial-hero-watermark {
+.vsa-editorial-shell :is(.program-app, .ace-app) .editorial-hero-title,
+.vsa-editorial-shell :is(.program-app, .ace-app) .editorial-hero-watermark {
   font-family: "Instrument Serif", Georgia, serif;
   font-weight: 400;
 }

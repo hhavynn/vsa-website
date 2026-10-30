@@ -48,7 +48,7 @@ export function AiAssistantLauncher({
             aria-label={isOpen ? 'Ask VSA (close assistant)' : 'Ask VSA (open assistant)'}
           >
             <span className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5 rounded-full border-2 border-[var(--color-bg)] bg-amber-300 shadow-sm" />
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15 dark:bg-zinc-950/10">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15 dark:bg-brand-950/10">
               <ChatSparkIcon className="h-5 w-5" />
             </span>
             <span className="hidden sm:inline">Ask VSA</span>

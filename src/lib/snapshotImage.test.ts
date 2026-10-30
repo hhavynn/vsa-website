@@ -20,10 +20,11 @@ function stubContext() {
   const gradient = { addColorStop: jest.fn() };
   const ctx: Record<string, unknown> = {
     createLinearGradient: () => gradient,
+    createRadialGradient: () => gradient,
     measureText: (t: string) => ({ width: t.length * 10 }),
     fillText: (t: string) => texts.push(t),
   };
-  for (const fn of ['translate', 'scale', 'fillRect', 'beginPath', 'moveTo', 'arcTo', 'closePath', 'stroke', 'fill', 'save', 'restore', 'arc', 'clip', 'setLineDash', 'drawImage']) {
+  for (const fn of ['translate', 'scale', 'fillRect', 'beginPath', 'moveTo', 'arcTo', 'closePath', 'stroke', 'fill', 'save', 'restore', 'arc', 'clip', 'setLineDash', 'drawImage', 'bezierCurveTo', 'rotate']) {
     ctx[fn] = jest.fn();
   }
   return { ctx: ctx as unknown as CanvasRenderingContext2D, texts };

@@ -7,7 +7,7 @@ describe('public editorial theme routing', () => {
     expect(isPublicEditorialRoute(pathname)).toBe(true);
   });
 
-  it.each(['/admin', '/admin/', '/admin/login', '/admin/events', '/signin', '/ADMIN', '/Admin/Events', '/SignIn'])('preserves the existing non-public theme on %s', (pathname) => {
+  it.each(['/admin', '/admin/', '/admin/login', '/admin/events', '/signin', '/ADMIN', '/Admin/Events', '/SignIn'])('keeps page-level editorial decoration off %s', (pathname) => {
     expect(isPublicEditorialRoute(pathname)).toBe(false);
   });
 
@@ -17,11 +17,10 @@ describe('public editorial theme routing', () => {
 });
 
 describe('editorial nav link styling', () => {
-  it('uses the Figma underline treatment on public routes and the pill elsewhere', () => {
-    expect(navLinkClass(true, true)).toContain('border-ed-ink');
-    expect(navLinkClass(true, false)).toContain('border-transparent');
-    expect(navLinkClass(false, true)).toContain('rounded-lg');
-    expect(navLinkClass(false, true)).not.toContain('ed-ink');
+  it('uses the Figma underline treatment on every route, admin included', () => {
+    expect(navLinkClass(true)).toContain('border-ed-ink');
+    expect(navLinkClass(false)).toContain('border-transparent');
+    expect(navLinkClass(false)).not.toContain('rounded-lg');
   });
 });
 

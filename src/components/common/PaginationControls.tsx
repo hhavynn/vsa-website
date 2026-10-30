@@ -10,49 +10,23 @@ interface PaginationControlsProps {
   pageStartLabel: number;
   pageEndLabel: number;
   totalCount: number;
-  theme?: 'slate' | 'gray' | 'zinc';
   showRowsPerPage?: boolean;
   className?: string;
 }
 
-const THEMES = {
-  slate: {
-    divider:     'border-slate-800/80',
-    btnBorder:   'border-slate-700',
-    btnText:     'text-slate-300',
-    btnHover:    'hover:bg-slate-800/60',
-    pageLabel:   'text-slate-400',
-    selectBg:    'bg-slate-950/80',
-    selectText:  'text-white',
-    selectBorder:'border-slate-700',
-    selectFocus: 'focus:border-indigo-500 focus:outline-none',
-    countText:   'text-slate-500',
-  },
-  gray: {
-    divider:     'border-gray-200 dark:border-gray-700',
-    btnBorder:   'border-gray-300 dark:border-gray-600',
-    btnText:     'text-gray-700 dark:text-gray-300',
-    btnHover:    'hover:bg-gray-50 dark:hover:bg-gray-800',
-    pageLabel:   'text-gray-500 dark:text-gray-400',
-    selectBg:    'bg-white dark:bg-gray-700',
-    selectText:  'text-gray-900 dark:text-white',
-    selectBorder:'border-gray-300 dark:border-gray-600',
-    selectFocus: 'focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none',
-    countText:   'text-gray-500 dark:text-gray-400',
-  },
-  zinc: {
-    divider:     'border-zinc-200 dark:border-[#27272a]',
-    btnBorder:   'border-zinc-200 dark:border-[#27272a]',
-    btnText:     'text-zinc-700 dark:text-zinc-300',
-    btnHover:    'hover:bg-zinc-50 dark:hover:bg-zinc-800',
-    pageLabel:   'text-zinc-500 dark:text-zinc-400',
-    selectBg:    'bg-white dark:bg-[#18181b]',
-    selectText:  'text-zinc-900 dark:text-zinc-100',
-    selectBorder:'border-zinc-200 dark:border-[#27272a]',
-    selectFocus: 'focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500',
-    countText:   'text-zinc-500 dark:text-zinc-400',
-  },
-} as const;
+/** Token-driven, so pagination matches whichever surface (public or admin) hosts it. */
+const t = {
+  divider:      'border-[var(--color-border)]',
+  btnBorder:    'border-[var(--color-border)]',
+  btnText:      'text-text-secondary',
+  btnHover:     'hover:border-brand-300 hover:bg-brand-50 hover:text-brand-800 dark:hover:border-brand-700 dark:hover:bg-brand-900/40 dark:hover:text-brand-100',
+  pageLabel:    'text-text-muted',
+  selectBg:     'bg-[var(--color-input)]',
+  selectText:   'text-text-primary',
+  selectBorder: 'border-[var(--color-border)]',
+  selectFocus:  'focus:outline-none focus:border-brand-600 dark:focus:border-brand-400',
+  countText:    'text-text-muted',
+};
 
 export function PaginationControls({
   page,
@@ -63,12 +37,9 @@ export function PaginationControls({
   pageStartLabel,
   pageEndLabel,
   totalCount,
-  theme = 'gray',
   showRowsPerPage = true,
   className = '',
 }: PaginationControlsProps) {
-  const t = THEMES[theme];
-
   return (
     <div className={className}>
       {showRowsPerPage && (

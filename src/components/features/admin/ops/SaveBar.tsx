@@ -37,7 +37,7 @@ export function SaveBar({
         type={submit ? 'submit' : 'button'}
         onClick={submit ? undefined : onSave}
         disabled={!canSave(status)}
-        className="rounded border-0 bg-brand-600 px-4 py-2 font-sans text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-400 dark:text-[#050810]"
+        className="rounded border-0 bg-brand-600 px-4 py-2 font-sans text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-400 dark:text-brand-950"
       >
         {status === 'saving' ? 'Saving…' : saveLabel}
       </button>

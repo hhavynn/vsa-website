@@ -9,8 +9,8 @@ import { adminStatusQuery } from '../../../hooks/useAdmin';
 import { SignInSchema, type SignInFormData } from '../../../schemas';
 import { FieldError, FormAlert } from '../../ui/FieldError';
 
-const inputCls = 'mt-1 block w-full touch:min-h-11 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 px-3 py-2 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500';
-const labelCls = 'block text-xs font-medium text-text-secondary uppercase tracking-widest mb-1';
+const inputCls = 'mt-1 block w-full touch:min-h-11 rounded-md border border-[var(--color-border)] bg-[var(--color-input)] px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/20 dark:focus:border-brand-300 dark:focus:ring-brand-300/25';
+const labelCls = 'mb-1 block font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em] text-text-secondary';
 
 const ADMIN_CHECK_FAILED = 'Unable to verify admin access.';
 
@@ -167,7 +167,7 @@ export function SignInForm({ onSignedIn, defaultEmail }: SignInFormProps = {}) {
         type="submit"
         disabled={isSubmitting}
         aria-busy={isSubmitting}
-        className="w-full flex touch:min-h-11 items-center justify-center py-2.5 px-4 rounded text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 transition-colors duration-150 disabled:opacity-50"
+        className="flex w-full touch:min-h-11 items-center justify-center rounded-md bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] disabled:opacity-50 dark:bg-brand-300 dark:text-brand-950 dark:hover:bg-brand-200"
       >
         {isSubmitting ? 'Verifying access...' : 'Sign In'}
       </button>

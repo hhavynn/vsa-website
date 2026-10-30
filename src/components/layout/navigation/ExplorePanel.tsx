@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { QUICK_LINKS, GET_INVOLVED, EXPLORE_LINKS, INVOLVEMENT_PREFIXES, isRouteActive } from './navConfig';
-import { navLinkClass, usePublicEditorialRoute } from '../publicEditorialTheme';
+import { navLinkClass } from '../publicEditorialTheme';
 
 // Desktop nav — single "Explore" trigger opening a three-group flyout
 // (Quick Links / Get Involved / Explore). Replaces the old GetInvolvedDropdown,
@@ -54,8 +54,6 @@ export function ExplorePanel() {
 
   useEffect(() => () => clearTimeout(closeTimer.current), []);
 
-  const editorial = usePublicEditorialRoute();
-
   const itemRow = 'flex items-center gap-2.5 rounded-lg px-2.5 py-2 font-sans text-[13px] font-semibold transition-colors duration-100 hover:bg-[var(--color-surface2)] focus:bg-[var(--color-surface2)] focus:outline-none';
 
   return (
@@ -77,7 +75,7 @@ export function ExplorePanel() {
         aria-expanded={open}
         aria-label="Explore VSA"
         onClick={() => setOpen((v) => !v)}
-        className={navLinkClass(editorial, triggerActive || open)}
+        className={navLinkClass(triggerActive || open)}
       >
         Explore
         <svg
