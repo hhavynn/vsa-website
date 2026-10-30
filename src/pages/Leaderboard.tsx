@@ -15,6 +15,8 @@ import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { useLeaderboardYears } from '../hooks/useLeaderboardYears';
 import { useIndividualLeaderboard, type IndividualLeaderboardMember as Member } from '../hooks/useIndividualLeaderboard';
 import { usePublishedLeaderboardRoles } from '../hooks/usePublishedLeaderboardRoles';
+import { usePublishedBoardRoster } from '../hooks/usePublishedBoardRoster';
+import { rankPublishedCohort, type LeaderboardCohort } from '../lib/memberCohorts';
 import { rolesForSelectedYear, type PublicMemberRole } from '../lib/memberRoles';
 import { PublicMemberRoleBadges } from '../components/features/leaderboard/PublicMemberRoleBadges';
 import { leaderboardRepository } from '../data/repos/leaderboard';
@@ -485,7 +487,8 @@ export function Leaderboard() {
   const [activeView, setActiveView] = useState<'individual' | 'houses'>(
     searchParams.get('view') === 'houses' ? 'houses' : 'individual'
   );
-  const [activeTab, setActiveTab] = useState<'points' | 'events'>('points');
+  const [activeTab, setActiveTab] = useState<'points' | 'events'>(searchParams.get('metric') === 'events' ? 'events' : 'points');
+  const [cohort, setCohort] = useState<LeaderboardCohort>(searchParams.get('cohort') === 'board' ? 'board' : 'members');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<SelectedYear | null>(null);
   const [hasUserSelectedYear, setHasUserSelectedYear] = useState(false);
@@ -513,6 +516,9 @@ export function Leaderboard() {
   );
 
   useEffect(() => {
+    const selectedCohort = searchParams.get('cohort') === 'board' ? 'board' : 'members';
+    setCohort(selectedCohort);
+    setActiveTab(searchParams.get('metric') === 'events' ? 'events' : 'points');
     const view = searchParams.get('view');
     if (view === 'houses' && activeView !== 'houses') {
       setActiveView('houses');
@@ -556,8 +562,12 @@ export function Leaderboard() {
     if (hasUserSelectedYear || selectedYear !== null || initialSelectedYear === null) {
       return;
     }
-    setSelectedYear(initialSelectedYear);
-  }, [hasUserSelectedYear, initialSelectedYear, selectedYear]);
+    const wanted = searchParams.get('year');
+    const selectedFromUrl = wanted === 'all' ? 'all' :
+      wanted && academicYears.some((year) => String(year.year) === wanted) ? Number(wanted) : initialSelectedYear;
+    setSelectedYear(selectedFromUrl);
+
+  }, [hasUserSelectedYear, initialSelectedYear, selectedYear, academicYears, searchParams]);
 
   // Approved member avatars (member_id → thumbnail URL) from the shared cached
   // query. Fail-soft: initials remain the fallback.
@@ -583,9 +593,44 @@ export function Leaderboard() {
   const handleSelectedYearChange = (value: string) => {
     setHasUserSelectedYear(true);
     setSelectedYear(value === 'all' ? 'all' : Number(value));
+    if (value === 'all') setCohort('members');
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('year', value);
+      if (value === 'all') next.delete('cohort');
+      return next;
+    }, { replace: true });
+  };
+  const selectMetric = (metric: 'points' | 'events') => {
+    setActiveTab(metric);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (metric === 'points') next.delete('metric');
+      else next.set('metric', 'events');
+      return next;
+    }, { replace: true });
+  };
+  const selectCohort = (nextCohort: LeaderboardCohort) => {
+    setCohort(nextCohort);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (selectedYear !== null) next.set('year', String(selectedYear));
+      if (activeTab === 'events') next.set('metric', 'events');
+      if (nextCohort === 'board') next.set('cohort', 'board');
+      else next.delete('cohort');
+      return next;
+    }, { replace: true });
   };
 
-  const entries = activeTab === 'points' ? byPoints : byEvents;
+  const boardRoster = usePublishedBoardRoster(selectedYear);
+  const cohortAvailable = typeof selectedYear === 'number' && !boardRoster.isLoading && !boardRoster.isError && !!boardRoster.data;
+  const boardRosterUnavailable = typeof selectedYear === 'number' && !boardRoster.isLoading && !cohortAvailable;
+  const unsplitEntries = activeTab === 'points' ? byPoints : byEvents;
+  // A Board roster outage displays an explicitly unsplit fallback. It NEVER
+  // claims everyone is a general member. All-Time is deliberately unsplit.
+  const entries = cohortAvailable
+    ? rankPublishedCohort(members ?? [], boardRoster.data as Set<string>, cohort, activeTab)
+    : cohort === 'board' && typeof selectedYear === 'number' ? [] : unsplitEntries;
   const searchTerm = searchQuery.trim().toLowerCase();
   const filteredEntries = entries.filter(
     (entry) =>
@@ -595,7 +640,7 @@ export function Leaderboard() {
       (entry.year ?? '').toLowerCase().includes(searchTerm)
   );
 
-  const resetKey = `${activeTab}|${searchQuery}|${selectedYear}`;
+  const resetKey = `${activeTab}|${searchQuery}|${selectedYear}|${cohort}`;
   const {
     page,
     totalPages,
@@ -697,7 +742,7 @@ export function Leaderboard() {
                 {(['points', 'events'] as const).map((tab) => (
                   <button
                     key={tab}
-                    onClick={() => setActiveTab(tab)}
+                    onClick={() => selectMetric(tab)}
                     aria-pressed={activeTab === tab}
                     className={`chip-check min-h-[40px] touch:min-h-11 rounded-full border-2 px-4 py-1.5 font-mono text-[11px] font-bold tracking-wider transition-all ${
                       activeTab === tab 
@@ -706,6 +751,27 @@ export function Leaderboard() {
                     }`}
                   >
                     {tab.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Cohorts depend only on verified published Cabinet member IDs. */}
+            {activeView === 'individual' && typeof selectedYear === 'number' && (
+              <div role="group" aria-label="Leaderboard member category" className="flex flex-wrap gap-2">
+                {(['members', 'board'] as const).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={cohort === option}
+                    onClick={() => selectCohort(option)}
+                    className={`chip-check min-h-11 rounded-full border-2 px-4 py-1.5 font-mono text-xs font-bold transition-all ${
+                      cohort === option
+                        ? 'border-[var(--accent)] bg-[var(--accent)] text-[color:var(--color-on-accent)] shadow-sm'
+                        : 'border-[var(--border)] bg-[var(--surface2)] text-[var(--text3)] hover:border-[var(--accent)]'
+                    }`}
+                  >
+                    {option === 'board' ? 'BOARD' : 'MEMBERS'}
                   </button>
                 ))}
               </div>
@@ -764,6 +830,19 @@ export function Leaderboard() {
                 <h2 className="font-serif text-2xl font-bold">Full Standings</h2>
               </div>
 
+              {boardRoster.isLoading && typeof selectedYear === 'number' && (
+                <p role="status" className="mb-3 font-sans text-xs text-text-secondary">Checking the published Cabinet roster before separating Board members…</p>
+              )}
+              {boardRosterUnavailable && (
+                <p role="status" className="mb-3 font-sans text-xs text-text-secondary">
+                  Board roster is unavailable for this academic year. {cohort === 'board'
+                    ? 'Board rankings cannot be verified right now.'
+                    : 'Showing unsegmented standings; no member is being excluded based on an unknown role.'}
+                </p>
+              )}
+              {selectedYear === 'all' && (
+                <p className="mb-3 font-sans text-xs text-text-secondary">All-Time combines everyone. Select an academic year to see separate Members and Board rankings.</p>
+              )}
               {rolesUnavailable && typeof selectedYear === 'number' && (
                 <p role="status" className="mb-3 font-sans text-xs text-[var(--text3)]">Member roles are temporarily unavailable. Individual points and rankings are unaffected.</p>
               )}
@@ -786,7 +865,9 @@ export function Leaderboard() {
                     />
                   ) : (
                     <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                      {searchTerm ? 'No matching members found.' : `No activity recorded for ${selectedYearLabel} yet.`}
+                      {cohort === 'board' && typeof selectedYear === 'number' && !cohortAvailable
+                        ? 'Board rankings are unavailable until a verified published roster can be read.'
+                        : searchTerm ? 'No matching members found in this category.' : `No activity recorded for ${selectedYearLabel} in this category yet.`}
                     </p>
                   )}
                 </div>
@@ -794,7 +875,7 @@ export function Leaderboard() {
                 <div className="space-y-3">
                   {/* The scrapbook card layout needs flexible widths, so expose one
                       ARIA table instead of maintaining a separate hidden table. */}
-                  <div role="table" aria-label={'Full member standings for ' + selectedYearLabel}>
+                  <div role="table" aria-label={(cohortAvailable ? (cohort === 'board' ? 'Board' : 'Members') : 'Full member') + ' standings for ' + selectedYearLabel}>
                     <div role="rowgroup" className="sr-only">
                       <div role="row">
                         <span role="columnheader">Rank</span>
