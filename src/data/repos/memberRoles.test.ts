@@ -61,9 +61,30 @@ describe('bounded public role-source reads (#623/#627)', () => {
     expect(supabaseMock.queriesFor('members')).toHaveLength(0);
   });
 
-  it('protects query budget against more than one visible page of member IDs', async () => {
-    const tooMany = Array.from({ length: 51 }, (_, i) => `member-${i}`);
-    await expect(getPublicMemberRoles(2026, tooMany)).rejects.toThrow(/visible-member limit/);
+  it('supports the existing 100-row and Show All pagination with bounded batches rather than N+1', async () => {
+    const visibleIds = Array.from({ length: 153 }, (_, i) => `member-${String(i).padStart(3, '0')}`);
+    supabaseMock.queueResult('cabinet_years', { data: [year], error: null });
+    for (let chunk = 0; chunk < 4; chunk += 1) {
+      supabaseMock.queueResult('cabinet_members', {
+        data: [roles[0]], error: null,
+      });
+    }
+    const result = await getPublicMemberRoles(2026, visibleIds);
+    expect(result.get('verified-1')).toBeUndefined();
+    const queryBatches = supabaseMock.queriesFor('cabinet_members');
+    expect(queryBatches).toHaveLength(4);
+    for (const [index, query] of queryBatches.entries()) {
+      const batch = query.calls.find((call) => call.method === 'in')?.args[1] as string[];
+      expect(batch).toEqual(visibleIds.slice(index * 50, (index + 1) * 50));
+      expect(batch.length).toBeLessThanOrEqual(50);
+      expect(query.calls.find((call) => call.method === 'select')?.args[0]).toBe('id, member_id, role, category');
+    }
+    expect(supabaseMock.queriesFor('cabinet_years')).toHaveLength(1);
+  });
+
+  it('rejects unbounded enumeration rather than querying all member roles', async () => {
+    const beyondVisible = Array.from({ length: 2001 }, (_, i) => `member-${i}`);
+    await expect(getPublicMemberRoles(2026, beyondVisible)).rejects.toThrow(/visible-member limit/);
     expect(supabaseMock.queries()).toHaveLength(0);
   });
 });
