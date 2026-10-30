@@ -223,7 +223,7 @@ export function BottomSheet({
 
   return createPortal(
     <motion.div
-      className="fixed inset-0 z-[80] flex items-end justify-center bg-black/50 sm:items-center sm:p-6"
+      className="fixed inset-0 z-[80] flex items-end justify-center bg-scrim sm:items-center sm:p-6"
       role="presentation"
       onClick={beginClose}
       initial={{ opacity: 0 }}

@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { memo, useMemo } from 'react';
 import { ExplorePanel } from './ExplorePanel';
-import { navLinkClass, usePublicEditorialRoute } from '../publicEditorialTheme';
+import { navLinkClass } from '../publicEditorialTheme';
 
 interface NavItem {
   path: string;
@@ -28,15 +28,13 @@ export const NavLinks = memo(function NavLinks() {
     [location.pathname]
   );
 
-  const editorial = usePublicEditorialRoute();
-
   return (
-    <div className={`hidden items-center md:flex ${editorial ? 'gap-5 lg:gap-8' : 'gap-1'}`}>
+    <div className="hidden items-center gap-5 md:flex lg:gap-8">
       {FLAT_NAV_ITEMS.map((item) => (
         <Link
           key={item.path}
           to={item.path}
-          className={navLinkClass(editorial, isActive(item.path))}
+          className={navLinkClass(isActive(item.path))}
         >
           {item.label}
         </Link>

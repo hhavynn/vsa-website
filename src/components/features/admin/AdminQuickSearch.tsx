@@ -51,8 +51,8 @@ function Palette({ onClose }: { onClose: () => void }) {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-black/60 px-4 pt-[12vh] backdrop-blur-sm" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-label="Search admin" onKeyDown={onKeyDown} className="w-full max-w-xl overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
+    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-scrim px-4 pt-[12vh] backdrop-blur-sm" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <div role="dialog" aria-modal="true" aria-label="Search admin" onKeyDown={onKeyDown} className="vsa-ribbon-top w-full max-w-xl overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_24px_64px_rgba(22,30,61,0.24)]">
         <input
           ref={inputRef}
           type="search"
@@ -75,7 +75,7 @@ function Palette({ onClose }: { onClose: () => void }) {
               aria-selected={index === active}
               onMouseEnter={() => setActive(index)}
               onClick={() => choose(result)}
-              className={cn('flex cursor-pointer items-center justify-between gap-3 px-4 py-2', index === active && 'bg-[var(--color-surface2)]')}
+              className={cn('flex cursor-pointer items-center justify-between gap-3 border-l-2 border-transparent px-4 py-2', index === active && 'border-brand-500 bg-brand-50 dark:border-brand-300 dark:bg-brand-900/50')}
             >
               <div className="min-w-0">
                 <p className="truncate font-sans text-sm font-semibold text-[var(--color-text)]">{result.title}</p>
@@ -117,12 +117,12 @@ export function QuickSearchButton({ onOpen, className }: { onOpen: () => void; c
       onClick={onOpen}
       aria-label="Search admin"
       className={cn(
-        'flex w-full items-center justify-between gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-3 py-2 font-sans text-[13px] text-[var(--color-text2)] transition-colors hover:text-[var(--color-text)]',
+        'flex w-full items-center justify-between gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-input)] px-3 py-2 font-sans text-[13px] text-[var(--color-text2)] transition-colors hover:border-brand-300 hover:text-[var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:hover:border-brand-700 dark:focus-visible:outline-brand-400',
         className,
       )}
     >
       <span>Search admin…</span>
-      <kbd className="font-mono text-[10px] text-[var(--color-text3)]">{isMac ? '⌘K' : 'Ctrl K'}</kbd>
+      <kbd className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--color-text3)]">{isMac ? '⌘K' : 'Ctrl K'}</kbd>
     </button>
   );
 }

@@ -166,14 +166,15 @@ html.dark .vsa-halftone::before {
 }
 
 /* Figma footer: periwinkle in light mode, deep navy in dark. */
-.vsa-editorial-shell .editorial-footer {
+/* Unscoped: the footer is shared chrome on every route. */
+.editorial-footer {
   background: var(--ed-footer);
   /* Periwinkle is darker than cream: deepen secondary ink to keep 4.5:1. */
   --ed-muted: #3e4a66;
   --color-text2: #3e4a66;
 }
 
-html.dark .vsa-editorial-shell .editorial-footer {
+html.dark .editorial-footer {
   --ed-muted: #bfcbe4;
   --color-text2: #d5dcf0;
 }

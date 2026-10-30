@@ -242,7 +242,6 @@ export default function AdminMergeSuggestions() {
                 page={page} totalPages={totalPages}
                 rowsPerPage={rowsPerPage} onPageChange={setCurrentPage} onRowsPerPageChange={setRowsPerPage}
                 pageStartLabel={pageStartLabel} pageEndLabel={pageEndLabel} totalCount={potentialMatches.length}
-                theme="zinc"
               />
             </div>
           )}

@@ -866,7 +866,6 @@ export function Leaderboard() {
                       pageStartLabel={pageStartLabel}
                       pageEndLabel={pageEndLabel}
                       totalCount={filteredEntries.length}
-                      theme="zinc"
                     />
                   </div>
                 </div>

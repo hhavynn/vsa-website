@@ -709,7 +709,6 @@ export default function AdminMembers() {
                 page={page} totalPages={totalPages}
                 rowsPerPage={rowsPerPage} onPageChange={setCurrentPage} onRowsPerPageChange={setRowsPerPage}
                 pageStartLabel={pageStartLabel} pageEndLabel={pageEndLabel} totalCount={filtered.length}
-                theme="zinc"
               />
             )}
           </div>
