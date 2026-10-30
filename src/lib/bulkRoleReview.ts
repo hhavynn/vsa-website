@@ -85,12 +85,14 @@ export function getRoleReviewStatus(
   role: ReviewRoleKind,
   yearId: string,
   selectedSourceIds: readonly string[],
+  canonicalMemberName?: string,
 ): RoleReviewStatus {
   if (!selectedMemberId || row.duplicateOf !== null) return 'identity-review';
   if (!source) return 'source-review';
   if (source.cabinet_year_id !== yearId || !belongsToRole(source, role)) return 'conflict';
   if (selectedSourceIds.filter((id) => id === source.id).length > 1) return 'conflict';
-  if (normalizeMemberName(row.name) !== normalizeMemberName(source.name)) return 'name-mismatch';
+  if (normalizeMemberName(row.name) !== normalizeMemberName(source.name) ||
+    (canonicalMemberName && normalizeMemberName(row.name) !== normalizeMemberName(canonicalMemberName))) return 'name-mismatch';
   if (source.member_id === selectedMemberId) return 'already-linked';
   if (source.member_id) return 'conflict';
   return 'ready';
