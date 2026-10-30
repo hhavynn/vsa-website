@@ -535,18 +535,18 @@
       ]
     },
     {
-      "path": "src/data/repos/houseMemberships.ts",
-      "tables": [
-        "house_memberships",
-        "public_house_memberships"
-      ],
-      "rpcs": []
-    },
-    {
       "path": "src/data/repos/houseMembershipWrites.ts",
       "tables": [
         "house_memberships",
         "members"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/houseMemberships.ts",
+      "tables": [
+        "house_memberships",
+        "public_house_memberships"
       ],
       "rpcs": []
     },
