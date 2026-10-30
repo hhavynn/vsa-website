@@ -43,7 +43,7 @@ create role authenticated;
 create database ace_assignments;
 SQL
 
-migration="$repo_dir/supabase/migrations/20261030120000_ace_assignment_eligibility_policy.sql"
+migration="$repo_dir/supabase/migrations/20261030184936_ace_assignment_eligibility_policy.sql"
 psql "${psql_args[@]}" -d ace_assignments -q -c 'set client_min_messages = warning' \
   -f "$script_dir/sql/ace-assignments.fixture.sql" -f "$migration" -f "$migration"
 printf 'PASS: eligibility-policy migration applies cleanly and is repeatable.\n'

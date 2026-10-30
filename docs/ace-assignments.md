@@ -141,7 +141,7 @@ not apply it to production from a PR.
 
 **Status:** applied to production on 2026-10-01 (recorded as version `20261001213356`); the filename matches the recorded version.
 
-Migration `20261030120000_ace_assignment_eligibility_policy.sql` adds the
+Migration `20261030184936_ace_assignment_eligibility_policy.sql` adds the
 eligibility policy: the two minimum columns, `ace_assignment_cycle_events`
 (admin-only RLS via `is_admin_user`, no `anon` access, no UPDATE grant), the
 freeze triggers and `save_ace_eligibility_policy` (SECURITY INVOKER). It is

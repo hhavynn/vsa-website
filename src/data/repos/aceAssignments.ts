@@ -35,7 +35,7 @@ export interface SavedEligibilityPolicy {
 }
 
 export const ACE_ELIGIBILITY_UNAVAILABLE =
-  'The ACE eligibility check is not available yet. Ask a site administrator to apply database migration 20261030120000.';
+  'The ACE eligibility check is not available yet. Ask a site administrator to apply database migration 20261030184936.';
 
 /** Missing table, column or function: the eligibility migration is not applied yet. */
 function missingEligibilitySchema(code: string | undefined) {

@@ -267,7 +267,7 @@ export interface AceAssignmentCycle {
   status: AceAssignmentStatus;
   /** Saved Little minimum (qualifying events attended); null until the ACE Chair saves it. */
   little_min_events?: number | null;
-  /** Saved Big minimum; null until saved. Absent before migration 20261030120000. */
+  /** Saved Big minimum; null until saved. Absent before migration 20261030184936. */
   big_min_events?: number | null;
   created_by: string | null;
   created_at: string;
