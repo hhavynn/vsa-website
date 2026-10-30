@@ -246,3 +246,24 @@ describe('Admin Overview health scan', () => {
     });
   });
 });
+
+describe('manual attention links without count fan-out (#253)', () => {
+  it('exposes merge and launch destinations without inventing unresolved counts', async () => {
+    load.mockResolvedValue(snapshot(HEALTHY));
+    renderOverview();
+    const merge = await screen.findByRole('link', { name: 'Review merge suggestions' });
+    const launch = screen.getByRole('link', { name: 'Check launch readiness' });
+    expect(merge).toHaveAttribute('href', '/admin/merge-suggestions');
+    expect(launch).toHaveAttribute('href', '/admin/launch-checklist');
+    expect(screen.getByText('Manual checks (not counted above)')).toBeInTheDocument();
+    expect(screen.getByText(/dashboard cannot safely infer how many are unresolved/)).toBeInTheDocument();
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps both manual review actions available during a count-source outage', async () => {
+    load.mockRejectedValue(new Error('Dashboard read unavailable'));
+    renderOverview();
+    expect(await screen.findByRole('link', { name: 'Review merge suggestions' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Check launch readiness' })).toBeInTheDocument();
+  });
+});
