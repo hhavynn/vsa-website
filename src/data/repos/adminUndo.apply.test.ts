@@ -38,9 +38,9 @@ describe('applyUndo is a database-level compare-and-set', () => {
   });
 
   it('rejects when more than one row would change', async () => {
-    supabaseMock.setDefault('intern_cohort_drafts', { data: [{ id: 'a' }, { id: 'b' }], error: null });
+    supabaseMock.setDefault('ace_assignment_drafts', { data: [{ id: 'a' }, { id: 'b' }], error: null });
     await expect(
-      applyUndo({ kind: 'intern_mentor', target: { cycleId: 'c1', draftId: 'd1' }, before: null, after: 'm' }, null),
+      applyUndo({ kind: 'ace_draft_big', target: { draftId: 'd1' }, before: null, after: 'm' }, null),
     ).rejects.toBeInstanceOf(UndoConflictError);
   });
 

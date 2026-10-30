@@ -162,20 +162,7 @@ export function planHouseClear<T extends HouseBulkRow>(rows: readonly T[], edita
 
 export interface InternBulkRow {
   id: string;
-  mentor_cabinet_member_id: string | null;
   role_or_track: string | null;
-}
-
-export function planInternMentor<T extends InternBulkRow>(rows: readonly T[], mentorId: string | null, editable: boolean): BulkPlan<T> {
-  return planBulk(
-    rows,
-    (row) => {
-      if (!editable) return 'The cohort is locked. Reopen it to edit.';
-      if ((row.mentor_cabinet_member_id ?? null) === mentorId) return mentorId ? 'Already has this mentor.' : 'Already has no mentor.';
-      return null;
-    },
-    { verb: mentorId ? 'Set the mentor for' : 'Remove the mentor from', noun: 'intern', destructive: mentorId === null },
-  );
 }
 
 export function planInternTrack<T extends InternBulkRow>(rows: readonly T[], track: string, editable: boolean): BulkPlan<T> {

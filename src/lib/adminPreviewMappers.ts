@@ -1,7 +1,7 @@
 // What a roster/cohort draft would look like on the public Cabinet board once
 // published. Mirrors the publish mapping (name, role, board, order, member link,
-// and the optional bio fields; never images, mentors, captions, or notes), so a
-// preview shows exactly what Publish would write. Pure and read-only.
+// and the optional bio fields; never images, shadow positions, captions, or
+// notes), so a preview shows exactly what Publish would write. Pure and read-only.
 import type { CabinetMemberRaw } from '../hooks/useCabinet';
 import type { CabinetRosterDraft } from './cabinetRoster';
 import { INTERN_CATEGORY, INTERN_DEFAULT_ROLE, InternCohortDraft } from './internCohort';

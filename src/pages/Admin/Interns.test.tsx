@@ -31,7 +31,7 @@ jest.mock('../../data/repos/internCohort', () => ({
     listCycles: jest.fn(),
     getCycle: jest.fn(),
     getDrafts: jest.fn(),
-    listMentorOptions: jest.fn(),
+    listShadowPositionOptions: jest.fn(),
     createCycle: jest.fn(),
     addDrafts: jest.fn(),
     updateDraft: jest.fn(),
@@ -56,15 +56,16 @@ const cycle = (status: InternCohortCycle['status']): InternCohortCycle => ({
   created_by: null, locked_at: null, published_at: null, created_at: '', updated_at: '',
 });
 const draft = (id: string, overrides: Partial<InternCohortDraft>): InternCohortDraft => ({
-  id, cycle_id: 'c1', name: id, member_id: null, mentor_cabinet_member_id: null, role_or_track: null, caption: null,
+  id, cycle_id: 'c1', name: id, member_id: null, shadow_positions: [], role_or_track: null, caption: null,
   internal_notes: null, display_order: 0, published_cabinet_member_id: null, created_at: `2026-10-01T00:00:0${id.length % 9}Z`,
   updated_at: '', ...overrides,
 });
 
-async function openCohort(status: InternCohortCycle['status'], drafts: InternCohortDraft[]) {
+async function openCohort(status: InternCohortCycle['status'], drafts: InternCohortDraft[], arrange?: () => void) {
   repo.listCycles.mockResolvedValue([cycle(status)]);
   repo.getDrafts.mockResolvedValue(drafts);
-  repo.listMentorOptions.mockResolvedValue([{ id: 'cm-emily', name: 'Emily Nguyen', role: 'Events' }]);
+  repo.listShadowPositionOptions.mockResolvedValue(['Co-President', 'Treasurer', 'Events Chair', 'Media Director']);
+  arrange?.();
   lookup.searchMembers.mockResolvedValue([]);
   lookup.listMemberDirectory.mockResolvedValue([
     { id: 'm-sarah', fullName: 'Sarah Nguyen', college: 'Muir', year: 'Second Year', displayName: 'Sarah Nguyen · Muir · Second Year' },
@@ -80,7 +81,7 @@ async function openCohort(status: InternCohortCycle['status'], drafts: InternCoh
   await settle();
 }
 
-/** Lets the page's mount-time loads (members, mentors, interns) finish inside act. */
+/** Lets the page's mount-time loads (members, positions, interns) finish inside act. */
 async function settle() {
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -89,9 +90,9 @@ async function settle() {
 
 beforeEach(() => jest.clearAllMocks());
 
-it('summarizes the cohort and shows a linked intern with member, mentor, and track', async () => {
+it('summarizes the cohort and shows a linked intern with member, shadow positions, and track', async () => {
   await openCohort('draft', [
-    draft('Sarah Nguyen', { member_id: 'm-sarah', mentor_cabinet_member_id: 'cm-emily', role_or_track: 'Events / Operations', display_order: 0 }),
+    draft('Sarah Nguyen', { member_id: 'm-sarah', shadow_positions: ['Treasurer', 'Events Chair'], role_or_track: 'Events / Operations', display_order: 0 }),
     draft('Zed Unknown', { display_order: 1 }),
   ]);
 
@@ -99,18 +100,109 @@ it('summarizes the cohort and shows a linked intern with member, mentor, and tra
   const preflight = within(screen.getByLabelText('Preflight'));
   expect(preflight.getByText(/1 member link unresolved/)).toBeInTheDocument();
   expect(preflight.getByText(/Ready to Lock/)).toBeInTheDocument();
-  expect(preflight.getByText(/1 missing mentor/)).toBeInTheDocument();
-  expect(screen.getByText(/✅ Sarah Nguyen · Member: Sarah Nguyen · Muir · Second Year · Mentor: Emily Nguyen · Events · Track: Events \/ Operations/)).toBeInTheDocument();
+  expect(preflight.queryByText(/shadow|optional/i)).not.toBeInTheDocument();
+  expect(screen.getByText(/✅ Sarah Nguyen · Member: Sarah Nguyen · Muir · Second Year · Shadowing: Treasurer, Events Chair · Track: Events \/ Operations/)).toBeInTheDocument();
+  expect(screen.getByText(/⚠ Zed Unknown · Member: not linked · Shadowing: none/)).toBeInTheDocument();
 });
 
-it('saves a mentor choice on the draft', async () => {
-  await openCohort('draft', [draft('Sarah Nguyen', { member_id: 'm-sarah' })]);
+describe('shadow positions', () => {
+  const { logAdminActivity } = jest.requireMock('../../data/repos/adminActivity');
+  const picker = (slot: number) => screen.getByLabelText(`Shadow position ${slot} for Sarah Nguyen`) as HTMLSelectElement;
+  const optionsOf = (select: HTMLSelectElement) => Array.from(select.options).map((option) => option.value);
+  const shadowEntries = () => logAdminActivity.mock.calls.map(([call]: [{ action: string }]) => call).filter((call: { action: string }) => call.action === 'intern.shadow_changed');
 
-  await userEvent.selectOptions(screen.getByLabelText('Mentor (optional)'), 'cm-emily');
+  it('saves a first position, and only then opens the next picker', async () => {
+    await openCohort('draft', [draft('Sarah Nguyen', { member_id: 'm-sarah' })]);
+    expect(picker(1)).toBeEnabled();
+    expect(picker(2)).toBeDisabled();
+    expect(picker(3)).toBeDisabled();
 
-  expect(repo.updateDraft).toHaveBeenCalledWith('c1', 'Sarah Nguyen', { mentor_cabinet_member_id: 'cm-emily' });
-  await settle();
-  expect(screen.getByLabelText('Mentor (optional)')).toBeEnabled();
+    await userEvent.selectOptions(picker(1), 'Treasurer');
+    await settle();
+
+    expect(repo.updateDraft).toHaveBeenCalledWith('c1', 'Sarah Nguyen', { shadow_positions: ['Treasurer'] });
+    expect(picker(1)).toHaveValue('Treasurer');
+    expect(picker(2)).toBeEnabled();
+    expect(picker(3)).toBeDisabled();
+  });
+
+  it('offers exactly 3 pickers, and no position twice', async () => {
+    await openCohort('draft', [draft('Sarah Nguyen', { member_id: 'm-sarah', shadow_positions: ['Treasurer', 'Events Chair', 'Media Director'] })]);
+    expect(screen.getAllByLabelText(/Shadow position \d for Sarah Nguyen/)).toHaveLength(3);
+    expect(optionsOf(picker(1))).toEqual(['', 'Co-President', 'Treasurer']);
+    expect(optionsOf(picker(2))).toEqual(['', 'Co-President', 'Events Chair']);
+    expect(optionsOf(picker(3))).toEqual(['', 'Co-President', 'Media Director']);
+  });
+
+  it('closes the gap when a position is cleared', async () => {
+    await openCohort('draft', [draft('Sarah Nguyen', { member_id: 'm-sarah', shadow_positions: ['Treasurer', 'Events Chair'] })]);
+    await userEvent.selectOptions(picker(1), '');
+    await settle();
+    expect(repo.updateDraft).toHaveBeenCalledWith('c1', 'Sarah Nguyen', { shadow_positions: ['Events Chair'] });
+    expect(picker(1)).toHaveValue('Events Chair');
+    expect(picker(2)).toHaveValue('');
+  });
+
+  it('keeps a saved title visible after it stops being a Board position', async () => {
+    await openCohort('draft', [draft('Sarah Nguyen', { member_id: 'm-sarah', shadow_positions: ['Old Title'] })]);
+    expect(picker(1)).toHaveValue('Old Title');
+    expect(screen.getByText(/Shadowing: Old Title/)).toBeInTheDocument();
+  });
+
+  it('logs a change with the positions and no undo', async () => {
+    await openCohort('draft', [draft('Sarah Nguyen', { member_id: 'm-sarah', shadow_positions: ['Treasurer'] })]);
+    await userEvent.selectOptions(picker(2), 'Events Chair');
+    await settle();
+    expect(shadowEntries()).toHaveLength(1);
+    const [entry] = shadowEntries();
+    expect(entry).toMatchObject({
+      entityType: 'intern_cohort_draft',
+      entityId: 'Sarah Nguyen',
+      academicYearStart: 2026,
+      summary: "Changed Sarah Nguyen's shadow positions: Treasurer → Treasurer, Events Chair",
+    });
+    expect(entry.metadata).toBeUndefined();
+  });
+
+  it('logs nothing and keeps the positions when the save fails', async () => {
+    const toast = jest.requireMock('react-hot-toast').default;
+    await openCohort('draft', [draft('Sarah Nguyen', { member_id: 'm-sarah' })]);
+    repo.updateDraft.mockRejectedValueOnce(new Error('network'));
+    await userEvent.selectOptions(picker(1), 'Treasurer');
+    await settle();
+    expect(toast.error).toHaveBeenCalledWith('network');
+    expect(shadowEntries()).toHaveLength(0);
+    expect(picker(1)).toHaveValue('');
+  });
+
+  it.each(['locked', 'published'] as const)('is read-only when the cohort is %s, while the summary still shows it', async (status) => {
+    await openCohort(status, [draft('Sarah Nguyen', { member_id: 'm-sarah', shadow_positions: ['Treasurer'] })]);
+    [1, 2, 3].forEach((slot) => expect(picker(slot)).toBeDisabled());
+    expect(screen.getByText(/Shadowing: Treasurer/)).toBeInTheDocument();
+  });
+
+  it('has no bulk shadow action', async () => {
+    await openCohort('draft', [draft('Sarah Nguyen', { member_id: 'm-sarah' })]);
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Sarah Nguyen' }));
+    const bar = within(screen.getByRole('toolbar', { name: 'Bulk actions' }));
+    expect(bar.getAllByRole('button').map((button) => button.textContent)).toEqual(['Set track', 'Mark reviewed', 'Clear selection']);
+  });
+
+  it('renders a row from before the migration, which has no shadow_positions yet', async () => {
+    const { shadow_positions: _omitted, ...oldRow } = draft('Sarah Nguyen', { member_id: 'm-sarah' });
+    await openCohort('draft', [oldRow as InternCohortDraft]);
+    expect(picker(1)).toHaveValue('');
+    expect(screen.getByText(/Shadowing: none/)).toBeInTheDocument();
+  });
+
+  it('says so when the positions fail to load', async () => {
+    const toast = jest.requireMock('react-hot-toast').default;
+    await openCohort('draft', [draft('Sarah Nguyen', { member_id: 'm-sarah' })], () => {
+      repo.listShadowPositionOptions.mockRejectedValue(new Error('offline'));
+    });
+    expect(toast.error).toHaveBeenCalledWith('Failed to load cabinet positions.');
+    expect(optionsOf(picker(1))).toEqual(['']);
+  });
 });
 
 it('offers an exact-name member to link but never links it by itself', async () => {
@@ -156,7 +248,7 @@ it('makes a locked cohort read-only and requires confirmation to publish', async
 describe('filters, bulk actions, and history', () => {
   const { logAdminActivity } = jest.requireMock('../../data/repos/adminActivity');
   const cohort = () => [
-    draft('Sarah Nguyen', { member_id: 'm-sarah', mentor_cabinet_member_id: 'cm-emily', role_or_track: 'Events', caption: 'hi', display_order: 0 }),
+    draft('Sarah Nguyen', { member_id: 'm-sarah', role_or_track: 'Events', caption: 'hi', display_order: 0 }),
     draft('Zed Unknown', { display_order: 1 }),
     draft('Quinn Park', { display_order: 2 }),
   ];
@@ -164,41 +256,21 @@ describe('filters, bulk actions, and history', () => {
   it('shows chips with counts and filters the cohort', async () => {
     await openCohort('draft', cohort());
     expect(screen.getByRole('button', { name: /^Unlinked\s*2$/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Missing mentor\s*2/ })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^Missing/ })).toHaveLength(1);
     await userEvent.click(screen.getByRole('button', { name: /^Unlinked\s*2$/ }));
     expect(screen.getAllByTestId('intern-row')).toHaveLength(2);
   });
 
-  it('logs a mentor change with an undo spec for the previous mentor', async () => {
-    await openCohort('draft', [draft('Sarah Nguyen', { member_id: 'm-sarah', mentor_cabinet_member_id: 'cm-emily' })]);
-    await userEvent.selectOptions(screen.getByLabelText('Mentor (optional)'), '');
-    await settle();
-    const entry = logAdminActivity.mock.calls.map(([call]: [{ action: string }]) => call).find((call: { action: string }) => call.action === 'intern.mentor_changed');
-    expect(entry.summary).toBe("Changed Sarah Nguyen's mentor: Emily Nguyen → none");
-    expect(entry.metadata.undo).toEqual({ kind: 'intern_mentor', target: { cycleId: 'c1', draftId: 'Sarah Nguyen' }, before: 'cm-emily', after: null });
-  });
-
-  it('sets a mentor for selected interns, skipping those who already have it', async () => {
+  it('sets a track for selected interns, skipping those who already have it', async () => {
     await openCohort('draft', cohort());
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select Sarah Nguyen' }));
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select Zed Unknown' }));
-    await userEvent.selectOptions(screen.getByLabelText('Mentor for selected interns'), 'cm-emily');
-    await userEvent.click(screen.getByRole('button', { name: 'Set mentor' }));
+    await userEvent.type(screen.getByLabelText('Track for selected interns'), 'Events');
+    await userEvent.click(screen.getByRole('button', { name: 'Set track' }));
     await settle();
     expect(repo.updateDraft).toHaveBeenCalledTimes(1);
-    expect(repo.updateDraft).toHaveBeenCalledWith('c1', 'Zed Unknown', { mentor_cabinet_member_id: 'cm-emily' });
+    expect(repo.updateDraft).toHaveBeenCalledWith('c1', 'Zed Unknown', { role_or_track: 'Events' });
     expect(logAdminActivity).toHaveBeenCalledWith(expect.objectContaining({ action: 'intern.bulk_changed' }));
-  });
-
-  it('confirms with the count before removing mentors in bulk', async () => {
-    await openCohort('draft', cohort());
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Sarah Nguyen' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Remove mentor' }));
-    expect(screen.getByText('Remove the mentor from 1 intern?')).toBeInTheDocument();
-    expect(repo.updateDraft).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole('button', { name: 'Confirm (1)' }));
-    await settle();
-    expect(repo.updateDraft).toHaveBeenCalledWith('c1', 'Sarah Nguyen', { mentor_cabinet_member_id: null });
   });
 
   it('flags an exact duplicate name as a possible duplicate without merging anything', async () => {
@@ -235,10 +307,10 @@ it('shows rows that were saved before a bulk update failed, and says how far it 
   repo.updateDraft.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('network'));
   await userEvent.click(screen.getByRole('checkbox', { name: 'Select Sarah Nguyen' }));
   await userEvent.click(screen.getByRole('checkbox', { name: 'Select Zed Unknown' }));
-  await userEvent.selectOptions(screen.getByLabelText('Mentor for selected interns'), 'cm-emily');
-  await userEvent.click(screen.getByRole('button', { name: 'Set mentor' }));
+  await userEvent.type(screen.getByLabelText('Track for selected interns'), 'Events');
+  await userEvent.click(screen.getByRole('button', { name: 'Set track' }));
   await settle();
   expect(toast.error).toHaveBeenCalledWith('Updated 1 of 2 interns before it failed. The rest were not changed.');
-  // The first intern's saved mentor is reflected on screen.
-  expect(screen.getByText(/Sarah Nguyen · Member: .* · Mentor: Emily Nguyen/)).toBeInTheDocument();
+  // The first intern's saved track is reflected on screen.
+  expect(screen.getByText(/Sarah Nguyen · Member: .* · Track: Events/)).toBeInTheDocument();
 });

@@ -66,13 +66,12 @@ describe('domain adapters', () => {
     expect(issues[0]).toMatchObject({ level: 'warning', count: 2, fix: { filter: 'missing_photo' } });
   });
 
-  it('Interns: optional gaps are info, and do not affect readiness', () => {
+  it('Interns: a warning does not affect readiness', () => {
     const issues = internIssues({
       blockers: [],
       warnings: [{ code: 'unlinked', message: '3 unresolved', draftIds: ['a', 'b', 'c'] }],
-      notes: [{ code: 'missing_mentor', message: '4 missing mentor (optional).', draftIds: ['a', 'b', 'c', 'd'] }],
     });
-    expect(issues.map((item) => item.level)).toEqual(['warning', 'info']);
+    expect(issues.map((item) => item.level)).toEqual(['warning']);
     expect(buildReadiness(issues).ready).toBe(true);
   });
 });

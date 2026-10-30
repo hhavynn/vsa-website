@@ -68,10 +68,10 @@ describe('House / Cabinet / Intern progress', () => {
     expect(steps.find((step) => step.key === 'links')?.value).toBe('17 / 18');
   });
 
-  it('Interns track links and mentors against the cohort', () => {
-    const steps = internProgress({ status: 'draft', accepted: 12, linked: 12, mentored: 4 });
+  it('Interns track links against the cohort, with no step for optional shadow positions', () => {
+    const steps = internProgress({ status: 'draft', accepted: 12, linked: 12 });
     expect(steps.find((step) => step.key === 'links')?.status).toBe('done');
-    expect(steps.find((step) => step.key === 'mentors')?.value).toBe('4 / 12');
+    expect(steps.map((step) => step.key)).toEqual(['added', 'links', 'locked', 'published']);
   });
 });
 
