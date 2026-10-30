@@ -1,8 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { aceAssignmentsRepository } from '../../../data/repos/aceAssignments';
-import { getLosAngelesDateOnly } from '../../../utils/losAngelesDate';
-import { attendanceReadinessRepository, type AttendanceReadiness } from '../../../data/repos/attendanceReadiness';
-import { isAceEventAttendanceVerified, reviewAceParticipation, type AceParticipationRow } from '../../../lib/aceParticipationReview';
+import { useEffect, useState } from 'react';
+import { isAceEventAttendanceVerified } from '../../../lib/aceParticipationReview';
+import { useAceParticipationReview, type AceReviewPolicy } from '../../../hooks/useAceParticipationReview';
 
 /**
  * Admin-only, read-only ACE participation investigation. An ACE Chair must
@@ -11,53 +9,33 @@ import { isAceEventAttendanceVerified, reviewAceParticipation, type AceParticipa
  */
 export function AceParticipationReview({cycleId,year}:{cycleId:string;year:number}) {
   const [expanded,setExpanded]=useState(false);
-  const [events,setEvents]=useState<AttendanceReadiness|null>(null);
+  const [loadEvents,setLoadEvents]=useState(false);
+  const [eventVersion,setEventVersion]=useState(0);
   const [selected,setSelected]=useState<ReadonlySet<string>>(new Set());
   const [minimum,setMinimum]=useState('');
-  const [rows,setRows]=useState<AceParticipationRow[]|null>(null);
+  const [policy,setPolicy]=useState<AceReviewPolicy|null>(null);
+  const [reviewRevision,setReviewRevision]=useState(0);
   const [filter,setFilter]=useState('');
-  const [error,setError]=useState('');
-  const [busy,setBusy]=useState(false);
-  const request=useRef(0);
+  const [policyError,setPolicyError]=useState('');
   useEffect(()=>{
-    request.current++;
-    setEvents(null);setSelected(new Set());setMinimum('');setRows(null);setError('');setFilter('');
+    setLoadEvents(false);setEventVersion(0);setSelected(new Set());
+    setMinimum('');setPolicy(null);setReviewRevision(0);setFilter('');setPolicyError('');
   },[cycleId,year]);
-  const refreshEvents=async()=>{
-    const token=++request.current;
-    setBusy(true);setError('');setRows(null);setSelected(new Set());
-    try{
-      const data=await attendanceReadinessRepository.getReadiness(year,null);
-      if(token!==request.current)return;
-      if(data.truncated || data.totalEvents>data.events.length){
-        throw new Error('Attendance event summary is incomplete or truncated; cannot approve an ACE review.');
-      }
-      setEvents(data);
-    }catch(e){
-      if(token===request.current){setEvents(null);setError(e instanceof Error?e.message:'Attendance data unavailable');}
-    }finally{if(token===request.current)setBusy(false);}
+  const {events,rows,busy,error}=useAceParticipationReview(cycleId,year,expanded,loadEvents,eventVersion,policy);
+  const refreshEvents=()=>{
+    setPolicy(null);setPolicyError('');setSelected(new Set());
+    setEventVersion(value=>value+1);setLoadEvents(true);
   };
-  const evaluate=async()=>{
-    const token=++request.current;
-    setBusy(true);setError('');setRows(null);
-    try{
-      const rule=Number(minimum);
-      const ids=Array.from(selected);
-      if(!events||!ids.length||ids.length>20||!Number.isInteger(rule)||rule<1||rule>ids.length)
-        throw new Error('Select 1–20 eligible events and a valid minimum; no ACE requirement is assumed.');
-      const checkedEvents=ids.map(id=>events.events.find(event=>event.id===id));
-      if(checkedEvents.some(event=>!event))throw new Error('Selected event is no longer in the reviewed year');
-      const today=getLosAngelesDateOnly();
-      if(checkedEvents.some(event=>!event?.date || event.date>today))throw new Error('Select completed, dated events only; upcoming or undated events cannot count as missed attendance');
-      const sourceReady=checkedEvents.every(event=>event && isAceEventAttendanceVerified(event));
-      const roster=await aceAssignmentsRepository.listPublishedCycleLittles(cycleId,year);
-      const memberIds=Array.from(new Set(roster.map(row=>row.little_member_id).filter((id):id is string=>!!id)));
-      const verified=await attendanceReadinessRepository.getVerifiedSelectedAttendance(memberIds,ids);
-      if(token!==request.current)return;
-      setRows(reviewAceParticipation(roster,verified,ids,rule,sourceReady));
-    }catch(e){
-      if(token===request.current)setError(e instanceof Error?e.message:'ACE participation verification failed');
-    }finally{if(token===request.current)setBusy(false);}
+  const evaluate=()=>{
+    const rule=Number(minimum),ids=Array.from(selected).sort();
+    if(!events||!ids.length||ids.length>20||!Number.isInteger(rule)||rule<1||rule>ids.length) {
+      setPolicy(null);
+      setPolicyError('Select 1–20 eligible events and a valid minimum; no ACE requirement is assumed.');
+      return;
+    }
+    setPolicyError('');
+    setReviewRevision(value=>value+1);
+    setPolicy({ids,minimum:rule,revision:reviewRevision+1});
   };
   const visible=(rows??[]).filter(row=>(row.name+' '+row.status).toLowerCase().includes(filter.toLowerCase())).slice(0,100);
   const complete=rows?.filter(r=>r.status==='complete').length??0;
@@ -80,10 +58,11 @@ export function AceParticipationReview({cycleId,year}:{cycleId:string;year:numbe
             No event automatically qualifies based on points, and this temporary selection is <strong>not a saved quarter policy</strong>.
             Orphans and Bigs outside this published Little cohort are not included in the counts.
           </p>
-          <button type="button" className="vsa-btn-secondary min-h-11" onClick={()=>void refreshEvents()} disabled={busy}>
+          <button type="button" className="vsa-btn-secondary min-h-11" onClick={refreshEvents} disabled={busy}>
             {busy?'Reading…':'Load current-year event import status'}
           </button>
-          {error&&<p role="alert" className="text-sm text-red-600">Verification unavailable: {error}. No completed requirements are claimed.</p>}
+          {!!error&&<p role="alert" className="text-sm text-red-600">Verification unavailable: {error instanceof Error?error.message:'Unknown source error'}. No completed requirements are claimed.</p>}
+          {policyError&&<p role="alert" className="text-sm text-red-600">{policyError}</p>}
           {events&&(
             <>
               <p className="text-xs text-[var(--color-text2)]">
@@ -95,10 +74,10 @@ export function AceParticipationReview({cycleId,year}:{cycleId:string;year:numbe
                   <legend className="px-1 text-sm font-semibold text-[var(--color-text)]">Select eligible events (max 20)</legend>
                   {events.events.map(event=>(
                     <label key={event.id} className="flex min-h-11 items-center gap-3 border-b border-[var(--color-border)] py-2 text-sm">
-                      <input type="checkbox" checked={selected.has(event.id)}
+                      <input type="checkbox" checked={selected.has(event.id)} disabled={busy}
                         onChange={e=>{
                           setSelected(old=>{const next=new Set(old);if(e.target.checked && next.size<20)next.add(event.id);else if(!e.target.checked)next.delete(event.id);return next;});
-                          setRows(null);
+                          setPolicy(null);
                         }}/>
                       <span>{event.name} · {event.date||'no date'} · {event.term_label||'unassigned term'}
                         {!isAceEventAttendanceVerified(event)?' · import evidence incomplete':''}
@@ -110,12 +89,12 @@ export function AceParticipationReview({cycleId,year}:{cycleId:string;year:numbe
               <div className="flex flex-wrap items-end gap-3">
                 <label className="text-sm font-semibold text-[var(--color-text)]" htmlFor="ace-minimum">
                   Minimum approved events
-                  <input id="ace-minimum" type="number" min={1} max={20} step={1} value={minimum}
+                  <input id="ace-minimum" type="number" min={1} max={20} step={1} value={minimum} disabled={busy}
                     onChange={e=>{setMinimum(e.target.value);setRows(null);}}
                     className="mt-1 block min-h-11 w-28 rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-3"/>
                 </label>
                 <button type="button" className="vsa-btn-primary min-h-11" disabled={busy||!selected.size||!minimum}
-                  onClick={()=>void evaluate()}>{busy?'Evaluating…':'Evaluate published ACE roster'}</button>
+                  onClick={evaluate}>{busy?'Evaluating…':'Evaluate published ACE roster'}</button>
               </div>
             </>
           )}
