@@ -54,6 +54,16 @@ export function VcnRoleRosterReview({ editionYear }: { editionYear: number | nul
             Only an explicit <code>verified</code> status is considered for identity review.
             Stage Manager and Props Master are never silently mapped to other production roles.
           </p>
+          <label htmlFor="vcn-roster-file" className="block text-sm font-semibold text-[var(--color-text)]">Read local CSV / TSV file</label>
+          <input id="vcn-roster-file" type="file" accept=".csv,.tsv,text/csv,text/tab-separated-values"
+            className="block min-h-11 w-full max-w-md text-sm text-[var(--color-text)]"
+            onChange={async e=>{
+              const file=e.target.files?.[0]; if(!file)return;
+              setResult(null);setConfirmed(new Map());setFailure('');
+              if(file.size>500000){setCsv('');setFailure('Roster exceeds 500 KB review limit');return;}
+              try{setCsv(await file.text());}
+              catch{setCsv('');setFailure('Could not read local roster file');}
+            }} />
           <label htmlFor="vcn-roster-text" className="block text-sm font-semibold text-[var(--color-text)]">Private roster CSV or TSV</label>
           <textarea id="vcn-roster-text" value={csv} onChange={e=>{setCsv(e.target.value);setResult(null);setConfirmed(new Map());}}
             placeholder={'name,role,status\nExample Member,VCN Dancer,verified'}
