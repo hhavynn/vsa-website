@@ -61,6 +61,7 @@ describe('Board vs Members segmented leaderboard (#628)', () => {
     expect(within(boardTable).getByRole('row', { name: 'Rank #2: Cam Four' })).toBeInTheDocument();
     expect(within(boardTable).queryByText('Bao Two')).not.toBeInTheDocument();
     expect(screen.getByTestId('url')).toHaveTextContent('cohort=board');
+    expect(screen.getByTestId('url')).toHaveTextContent('year=2026');
     expect(within(boardTable).getByText('40')).toBeInTheDocument();
   });
 
