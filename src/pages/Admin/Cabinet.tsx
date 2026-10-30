@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useQuery } from 'react-query';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -7,7 +8,6 @@ import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
 import { MemberLinkPicker } from '../../components/features/admin/MemberLinkPicker';
 import { memberLookupRepository } from '../../data/repos/memberLookup';
-import type { MemberOption } from '../../lib/memberLinkMatching';
 import { useCabinetYears } from '../../hooks/useCabinetYears';
 import { getCurrentCabinetYear } from '../../lib/cabinetYears';
 import { CabinetYear } from '../../types';
@@ -188,21 +188,12 @@ export default function AdminCabinet() {
   const [previewTarget, setPreviewTarget] = useState<'create' | 'edit' | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedMemberBaseline, setSelectedMemberBaseline] = useState<CabinetMember | null>(null);
-  const [resolvedLinkedMember, setResolvedLinkedMember] = useState<MemberOption | null>(null);
-  const [memberLinkReadError, setMemberLinkReadError] = useState(false);
-
-  // Resolve only the selected Cabinet row's explicit canonical member ID.
-  // No name-based badge assertion, member auto-link, or full member directory.
-  useEffect(() => {
-    let current = true;
-    setResolvedLinkedMember(null);
-    setMemberLinkReadError(false);
-    if (!selectedMember?.member_id) return () => { current = false; };
-    memberLookupRepository.findMemberById(selectedMember.member_id)
-      .then((option) => { if (current) setResolvedLinkedMember(option); })
-      .catch(() => { if (current) setMemberLinkReadError(true); });
-    return () => { current = false; };
-  }, [selectedMember?.member_id]);
+  const linkedMemberId = selectedMember?.member_id ?? null;
+  const { data: resolvedLinkedMember = null, isError: memberLinkReadError } = useQuery(
+    ['cabinet-published-member-link', linkedMemberId],
+    () => memberLookupRepository.findMemberById(linkedMemberId),
+    { enabled: !!linkedMemberId, staleTime: 5 * 60 * 1000, retry: false },
+  );
 
   // Once cabinet years load, default to the active/most-recent year
   useEffect(() => {
@@ -642,30 +633,6 @@ export default function AdminCabinet() {
                 <label className={labelCls}>Fun Fact</label>
                 <textarea value={newMember.fun_fact || ''} onChange={e => setNewMember({...newMember, fun_fact: e.target.value})} className={inputCls} rows={2} />
               </div>
-              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-4" aria-label="Link Cabinet entry to VSA member">
-                <p className={labelCls}>Leaderboard role identity</p>
-                <p className="mb-3 font-sans text-xs leading-relaxed text-[var(--color-text2)]">
-                  Only a verified member ID will show this published Cabinet role on that person's leaderboard profile for the selected academic year. Select the right person explicitly; same names can belong to different members.
-                </p>
-                {memberLinkReadError && <p role="status" className="mb-2 font-sans text-xs text-amber-700 dark:text-amber-400">Could not verify the existing member link. You can review or change it manually.</p>}
-                <MemberLinkPicker
-                  linkedMemberId={selectedMember.member_id}
-                  linkedMember={resolvedLinkedMember}
-                  onLink={(member) => {
-                    setSelectedMember((previous) => previous ? { ...previous, member_id: member.id } : null);
-                    setResolvedLinkedMember(member);
-                  }}
-                  onUnlink={() => {
-                    setSelectedMember((previous) => previous ? { ...previous, member_id: null } : null);
-                    setResolvedLinkedMember(null);
-                  }}
-                  busy={uploading}
-                  disabledReason={isRenamed(selectedMemberBaseline?.name, selectedMember.name)
-                    ? 'Save the renamed Cabinet entry before linking it to another person.'
-                    : null}
-                />
-                <p className="mt-2 font-sans text-xs text-[var(--color-text3)]">This member link is saved with Save Changes. Unlinked or yearless Cabinet rows do not earn a role badge.</p>
-              </div>
               <div>
                 <label className={labelCls}>Profile Photo</label>
                 <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
@@ -829,6 +796,28 @@ export default function AdminCabinet() {
               <div>
                 <label className={labelCls}>Fun Fact</label>
                 <textarea value={selectedMember.fun_fact || ''} onChange={e => setSelectedMember({...selectedMember, fun_fact: e.target.value})} className={inputCls} rows={2} />
+              </div>
+              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-4" aria-label="Link Cabinet entry to VSA member">
+                <p className={labelCls}>Leaderboard role identity</p>
+                <p className="mb-3 font-sans text-xs leading-relaxed text-[var(--color-text2)]">
+                  Only a verified member ID will show this published Cabinet role on that person's leaderboard profile for the selected academic year. Select the right person explicitly; same names can belong to different members.
+                </p>
+                {memberLinkReadError && <p role="status" className="mb-2 font-sans text-xs text-amber-700 dark:text-amber-400">Could not verify the existing member link. You can review or change it manually.</p>}
+                <MemberLinkPicker
+                  linkedMemberId={selectedMember.member_id}
+                  linkedMember={resolvedLinkedMember}
+                  onLink={(member) => {
+                    setSelectedMember((previous) => previous ? { ...previous, member_id: member.id } : null);
+                  }}
+                  onUnlink={() => {
+                    setSelectedMember((previous) => previous ? { ...previous, member_id: null } : null);
+                  }}
+                  busy={uploading}
+                  disabledReason={isRenamed(selectedMemberBaseline?.name, selectedMember.name)
+                    ? 'Save the renamed Cabinet entry before linking it to another person.'
+                    : null}
+                />
+                <p className="mt-2 font-sans text-xs text-[var(--color-text3)]">This member link is saved with Save Changes. Unlinked or yearless Cabinet rows do not earn a role badge.</p>
               </div>
               <div>
                 <label className={labelCls}>Profile Photo</label>
