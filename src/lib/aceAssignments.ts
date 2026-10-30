@@ -5,6 +5,7 @@ import {
   findExactMemberMatch,
   normalizeMemberName,
 } from './memberLinkMatching';
+import { parseDelimitedPaste } from './delimitedPaste';
 
 /** A live ACE tree node, as the assignment workspace needs it. */
 export interface AceNodeRef {
@@ -324,10 +325,24 @@ export interface ParsedImport {
   /** Header columns that were recognized, e.g. ['name', 'big']. */
   columns: string[];
   skipped: number;
+  /** Rows left out because the person applied as a Big. */
+  bigsSkipped: number;
+  /** Earlier form submissions replaced by the same person's later one. */
+  repeatsReplaced: number;
   warnings: string[];
 }
 
-type ImportColumn = 'name' | 'first' | 'last' | 'email' | 'big' | 'notes';
+type ImportColumn =
+  | 'name'
+  | 'first'
+  | 'last'
+  | 'email'
+  | 'ucsd email'
+  | 'big'
+  | 'notes'
+  | 'big or little'
+  | 'requesting'
+  | 'mutual request';
 
 const HEADER_ALIASES: Record<string, ImportColumn> = {
   name: 'name',
@@ -342,6 +357,7 @@ const HEADER_ALIASES: Record<string, ImportColumn> = {
   lname: 'last',
   email: 'email',
   emailaddress: 'email',
+  ucsdemail: 'ucsd email',
   big: 'big',
   bigname: 'big',
   requestedbig: 'big',
@@ -350,47 +366,66 @@ const HEADER_ALIASES: Record<string, ImportColumn> = {
   comments: 'notes',
 };
 
-function splitDelimited(line: string, delimiter: string): string[] {
-  const cells: string[] = [];
-  let cell = '';
-  let quoted = false;
-  for (let i = 0; i < line.length; i += 1) {
-    const char = line[i];
-    if (quoted) {
-      if (char === '"' && line[i + 1] === '"') {
-        cell += '"';
-        i += 1;
-      } else if (char === '"') {
-        quoted = false;
-      } else {
-        cell += char;
-      }
-    } else if (char === '"') {
-      quoted = true;
-    } else if (char === delimiter) {
-      cells.push(cell);
-      cell = '';
-    } else {
-      cell += char;
-    }
-  }
-  cells.push(cell);
-  return cells.map((value) => value.trim());
+/**
+ * Column names from the ACE application and mutual request Google Forms. The
+ * application asks "Anh/Chi (Big) or Em (Little)"; the mutual request form
+ * asks who they are requesting, so "Big" there means the person is a Little.
+ */
+const FORM_HEADER_PATTERNS: ReadonlyArray<[RegExp, ImportColumn]> = [
+  [/^namefirst/, 'name'],
+  [/applyingtobe.*big.*little/, 'big or little'],
+  [/^areyoumutuallyrequesting/, 'requesting'],
+  [/^whoareyoumutuallyrequesting/, 'mutual request'],
+];
+
+function headerKey(header: string): string {
+  return header.toLowerCase().replace(/[^a-z]/g, '');
+}
+
+function columnForHeader(header: string): ImportColumn | null {
+  const key = headerKey(header);
+  return HEADER_ALIASES[key] ?? FORM_HEADER_PATTERNS.find(([pattern]) => pattern.test(key))?.[1] ?? null;
+}
+
+type Role = 'big' | 'little' | null;
+
+function roleFromAnswer(answer: string): Role {
+  const value = answer.toLowerCase();
+  if (/little|\bem\b/.test(value)) return 'little';
+  if (/big|anh|chi/.test(value)) return 'big';
+  return null;
 }
 
 function squash(value: string | undefined): string {
   return (value ?? '').replace(/\s+/g, ' ').trim();
 }
 
-/** Parses pasted CSV or TSV. A header row is optional; without one, column 1 is the name. */
-export function parseAssignmentImport(text: string): ParsedImport {
-  const lines = text.split(/\r?\n/).filter((line) => line.trim().length > 0);
-  const result: ParsedImport = { rows: [], columns: [], skipped: 0, warnings: [] };
-  if (lines.length === 0) return result;
+/** "Diego, L, Nguyen" or "Gwen H. Tran" → first and last, so it can match a member record. */
+function dropMiddleInitials(name: string): string {
+  const parts = name.split(/[\s,]+/).filter(Boolean);
+  if (parts.length < 3) return parts.join(' ');
+  const middle = parts.slice(1, -1).filter((part) => !/^[a-z]\.?$/i.test(part));
+  return [parts[0], ...middle, parts[parts.length - 1]].join(' ');
+}
 
-  const delimiter = lines[0].includes('\t') ? '\t' : ',';
-  const headerCells = splitDelimited(lines[0], delimiter);
-  const mapped = headerCells.map((cell) => HEADER_ALIASES[cell.toLowerCase().replace(/[^a-z]/g, '')] ?? null);
+/** The UCSD Email field sometimes holds only the username. */
+function ucsdEmail(value: string): string {
+  return /^[a-z0-9._-]+$/i.test(value) ? `${value}@ucsd.edu` : value;
+}
+
+/**
+ * Parses pasted CSV or TSV, including a copy of the ACE application or mutual
+ * request form responses. A header row is optional; without one, column 1 is
+ * the name. When the paste says who is a Big, only Littles are kept, and a
+ * repeat submission from the same email keeps the latest one.
+ */
+export function parseAssignmentImport(text: string): ParsedImport {
+  const records = parseDelimitedPaste(text);
+  const result: ParsedImport = { rows: [], columns: [], skipped: 0, bigsSkipped: 0, repeatsReplaced: 0, warnings: [] };
+  if (records.length === 0) return result;
+
+  const headerCells = records[0];
+  const mapped = headerCells.map(columnForHeader);
   const hasHeader = mapped.some(Boolean);
 
   const columnIndex = new Map<ImportColumn, number>();
@@ -409,26 +444,68 @@ export function parseAssignmentImport(text: string): ParsedImport {
     result.warnings.push('No header row recognized, so the first column is used as the name.');
   }
 
-  const dataLines = hasHeader ? lines.slice(1) : lines;
-  dataLines.forEach((line, offset) => {
-    const cells = splitDelimited(line, delimiter);
+  const nameIndex = columnIndex.get('name');
+  const nameHasInitials = hasHeader && nameIndex !== undefined && /^namefirst/.test(headerKey(headerCells[nameIndex]));
+  const hasRole = columnIndex.has('big or little') || columnIndex.has('requesting');
+  let unknownRole = 0;
+
+  const rows: ParsedImportRow[] = [];
+  const dataRecords = hasHeader ? records.slice(1) : records;
+  dataRecords.forEach((cells, offset) => {
     const cell = (column: ImportColumn) => {
       const index = columnIndex.get(column);
       return index === undefined ? '' : squash(cells[index]);
     };
-    const name = cell('name') || squash(`${cell('first')} ${cell('last')}`);
+    const rawName = cell('name') || squash(`${cell('first')} ${cell('last')}`);
+    const name = nameHasInitials ? dropMiddleInitials(rawName) : rawName;
     if (!name) {
       result.skipped += 1;
       return;
     }
-    result.rows.push({
+
+    if (hasRole) {
+      const applied = roleFromAnswer(cell('big or little'));
+      const requesting = roleFromAnswer(cell('requesting'));
+      const role: Role = applied ?? (requesting === 'big' ? 'little' : requesting === 'little' ? 'big' : null);
+      if (role === 'big') {
+        result.bigsSkipped += 1;
+        return;
+      }
+      if (role === null) unknownRole += 1;
+    }
+
+    const notes = [cell('notes'), cell('mutual request') && `Mutual request: ${cell('mutual request')}`].filter(Boolean);
+    const email = (cell('ucsd email') && ucsdEmail(cell('ucsd email'))) || cell('email');
+    rows.push({
       line: offset + (hasHeader ? 2 : 1),
       name,
-      email: cell('email').toLowerCase() || null,
+      email: email.toLowerCase() || null,
       bigName: cell('big') || null,
-      notes: cell('notes') || null,
+      notes: notes.length > 0 ? notes.join('; ') : null,
     });
   });
+
+  // Form responses are in submission order, so the last one per email is the latest.
+  const seen = new Set<string>();
+  for (let i = rows.length - 1; i >= 0; i -= 1) {
+    const email = rows[i].email;
+    if (email && seen.has(email)) {
+      result.repeatsReplaced += 1;
+    } else {
+      if (email) seen.add(email);
+      result.rows.unshift(rows[i]);
+    }
+  }
+
+  if (result.bigsSkipped > 0) {
+    result.warnings.push(`${plural(result.bigsSkipped, 'Big was', 'Bigs were')} left out. This import adds Littles only.`);
+  }
+  if (result.repeatsReplaced > 0) {
+    result.warnings.push(`${plural(result.repeatsReplaced, 'earlier submission was', 'earlier submissions were')} replaced by the same person's latest one.`);
+  }
+  if (unknownRole > 0) {
+    result.warnings.push(`${plural(unknownRole, 'row does not say', 'rows do not say')} Big or Little, so ${unknownRole === 1 ? 'it was' : 'they were'} kept as Littles.`);
+  }
   return result;
 }
 

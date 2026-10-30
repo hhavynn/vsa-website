@@ -87,8 +87,10 @@ export function AceAssignmentImportPanel({ nodes, nameIndex, existingNames = [],
         <div>
           <h3 className="text-sm font-semibold text-[var(--color-text)]">Import Littles</h3>
           <p className="mt-0.5 text-[11px] text-[var(--color-text3)]">
-            Paste a CSV or TSV. Recognized columns: name, first name, last name, email, big, notes. Emails only match
-            existing members and are never saved. Imports add draft rows; nothing becomes public.
+            Paste a CSV or TSV, or copy the ACE application or mutual request responses straight from Google Sheets.
+            Recognized columns: name, first name, last name, email, UCSD email, big, notes. Bigs are left out and a
+            repeat submission keeps the latest one. Emails only match existing members and are never saved. Imports
+            add draft rows; nothing becomes public.
           </p>
         </div>
         <button
