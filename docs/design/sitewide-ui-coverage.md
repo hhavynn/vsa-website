@@ -56,7 +56,7 @@ pages need an authorized session; anything verified only in the harness says so.
 | 4 Programs | Houses, ACE, Interns, Cabinet, Rollover, Years, Year Setup | `design/sitewide-programs-leadership` (stacked on 3) | implemented; real pages verified with empty data |
 | 5 Content | Gallery, Content, Calendar, VCN, Applications, Feedback, Resources, UVSA Schools, External Events | `design/sitewide-content-outreach` (stacked on 4) | implemented; real pages verified with empty data |
 | 6 Remaining admin | Analytics, Settings, AI ×3, Content Health, Launch Checklist, Recent Changes, Data Rights | `design/sitewide-remaining-admin` (stacked on 5) | implemented; real pages verified with empty data |
-| 7 Residual public | Legacy CSS in index.css, scrapbook stickers, public overlays | — | not started |
+| 7 Residual public | Legacy CSS in index.css, scrapbook stickers, public overlays | `design/sitewide-public-residuals` (stacked on 6) | implemented; ACE, overlays and snapshot PNG verified |
 | 8 Completion audit | Reconcile this ledger | — | not started |
 
 Protected areas (attendance import, House placement, member identity,
@@ -96,18 +96,18 @@ nothing is missed. Each still needs a Batch 7 sweep for overlays and legacy CSS.
 |---|---|---|---|
 | `/` | Home | implemented in #761 | Hero preserved; verify after merge |
 | `/events` | Events | implemented in #761 | Event detail overlays |
-| `/calendar` | Calendar | implemented in #761 | `CalendarDetailModal` (BottomSheet) |
+| `/calendar` | Calendar | implemented in #761 | Category colors off teal/coral (Batch 7); `CalendarDetailModal` not opened |
 | `/leaderboard` | Leaderboard | implemented in #761 | Pagination now tokenized; story share links |
 | `/cabinet` | Cabinet | implemented in #761 | `CabinetRoleModal`, `CabinetRoleExplorer` |
 | `/get-involved` | GetInvolved | implemented in #761 | `FindYourVsaPath`, `NewMemberChecklist` |
 | `/gallery` | Gallery | implemented in #761 | `AlbumLightbox`, `CameraFrame` |
-| `/ace` | Ace | implemented in #761 | `FamSheet`, `FamilyTree`; `styles/ace.css` |
+| `/ace` | Ace | visually verified (Batch 7) | Was still teal/coral/parchment: ace.css tokens, hero (shares the program-hero rules), FamilyTree accents and FamCover remapped to periwinkle/rose/violet; 375/1440 light+dark. FamSheet with data unverified |
 | `/house`, `/house-system`, `/house/:houseSlug`, `/house/archive`, `/house/archive/:yearSlug(/:houseSlug)`, `/house/year/:yearSlug(/:houseSlug)` | House, HouseDetail, HouseArchive | implemented in #761 | Archive/year variants unverified |
 | `/intern-program` | Internship | implemented in #761 | |
 | `/vcn`, `/vcn/current`, `/vcn/archive` | Vcn* | implemented in #761 | Stage hero variants |
 | `/wild-n-culture` | WildNCulture | implemented in #761 | |
 | `/uvsa-network` | UVSANetwork | implemented in #761 | |
-| `/points` | Points | implemented in #761 | `FindMyPoints`, `MyVSACard`, `PointsExplainer` |
+| `/points` | Points | visually verified (Batch 7, 1440 light+dark) | Snapshot share PNG redesigned (see below); lookup results with data unverified |
 | `/feedback` | Feedback | implemented in #761 | |
 | `/privacy` | Privacy | implemented in #761 | |
 | `/signin` → `/admin/login` | SignIn | visually verified (Batch 1) | |
@@ -230,9 +230,10 @@ counts (gray/zinc/slate/teal/coral/gold/hex) come from the Batch 1 holdout scan.
 | HouseRosterPanel, HousePaymentsPanel, HouseEventsManager/Dashboard, HouseDraftEditor, placement panels | admin | 4 | tokens; protected |
 | AttendanceReadinessPanel, ImportReviewPanel, ImportStepper | admin | 3 | tokens; protected |
 | Top3StoryDialog + StoryStudio + PNG export | admin / story / lib/story | 2 | visually verified (harness + real PNG export) |
-| PhotoRequestSection | avatar | 7 | tokens |
+| PhotoRequestSection | avatar | 7 | modal on ink scrim; not opened |
 | SessionExpiredDialog | auth | 1 | tokens (not screenshotted) |
-| CalendarDetailModal, CabinetRoleModal, AlbumLightbox, FamSheet, PublicSearchDialog, VsaAiAssistant, MobileDrawer | public features | 7 | editorial shell (body-scoped); verify in Batch 7 |
+| PublicSearchDialog, VsaAiAssistant, MobileDrawer | public features | 7 | visually verified open (search 1440 light+dark, Ask VSA 1440 dark, drawer 375 light+dark) |
+| CalendarDetailModal, CabinetRoleModal, AlbumLightbox, FamSheet | public features | 7/8 | tokens + ink scrim; not opened (need data / interaction) |
 | Toasts | App | 1 | implemented |
 
 ## Batch 2: leaderboard story generator
@@ -258,21 +259,27 @@ checked against live CORS headers.
 
 | Item | Files | Batch | Status |
 |---|---|---|---|
-| Member snapshot share image | `lib/snapshotImage.ts` | 7 | not started |
+| Member snapshot share image | `lib/snapshotImage.ts` | 7 | visually verified: real PNGs (classic 1080×1350, story 1080×1920, square 1080×1080) in the daydream palette, Instrument Serif, stars + ribbon; House frame, text and formats unchanged |
 
-## Known residual legacy CSS (Batch 7)
+## Legacy CSS (Batch 7, resolved)
 
-`src/index.css` still carries teal/coral/gold literals in public decorative
-classes: `.scrapbook-sticker-*` (overridden inside the editorial shell),
-`.editorial-hero` grid/watermark vars, and two glow gradients. They are not
-reachable from admin; audit them against public pages in Batch 7.
-`src/lib/uvsaSchoolLogos.ts` uses `coral-`/`gold-` palette classes for school
-initials. `StoryStudio` uses coral/gold (Batch 2).
+- `src/index.css`: 88 teal-era `rgba()` literals in public decorative classes
+  (scrapbook stickers, paper edges, glows, grids) remapped to the #761
+  family; the shared `.editorial-hero` base (washes, tape, grain, display
+  font) moved off teal/coral/gold. No teal-era hex remains in index.css.
+- `src/styles/ace.css`: token set and literals remapped; token *names* kept.
+- Public components: EventCard, FeedbackForm, CountdownTimer, CabinetBoard
+  (teal), BackToTop (indigo), Ask VSA and Cabinet role buttons (zinc dark
+  text), PhotoRequestSection scrim, Leaderboard avatar rims.
+- Intentional whites/hexes kept: homepage hero CTA and Polaroids, camera
+  chrome, gallery photo hover overlay, House colors, UVSA school logo data,
+  calendar category hues (distinct by design), Leaderboard podium gold medal.
 
 ## Verification log
 
 | Date | Batch | Evidence |
 |---|---|---|
+| 2026-10-30 | 7 | Public before/after /ace at 1440 light+dark; after at 375 light+dark; search dialog, Ask VSA panel and mobile drawer opened via real interactions; Find My Points 1440 light+dark; snapshot PNGs in all three formats. Gates: typecheck, lint (18 pre-existing warnings), 4198/4198 Jest, build, diff --check. |
 | 2026-10-30 | 6 | Real Batch 6 page components in the offline harness, 375/1440 light+dark (analytics, settings, AI knowledge/feedback/usage, content health, launch checklist, recent changes, data rights). Gates: typecheck, lint (18 pre-existing warnings), 4198/4198 Jest, build, diff --check. |
 | 2026-10-30 | 5 | Real Batch 5 page components in the offline harness, 375/1440 light+dark (gallery, content, calendar, vcn, applications, feedback, resources, uvsa schools, external events). Gates: typecheck, lint (18 pre-existing warnings), 4198/4198 Jest, build, diff --check. |
 | 2026-10-30 | 4 | Real Batch 4 page components in the offline harness, 375/1440 light+dark (houses, ace, interns, cabinet, rollover, years, year setup). Gates: typecheck, lint (18 pre-existing warnings), 4198/4198 Jest, build, diff --check. |
