@@ -7,7 +7,7 @@ import { SaveStatus, saveStatus } from '../lib/adminDirty';
 import { ConstraintHint, serverErrorToForm } from '../lib/adminForm';
 import { useUnsavedChangesGuard } from './useUnsavedChangesGuard';
 
-export interface UseAdminFormOptions<S extends z.ZodTypeAny> {
+export interface UseAdminFormOptions<S extends z.ZodType<FieldValues, FieldValues>> {
   /** Lives in src/schemas/. Client validation is UX; the DB/RLS stay authoritative. */
   schema: S;
   defaultValues: DefaultValues<z.input<S>>;
@@ -20,7 +20,7 @@ export interface UseAdminFormOptions<S extends z.ZodTypeAny> {
   onSuccess?: (values: z.output<S>) => void;
 }
 
-export interface AdminFormApi<S extends z.ZodTypeAny> {
+export interface AdminFormApi<S extends z.ZodType<FieldValues, FieldValues>> {
   form: UseFormReturn<z.input<S>, unknown, z.output<S>>;
   submit: (event?: React.BaseSyntheticEvent) => Promise<void>;
   status: SaveStatus;
@@ -38,7 +38,7 @@ export interface AdminFormApi<S extends z.ZodTypeAny> {
  * guard. The guard follows react-hook-form's dirty state, which `reset(values)`
  * clears on success — so saving and then navigating never prompts.
  */
-export function useAdminForm<S extends z.ZodTypeAny>(options: UseAdminFormOptions<S>): AdminFormApi<S> {
+export function useAdminForm<S extends z.ZodType<FieldValues, FieldValues>>(options: UseAdminFormOptions<S>): AdminFormApi<S> {
   type Input = z.input<S>;
   type Output = z.output<S>;
   const { schema, defaultValues, onSubmit, successMessage = 'Saved.', constraints, onSuccess } = options;
