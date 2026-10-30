@@ -86,6 +86,8 @@ describe('verified published Cabinet links for leaderboard role recognition (#62
   });
 
   it('resolves an existing linked identity without guessing from a display name', async () => {
+    // The selected canonical ID is intentionally absent from this synthetic directory.
+    supabaseMock.queueResult('public_members', { data: null, error: null });
     mount();
     await screen.findByText(/1 linked, 1 need a VSA member link/);
     await userEvent.click(screen.getAllByRole('button', { name: 'Edit' })[0]);
