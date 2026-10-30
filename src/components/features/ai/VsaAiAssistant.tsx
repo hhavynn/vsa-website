@@ -326,7 +326,7 @@ export function VsaAiAssistant() {
                             type="button"
                             onClick={() => handleRetry(idx)}
                             disabled={loading}
-                            className="rounded border border-rose-300 bg-rose-50 px-2.5 py-1 font-sans text-[11px] font-bold text-rose-700 transition-colors hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-950/20 dark:text-rose-300 disabled:opacity-50"
+                            className="inline-flex min-h-11 items-center rounded border border-rose-300 bg-rose-50 px-3 py-1.5 font-sans text-[11px] font-bold text-rose-700 transition-colors hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-950/20 dark:text-rose-300 disabled:opacity-50"
                           >
                             Retry
                           </button>
@@ -343,7 +343,7 @@ export function VsaAiAssistant() {
                             <Link
                               key={`${message.id}-${to}`}
                               to={to}
-                              className="inline-flex min-h-[32px] items-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 font-sans text-[11px] font-bold text-text-secondary underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+                              className="inline-flex min-h-11 items-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 font-sans text-[11px] font-bold text-text-secondary underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
                             >
                               {label}
                             </Link>
