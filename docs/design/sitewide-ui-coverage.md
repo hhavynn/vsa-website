@@ -54,7 +54,7 @@ pages need an authorized session; anything verified only in the harness says so.
 | 2 Story generator | StoryStudio editor + Top 3/5/10 PNG templates | `design/sitewide-story-generator` (stacked on 1) | implemented; exported PNGs verified |
 | 3 Core admin ops | Dashboard, Events, Import, Members, Points, Merge, Photo Requests | `design/sitewide-core-admin-ops` (stacked on 2) | implemented; real pages verified with empty data |
 | 4 Programs | Houses, ACE, Interns, Cabinet, Rollover, Years, Year Setup | `design/sitewide-programs-leadership` (stacked on 3) | implemented; real pages verified with empty data |
-| 5 Content | Gallery, Content, Calendar, VCN, Applications, Feedback, Resources, UVSA Schools, External Events | — | not started |
+| 5 Content | Gallery, Content, Calendar, VCN, Applications, Feedback, Resources, UVSA Schools, External Events | `design/sitewide-content-outreach` (stacked on 4) | implemented; real pages verified with empty data |
 | 6 Remaining admin | Analytics, Settings, AI ×3, Content Health, Launch Checklist, Recent Changes, Data Rights | — | not started |
 | 7 Residual public | Legacy CSS in index.css, scrapbook stickers, public overlays | — | not started |
 | 8 Completion audit | Reconcile this ledger | — | not started |
@@ -135,15 +135,15 @@ counts (gray/zinc/slate/teal/coral/gold/hex) come from the Batch 1 holdout scan.
 | `/admin/cabinet/rollover` | CabinetRollover | 4 | visually verified (harness, empty data) | |
 | `/admin/years` | YearsTerms | 4 | visually verified (harness, empty data) | Now uses AdminPageHeader; create actions → brand primary |
 | `/admin/year-setup` | YearSetup | 4 | visually verified (harness, empty data) | Custom header kept (embeds the year picker) with wash, ribbon and display title |
-| `/admin/content` | Content | 5 | tokens | |
-| `/admin/content-calendar` | ContentCalendar | 5 | tokens | 4 legacy classes |
-| `/admin/gallery` | Gallery | 5 | tokens | Upload/preview tools |
-| `/admin/vcn` | VcnArchives | 5 | tokens | 6 legacy classes |
-| `/admin/feedback` | Feedback / `FeedbackTab` | 5 | tokens | **30 legacy classes** |
-| `/admin/resources` | Resources | 5 | tokens | |
-| `/admin/uvsa-schools` | UVSASchools | 5 | tokens | |
-| `/admin/external-events` | ExternalEvents | 5 | tokens | |
-| `/admin/applications` | Applications | 5 | tokens | `ApplicationWindowCard` 6 legacy classes; protected |
+| `/admin/content` | Content | 5 | visually verified (harness, empty data) | Header wash + display title; save action → brand primary (ProgramContentManager too) |
+| `/admin/content-calendar` | ContentCalendar | 5 | visually verified (harness, empty data) | Header wash; 'Later' chip on tokens |
+| `/admin/gallery` | Gallery | 5 | visually verified (harness, empty data) | Album modal on ink scrim; upload previews need data |
+| `/admin/vcn` | VcnArchives | 5 | visually verified (harness, empty data) | Inputs were black in light mode: now token inputs; header wash |
+| `/admin/feedback` | Feedback / `FeedbackTab` | 5 | visually verified (harness, empty data) | 30 light-only hexes (teal-era) → status tokens, string-only; populated chips need data |
+| `/admin/resources` | Resources | 5 | visually verified (harness, empty data) | Ink-fill action → brand primary; delete color → danger token |
+| `/admin/uvsa-schools` | UVSASchools | 5 | visually verified (harness, empty data) | |
+| `/admin/external-events` | ExternalEvents | 5 | visually verified (harness, empty data) | |
+| `/admin/applications` | Applications | 5 | visually verified (harness, empty data) | **Applications + ApplicationWindowCard string-only**; window states on status tokens |
 | `/admin/analytics` | Analytics | 6 | tokens | |
 | `/admin/settings` | Settings | 6 | tokens | |
 | `/admin/ai-knowledge` | AiKnowledge | 6 | tokens | 7 legacy classes |
@@ -191,13 +191,28 @@ counts (gray/zinc/slate/teal/coral/gold/hex) come from the Batch 1 holdout scan.
 - Remaining data hexes (`#10b981` House accent fallback, `#000000` color-input
   default, `#E07856` placeholder) are data, not styling.
 
+## Batch 5 notes
+
+- **Status tokens** (`--status-{info,success,warning,danger,accent}-{text,border,bg}`
+  in index.css, light + dark): FeedbackTab, ApplicationWindowCard,
+  Applications and Resources used light-only inline hexes (FeedbackTab's
+  "in progress" chip was teal `#1e8878`) that failed contrast on dark
+  surfaces. Swapping the hex *strings* for `var(--status-…)` keeps those files
+  **string-only**, including both protected Applications files.
+- **Structural edits:** custom headers in Content, Content Calendar, VCN and
+  Feedback gained the shared wash/ribbon/display title in place (inline
+  `style` removed); the last three ink-fill buttons (Content, Resources,
+  ProgramContentManager) → brand primary; VCN inputs (black in light mode) →
+  token inputs. No handler, data or gating change. Application link
+  visibility and window logic are untouched.
+
 ## Overlays and embedded workflows (non-route)
 
 | Item | Owner | Batch | Status |
 |---|---|---|---|
 | ConfirmDialog, BulkRunDialog, BulkActionBar | common / admin ops | 1 / 3 | ConfirmDialog verified (harness); others tokens |
 | AdminQuickSearch, AdminOnboardingHelp | admin | 1 | Quick search verified (harness); onboarding bar seen in harness |
-| PublicPreviewDialog, PreviewFrame | admin/preview | 5 | tokens |
+| PublicPreviewDialog, PreviewFrame | admin/preview | 5 | implemented (ink scrim); not screenshotted open |
 | RecoveryWorkspace, BatchReviewDialog, RecoveryFindingDialog | admin/recovery | 3 | tokens; protected |
 | AceAssignmentsWorkspace | admin | 4 | tokens |
 | HouseRosterPanel, HousePaymentsPanel, HouseEventsManager/Dashboard, HouseDraftEditor, placement panels | admin | 4 | tokens; protected |
@@ -246,6 +261,7 @@ initials. `StoryStudio` uses coral/gold (Batch 2).
 
 | Date | Batch | Evidence |
 |---|---|---|
+| 2026-10-30 | 5 | Real Batch 5 page components in the offline harness, 375/1440 light+dark (gallery, content, calendar, vcn, applications, feedback, resources, uvsa schools, external events). Gates: typecheck, lint (18 pre-existing warnings), 4198/4198 Jest, build, diff --check. |
 | 2026-10-30 | 4 | Real Batch 4 page components in the offline harness, 375/1440 light+dark (houses, ace, interns, cabinet, rollover, years, year setup). Gates: typecheck, lint (18 pre-existing warnings), 4198/4198 Jest, build, diff --check. |
 | 2026-10-30 | 3 | Real Batch 3 page components in the offline harness, 375/1440 light+dark (dashboard, events, import, members, points, merge, photo requests); public /cabinet and /get-involved re-checked. Gates: typecheck, lint (18 pre-existing warnings), 4198/4198 Jest, build, diff --check. |
 | 2026-10-29 | 2 | Real 1080×1920 PNG exports for every template/theme/state listed above; editor harness 375/1440 light+dark. Gates: typecheck, lint (18 pre-existing warnings, none in touched files), 4198/4198 Jest, build. |

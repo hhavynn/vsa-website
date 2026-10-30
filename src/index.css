@@ -126,6 +126,22 @@
   --ed-ribbon: linear-gradient(90deg, #a8d9f0, #718bd4 34%, #c8b8e8 68%, #f0ccd9);
   /* Scrim behind dialogs and drawers: ink navy, never flat black. */
   --color-scrim: rgba(22, 30, 61, 0.48);
+  /* Status chips (text / border / fill). Each text color is ≥4.5:1 on its fill. */
+  --status-info-text: #36478a;
+  --status-info-border: #ced6f9;
+  --status-info-bg: #f2f4fe;
+  --status-success-text: #0f6a47;
+  --status-success-border: #bfe3d4;
+  --status-success-bg: #edf8f2;
+  --status-warning-text: #8a5a0a;
+  --status-warning-border: #ead39b;
+  --status-warning-bg: #fff7e0;
+  --status-danger-text: #b42318;
+  --status-danger-border: #f2c7c3;
+  --status-danger-bg: #fff1f0;
+  --status-accent-text: #5f4596;
+  --status-accent-border: #dccffc;
+  --status-accent-bg: #f5f0ff;
 }
 
 @keyframes vsa-float {
@@ -1735,6 +1751,21 @@ html.dark {
   --ed-lavender-wash: #251e48;
   --ed-sky-wash: #10294a;
   --color-scrim: rgba(5, 9, 22, 0.66);
+  --status-info-text: #c7d1ff;
+  --status-info-border: #3d4c7e;
+  --status-info-bg: rgba(163, 178, 236, 0.12);
+  --status-success-text: #86efac;
+  --status-success-border: #1f5a40;
+  --status-success-bg: rgba(34, 197, 94, 0.12);
+  --status-warning-text: #fcd34d;
+  --status-warning-border: #6b5216;
+  --status-warning-bg: rgba(245, 158, 11, 0.12);
+  --status-danger-text: #fca5a5;
+  --status-danger-border: #6e2a2a;
+  --status-danger-bg: rgba(239, 68, 68, 0.12);
+  --status-accent-text: #dfc5ff;
+  --status-accent-border: #4c3a78;
+  --status-accent-bg: rgba(211, 184, 241, 0.12);
 }
 
 /* ── Operational surfaces (admin, sign-in, dialogs) ──────────────────────
