@@ -84,15 +84,17 @@ export function useAceEligibility(
   });
   const attendance = needsAttendance ? attendanceQuery.data : NO_ATTENDANCE;
 
+  const rawError = eventsQuery.error ?? readinessQuery.error ?? (needsAttendance ? attendanceQuery.error : null);
+  // A failed refresh keeps the previous data in React Query; never show that
+  // snapshot as a current Meets/Short result next to the error.
   const result = useMemo(
     () =>
-      policy && readiness && attendance
+      !rawError && policy && readiness && attendance
         ? computeAceEligibility({ drafts, nodes, policy, events: readiness.events, attendance, now })
         : null,
-    [policy, readiness, attendance, drafts, nodes, now],
+    [rawError, policy, readiness, attendance, drafts, nodes, now],
   );
 
-  const rawError = eventsQuery.error ?? readinessQuery.error ?? (needsAttendance ? attendanceQuery.error : null);
   return {
     policy,
     savedEventIds: eventsQuery.data ?? null,
