@@ -73,12 +73,12 @@ describe('bounded public role-source reads (#623/#627)', () => {
     expect(result.get('verified-1')).toBeUndefined();
     const queryBatches = supabaseMock.queriesFor('cabinet_members');
     expect(queryBatches).toHaveLength(4);
-    for (const [index, query] of queryBatches.entries()) {
+    queryBatches.forEach((query, index) => {
       const batch = query.calls.find((call) => call.method === 'in')?.args[1] as string[];
       expect(batch).toEqual(visibleIds.slice(index * 50, (index + 1) * 50));
       expect(batch.length).toBeLessThanOrEqual(50);
       expect(query.calls.find((call) => call.method === 'select')?.args[0]).toBe('id, member_id, role, category');
-    }
+    });
     expect(supabaseMock.queriesFor('cabinet_years')).toHaveLength(1);
   });
 
