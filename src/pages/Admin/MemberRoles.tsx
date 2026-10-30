@@ -32,7 +32,6 @@ const STATUS_LABELS: Record<RoleReviewStatus, string> = {
 };
 
 function memberChoices(
-  row: RoleReviewInput,
   term: string,
   members: readonly MemberOption[],
   exact: readonly MemberOption[],
@@ -196,7 +195,7 @@ export default function AdminMemberRoles() {
               {visibleReviews.map(({ row, status, source }) => {
                 const exact = directory.nameIndex.get(normalizeMemberName(row.name)) ?? [];
                 const selected = directory.byId.get(memberIds[row.index]);
-                const candidates = memberChoices(row, memberSearch[row.index] ?? '', directory.members, exact, selected);
+                const candidates = memberChoices(memberSearch[row.index] ?? '', directory.members, exact, selected);
                 const sourceTerm = normalizeMemberName(sourceSearch[row.index] ?? '');
                 const sourceChoices = roleSources.filter((item) =>
                   sourceTerm ? normalizeMemberName(item.name).includes(sourceTerm) || normalizeMemberName(item.role).includes(sourceTerm)
