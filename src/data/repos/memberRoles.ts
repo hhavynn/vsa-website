@@ -20,7 +20,9 @@ export async function getPublicMemberRoles(
 ): Promise<Map<string, PublicMemberRole[]>> {
   const ids = Array.from(new Set(memberIds.filter(Boolean))).sort();
   if (ids.length === 0) return new Map();
-  if (ids.length > 50) throw new Error('Role lookup exceeds the visible-member limit.');
+  // The public pager supports 25, 50, 100 and Show All. Large visible
+  // selections must be chunked, never silently lose everyone's badges.
+  if (ids.length > 2000) throw new Error('Role lookup exceeds a safe visible-member limit.');
 
   return withErrorHandling(async () => {
     const { data: years, error: yearError } = await supabase
@@ -33,19 +35,21 @@ export async function getPublicMemberRoles(
     if (!years?.length) return new Map<string, PublicMemberRole[]>();
     if (years.length !== 1) throw new Error('Ambiguous Cabinet year. Role badges cannot be verified.');
 
-    const { data, error } = await supabase
-      .from('cabinet_members')
-      .select('id, member_id, role, category')
-      .eq('cabinet_year_id', years[0].id)
-      .in('member_id', ids)
-      .limit(501);
-
-    if (error) throw error;
-    if ((data ?? []).length >= 501) throw new Error('Public Cabinet role result exceeds safe bound.');
-    return shapePublishedCabinetRoles(
-      (data ?? []) as PublishedCabinetRoleRow[],
-      ids,
-      academicYearStart,
-    );
+    const matches: PublishedCabinetRoleRow[] = [];
+    // One year lookup; <=50 IDs per PostgREST request, never an N+1 role
+    // request per person. Page 100 / Show All require several safe batches.
+    for (let from = 0; from < ids.length; from += 50) {
+      const batch = ids.slice(from, from + 50);
+      const { data, error } = await supabase
+        .from('cabinet_members')
+        .select('id, member_id, role, category')
+        .eq('cabinet_year_id', years[0].id)
+        .in('member_id', batch)
+        .limit(501);
+      if (error) throw error;
+      if ((data ?? []).length >= 501) throw new Error('Public Cabinet role result exceeds safe bound.');
+      matches.push(...((data ?? []) as PublishedCabinetRoleRow[]));
+    }
+    return shapePublishedCabinetRoles(matches, ids, academicYearStart);
   }, 'Failed to fetch published member roles');
 }
