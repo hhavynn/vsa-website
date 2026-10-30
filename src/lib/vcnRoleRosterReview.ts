@@ -18,30 +18,43 @@ export interface VcnReview {
 }
 
 /** CSV/TSV with RFC-4180 quoted cells, including quoted newlines and escaped quotes. */
-function parseDelimited(input: string, delimiter: string): string[][] {
-  const records: string[][] = [];
+function parseDelimited(input: string, delimiter: string): Array<{cells: string[]; sourceLine: number}> {
+  const records: Array<{cells: string[]; sourceLine: number}> = [];
   let row: string[] = [];
   let cell = '';
   let quoted = false;
   let justClosedQuote = false;
+  let physicalLine = 1;
+  let startLine = 1;
+  const push = () => {
+    row.push(cell);
+    if (row.some(value => value.trim())) records.push({cells: row, sourceLine: startLine});
+    row = [];
+    cell = '';
+    justClosedQuote = false;
+  };
   for (let i = 0; i < input.length; i++) {
     const char = input[i];
     if (char === '"') {
-      if (quoted && input[i + 1] === '"') { cell += '"'; i++; }
+      if (quoted && input[i+1] === '"') { cell += '"'; i++; }
       else if (quoted) { quoted = false; justClosedQuote = true; }
       else if (cell === '' && !justClosedQuote) quoted = true;
       else throw new Error('Unexpected quote in roster field');
-    } else if (quoted) cell += char;
-    else if (char === delimiter) { row.push(cell); cell = ''; justClosedQuote = false; }
+    } else if (quoted) {
+      if (char === '\r' && input[i+1] === '\n') { cell += '\n'; i++; physicalLine++; }
+      else { cell += char; if (char === '\r' || char === '\n') physicalLine++; }
+    } else if (char === delimiter) { row.push(cell); cell=''; justClosedQuote=false; }
     else if (char === '\n' || char === '\r') {
-      if (char === '\r' && input[i + 1] === '\n') i++;
-      row.push(cell); records.push(row); row = []; cell = ''; justClosedQuote = false;
+      if (char === '\r' && input[i+1] === '\n') i++;
+      push();
+      physicalLine++;
+      startLine=physicalLine;
     } else if (justClosedQuote) throw new Error('Unexpected character after quoted roster field');
     else cell += char;
   }
   if (quoted) throw new Error('Unclosed quoted roster field');
-  if (cell || row.length) { row.push(cell); records.push(row); }
-  return records.filter(row => row.some(cell => cell.trim()));
+  if (cell || row.length) push();
+  return records;
 }
 
 export function normalizeVcnRole(value: string): VcnRole | null {
@@ -52,7 +65,7 @@ export function normalizeVcnRole(value: string): VcnRole | null {
     'stage ninja': 'VCN Stage Ninja', 'vcn stage ninja': 'VCN Stage Ninja',
     'props member': 'VCN Props Member', 'vcn props member': 'VCN Props Member',
   };
-  return mapped[normalized] ?? null;
+  return Object.prototype.hasOwnProperty.call(mapped, normalized) ? mapped[normalized] : null;
 }
 
 /**
@@ -69,7 +82,7 @@ export function reviewVcnRoleCsv(
   const records = parseDelimited(source.replace(/^\uFEFF/, ''), delimiter);
   if (!records.length) throw new Error('CSV contains no header');
   if (records.length > 5001) throw new Error('Roster exceeds 5,000 data rows');
-  const header = records[0].map(value=>value.toLowerCase().trim().replace(/[ _-]+/g, ' '));
+  const header = records[0].cells.map(value=>value.toLowerCase().trim().replace(/[ _-]+/g, ' '));
   const col = (names: string[])=>header.findIndex(h=>names.includes(h));
   const nameCol = col(['name', 'full name', 'member name']);
   const roleCol = col(['role', 'vcn role', 'production role']);
@@ -84,7 +97,7 @@ export function reviewVcnRoleCsv(
   });
   const rows: VcnRosterRow[] = [];
   const seen = new Set<string>();
-  records.slice(1).forEach((cells,index)=>{
+  records.slice(1).forEach(({cells,sourceLine})=>{
     const name = (cells[nameCol] ?? '').trim().slice(0,200);
     const originalRole = (cells[roleCol] ?? '').trim().slice(0,120);
     const verification = (cells[verificationCol] ?? '').trim().toLowerCase();
@@ -100,7 +113,7 @@ export function reviewVcnRoleCsv(
     else if (matches.length > 1) state='ambiguous-identity';
     else state='ready-for-human-review';
     seen.add(duplicateKey);
-    rows.push({sourceLine:index+2,name,originalRole,verification,role,candidateIds:matches.map(m=>m.id),state});
+    rows.push({sourceLine,name,originalRole,verification,role,candidateIds:matches.map(m=>m.id),state});
   });
   return {rows,errors:[]};
 }
