@@ -64,7 +64,7 @@ const EMPTY_FORM: VCNArchiveFormState = {
   internal_notes: '',
 };
 
-const inputCls = 'mt-1 block w-full rounded border border-zinc-700 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 placeholder:text-zinc-600';
+const inputCls = 'mt-1 block w-full rounded border border-[var(--color-border)] bg-[var(--color-input)] text-text-primary px-3 py-2 text-sm focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/30 dark:focus:border-brand-300 dark:focus:ring-brand-300/30 placeholder:text-text-muted';
 const labelCls = 'block text-xs font-medium text-[var(--color-text3)] uppercase tracking-label';
 
 function toNullable(value: string) {
@@ -202,9 +202,9 @@ export default function AdminVcnArchives() {
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="VCN Archive Management" />
 
-      <div className="border-b px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+      <div className="vsa-admin-field vsa-ribbon-bottom border-[var(--color-border)] border-b px-5 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-7">
         <div>
-          <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>VCN Archives</h1>
+          <h1 className="font-display text-[2rem] font-normal leading-[1.05] tracking-[-0.02em] text-text-primary sm:text-[2.6rem]">VCN Archives</h1>
           <p className="mt-1 max-w-3xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
             {archives.length} entries, {publishedCount} published. Published entries appear on <Link to="/vcn/archive" className="font-semibold text-[var(--brand)] hover:underline">/vcn/archive</Link>; the one marked Current powers <Link to="/vcn/current" className="font-semibold text-[var(--brand)] hover:underline">/vcn/current</Link>.
           </p>
@@ -212,8 +212,7 @@ export default function AdminVcnArchives() {
         <button
           type="button"
           onClick={resetForm}
-          className="font-sans text-xs transition-colors duration-150 rounded border px-3 py-2"
-          style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)', background: 'transparent' }}
+          className="mt-4 rounded border border-[var(--color-border)] bg-surface px-3 py-2 font-sans text-xs font-semibold text-brand-700 transition-colors duration-150 hover:border-brand-300 hover:bg-brand-50 sm:mt-0 dark:text-brand-200 dark:hover:border-brand-700 dark:hover:bg-brand-900/40"
         >
           New Entry
         </button>

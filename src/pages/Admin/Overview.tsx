@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
 import { FiRefreshCw, FiSearch } from '../../lib/adminIcons';
 import { PageTitle } from '../../components/common/PageTitle';
+import { Sparkle } from '../../components/ui/Sparkle';
 import { formatAcademicYear } from '../../lib/academicTerms';
 import { adminOverviewRepository } from '../../data/repos/adminOverview';
 import { useOperationsSummary } from '../../hooks/useOperationsSummary';
@@ -49,10 +50,15 @@ export default function AdminOverview() {
     <div className="flex-1">
       <PageTitle title="Admin Dashboard" />
 
-      <header className="border-b border-border-strong bg-surface px-4 py-6 sm:px-8 sm:py-8">
+      <header className="vsa-admin-field vsa-ribbon-bottom relative overflow-hidden border-b border-[var(--color-border)] px-4 py-6 sm:px-8 sm:py-9">
+        <Sparkle className="absolute right-[2.5%] top-4 hidden h-9 w-9 text-brand-300 dark:text-brand-200/60 sm:block" glow />
+        <Sparkle className="absolute right-[13%] top-[58%] hidden h-4 w-4 text-[#d6b8e8] sm:block" />
         <div className="flex max-w-5xl flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="font-serif text-3xl font-bold tracking-tight text-text-primary sm:text-4xl">VSA Admin</h1>
+            <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-text-muted">Cabinet workspace</p>
+            <h1 className="mt-2 font-display text-[2.4rem] font-normal leading-none tracking-[-0.02em] text-text-primary sm:text-[3.2rem]">
+              VSA <i className="text-[var(--ed-wordmark)]">Admin</i>
+            </h1>
             <p className="mt-1.5 font-sans text-sm text-text-secondary">
               Find a tool, pick up where you left off, and see what needs you.
               {yearLabel && <span className="ml-1 font-mono text-xs text-text-muted">· {yearLabel} academic year</span>}
@@ -63,7 +69,7 @@ export default function AdminOverview() {
               type="button"
               onClick={refreshHealth}
               disabled={refreshing}
-              className="inline-flex min-h-[36px] items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 font-sans text-xs font-semibold text-brand-600 transition-colors hover:bg-[var(--color-surface2)] disabled:opacity-60 dark:text-brand-400"
+              className="inline-flex min-h-[36px] items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-surface px-3 py-1.5 font-sans text-xs font-semibold text-brand-700 transition-colors hover:border-brand-300 hover:bg-brand-50 disabled:opacity-60 dark:text-brand-200 dark:hover:border-brand-700 dark:hover:bg-brand-900/40"
             >
               <FiRefreshCw aria-hidden className={refreshing ? 'h-3.5 w-3.5 animate-spin motion-reduce:animate-none' : 'h-3.5 w-3.5'} />
               {refreshing ? 'Refreshing…' : 'Refresh counts'}
@@ -79,11 +85,11 @@ export default function AdminOverview() {
           type="button"
           onClick={openSearch}
           aria-label="Search admin"
-          className="mt-5 flex min-h-[48px] w-full max-w-2xl items-center gap-3 rounded-lg border border-[var(--color-border)] bg-surface2 px-4 py-3 text-left font-sans text-sm text-text-secondary transition-colors hover:border-brand-600 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:hover:border-brand-400 dark:focus-visible:outline-brand-400"
+          className="mt-6 flex min-h-[52px] w-full max-w-2xl items-center gap-3 rounded-lg border border-[var(--color-border)] bg-surface px-4 py-3 shadow-[0_8px_24px_rgba(67,86,161,0.08)] text-left font-sans text-sm text-text-secondary transition-colors hover:border-brand-600 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:hover:border-brand-400 dark:focus-visible:outline-brand-400"
         >
           <FiSearch aria-hidden className="h-4 w-4 shrink-0" />
           <span className="min-w-0 flex-1 truncate">Search members, events, pages…</span>
-          <kbd className="hidden shrink-0 font-mono text-[11px] text-text-muted sm:inline">{isMac() ? '⌘K' : 'Ctrl K'}</kbd>
+          <kbd className="hidden shrink-0 rounded border border-[var(--color-border)] bg-surface2 px-1.5 py-0.5 font-mono text-[11px] text-text-muted sm:inline">{isMac() ? '⌘K' : 'Ctrl K'}</kbd>
         </button>
       </header>
 

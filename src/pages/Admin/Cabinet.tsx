@@ -146,7 +146,7 @@ function CabinetYearSelect({
     >
       {yearOptions}
     </select>,
-    <p key="helper" className="mt-1 text-xs text-zinc-500">
+    <p key="helper" className="mt-1 text-xs text-text-muted">
       {helperText}
     </p>,
   ];
@@ -743,7 +743,7 @@ export default function AdminCabinet() {
 
       {/* Edit Modal */}
       {selectedMember && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:items-center">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-scrim p-4 backdrop-blur-sm sm:items-center">
           <div className="scrapbook-paper my-8 w-full max-w-2xl sm:my-0" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
             <div className="flex items-center justify-between border-b px-6 py-5" style={{ borderColor: 'var(--color-border)' }}>
               <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Edit {selectedMember.name}</h2>

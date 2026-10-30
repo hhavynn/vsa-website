@@ -207,7 +207,7 @@ function StatusBadge({ active }: { active: boolean }) {
       className={`rounded-full border px-2.5 py-1 font-sans text-[11px] font-bold ${
         active
           ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-500/40 dark:bg-green-950/30 dark:text-green-300'
-          : 'border-zinc-200 bg-zinc-100 text-zinc-600 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300'
+          : 'border-[var(--color-border)] bg-surface2 text-text-secondary'
       }`}
     >
       {active ? 'Active' : 'Inactive'}
@@ -482,13 +482,13 @@ export default function AdminAiKnowledge() {
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="Ask VSA Knowledge" />
 
-      <div className="border-b px-6 py-6 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+      <div className="vsa-admin-field vsa-ribbon-bottom border-[var(--color-border)] border-b px-5 py-6 sm:px-8 sm:py-7">
         <div className="flex max-w-6xl flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--color-text3)' }}>
               Ask VSA assistant
             </p>
-            <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>
+            <h1 className="mt-2 font-display text-[2rem] font-normal leading-[1.05] tracking-[-0.02em] text-text-primary sm:text-[2.6rem]" style={{ color: 'var(--color-text)' }}>
               Ask VSA Knowledge
             </h1>
             <p className="mt-2 max-w-3xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
@@ -1024,7 +1024,7 @@ export default function AdminAiKnowledge() {
                   type="checkbox"
                   checked={form.is_active}
                   onChange={event => updateForm('is_active', event.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-600"
+                  className="mt-1 h-4 w-4 rounded border-[var(--color-border-strong)] text-brand-600 focus:ring-brand-600"
                 />
                 <span>
                   <span className="block font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>

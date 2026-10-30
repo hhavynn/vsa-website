@@ -40,12 +40,12 @@ export function AdminPageHeader({
 
   return (
     <header
-      className={`border-b border-border-strong bg-surface px-6 py-6 sm:flex sm:items-start sm:justify-between sm:gap-4 sm:px-8 sm:py-8 ${className}`}
+      className={`vsa-admin-field vsa-ribbon-bottom border-b border-[var(--color-border)] px-5 py-6 sm:flex sm:items-start sm:justify-between sm:gap-4 sm:px-8 sm:py-7 ${className}`}
     >
       <div className="min-w-0">
         {crumbs.length > 1 && (
           <nav aria-label="Breadcrumb" className="mb-2">
-            <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-1 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted">
+            <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-1 font-mono text-[10.5px] uppercase tracking-[0.1em] text-text-muted">
               {crumbs.map((crumb, index) => {
                 const last = index === crumbs.length - 1;
                 return (
@@ -72,11 +72,11 @@ export function AdminPageHeader({
             </ol>
           </nav>
         )}
-        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl text-text-primary">
+        <h1 className="font-display text-[2rem] font-normal leading-[1.05] tracking-[-0.02em] text-text-primary sm:text-[2.6rem]">
           {heading}
         </h1>
         {blurb && (
-          <p className="mt-2 font-sans text-sm text-text-secondary">
+          <p className="mt-2 max-w-2xl font-sans text-sm leading-relaxed text-text-secondary">
             {blurb}
           </p>
         )}
@@ -89,7 +89,7 @@ export function AdminPageHeader({
                 <Link
                   key={entry.to}
                   to={entry.to}
-                  className="inline-flex min-h-[32px] items-center gap-1.5 rounded-full border border-[var(--color-border)] px-2.5 py-1 font-sans text-xs font-semibold text-text-secondary transition-colors hover:bg-surface2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:focus-visible:outline-brand-400"
+                  className="inline-flex min-h-[32px] items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-surface px-2.5 py-1 font-sans text-xs font-semibold text-text-secondary transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-800 dark:hover:border-brand-700 dark:hover:bg-brand-900/40 dark:hover:text-brand-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:focus-visible:outline-brand-400"
                 >
                   <Icon aria-hidden className="h-3.5 w-3.5" />
                   {entry.label}

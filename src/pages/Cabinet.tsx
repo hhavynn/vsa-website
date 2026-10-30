@@ -184,7 +184,7 @@ export function Cabinet() {
         onClose={() => setActiveRoleName(null)}
       />
 
-      <div className="vsa-page-hero">
+      <div className="vsa-page-hero vsa-page-hero--blush">
         <div className="vsa-container relative z-10">
           <span className="scrapbook-sticker scrapbook-sticker-teal mb-4">Yearbook</span>
           <p className="vsa-section-label mt-3">Leadership</p>

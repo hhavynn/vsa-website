@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { memo, useMemo } from 'react';
 import { ExplorePanel } from './ExplorePanel';
+import { navLinkClass } from '../publicEditorialTheme';
 
 interface NavItem {
   path: string;
@@ -27,20 +28,13 @@ export const NavLinks = memo(function NavLinks() {
     [location.pathname]
   );
 
-  const linkBase =
-    'font-sans text-[13px] font-semibold transition-colors duration-150 rounded-lg border px-3 py-1.5';
-  const activeLink =
-    'text-[var(--brand)] bg-[var(--surface2)] border-[var(--border2)]';
-  const inactiveLink =
-    'text-[var(--text2)] border-transparent hover:text-[var(--text)] hover:bg-[var(--surface2)] hover:border-[var(--border)]';
-
   return (
-    <div className="hidden items-center gap-1 md:flex">
+    <div className="hidden items-center gap-5 md:flex lg:gap-8">
       {FLAT_NAV_ITEMS.map((item) => (
         <Link
           key={item.path}
           to={item.path}
-          className={`${linkBase} ${isActive(item.path) ? activeLink : inactiveLink}`}
+          className={navLinkClass(isActive(item.path))}
         >
           {item.label}
         </Link>
