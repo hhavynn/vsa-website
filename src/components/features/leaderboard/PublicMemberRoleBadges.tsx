@@ -1,8 +1,11 @@
 import { cn } from '../../../lib/utils';
 import type { PublicMemberRole } from '../../../lib/memberRoles';
+import type { PublicMemberHouse } from '../../../data/repos/houseMemberships';
+import { PublishedHouseBadge } from './PublishedHouseBadge';
 
 interface Props {
   roles: readonly PublicMemberRole[];
+  house?: PublicMemberHouse | null;
   className?: string;
   compact?: boolean;
 }
@@ -11,13 +14,14 @@ interface Props {
  * Pure display; never a link/button nested within a member's profile opener.
  * The roles are only emitted by the canonical-ID, published-year projection.
  */
-export function PublicMemberRoleBadges({ roles, className, compact = false }: Props) {
-  if (roles.length === 0) return null;
+export function PublicMemberRoleBadges({ roles, house, className, compact = false }: Props) {
+  if (roles.length === 0 && !house) return null;
   return (
     <div
-      aria-label="Verified VSA roles"
+      aria-label="Revealed House and verified VSA roles"
       className={cn('flex min-w-0 flex-wrap items-center gap-1.5', className)}
     >
+      <PublishedHouseBadge house={house} compact={compact} />
       {roles.map((role) => (
         <span
           key={`${role.kind}:${role.label}`}
