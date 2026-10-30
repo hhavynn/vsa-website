@@ -2,8 +2,8 @@ import type { ToasterProps } from 'react-hot-toast';
 
 /**
  * Shared toast styling. Toasts portal outside every layout, so they read the
- * theme tokens directly; App's Toaster and the admin pages that mount their
- * own all pass this, so no toast falls back to the library's white default.
+ * theme tokens directly; App's Toaster is the only one mounted and passes
+ * this, so no toast falls back to the library's white default.
  */
 export const TOAST_OPTIONS: ToasterProps['toastOptions'] = {
   style: {

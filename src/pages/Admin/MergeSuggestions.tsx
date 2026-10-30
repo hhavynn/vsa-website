@@ -5,11 +5,10 @@ import { DUPLICATE_REASON_LABEL, DuplicateCandidateMember, DuplicatePair, findDu
 import type { IdentityAlias } from '../../lib/identityResolution';
 import type { YearObservation } from '../../lib/yearStanding';
 import { EvidenceList } from '../../components/features/admin/AttendanceRowDecision';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { usePagination } from '../../hooks/usePagination';
 import { PaginationControls } from '../../components/common/PaginationControls';
 import { PageTitle } from '../../components/common/PageTitle';
-import { TOAST_OPTIONS } from '../../lib/toastOptions';
 import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
 
 type Member = DuplicateCandidateMember;
@@ -138,8 +137,6 @@ export default function AdminMergeSuggestions() {
   return (
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="Merge Suggestions" />
-      <Toaster position="top-right" toastOptions={TOAST_OPTIONS} />
-
       <AdminPageHeader
         title="Merge Suggestions"
         description="Review and merge likely duplicate member records before they diverge further."

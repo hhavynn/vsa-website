@@ -11,7 +11,7 @@ import { ImportReviewPanel } from '../../components/features/admin/ops';
 import { reviewAttendanceRows } from '../../lib/adminImportReview';
 import { supabase } from '../../lib/supabase';
 import { runBulkWrites } from '../../lib/bulkWrites';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { useQueryClient } from 'react-query';
 import { parseCsvTable } from '../../lib/csvParse';
 import {
@@ -51,7 +51,6 @@ import {
   planAttendanceMemberEnrichments,
   matchAttendanceImportRows,
 } from '../../lib/legacyAttendanceMatching';
-import { TOAST_OPTIONS } from '../../lib/toastOptions';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -703,8 +702,6 @@ export default function LegacyAdminImport() {
   return (
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="Import Attendance" />
-      <Toaster position="top-right" toastOptions={TOAST_OPTIONS} />
-
       <AdminPageHeader
         title="Import Attendance"
         related={['/admin/events', '/admin/members', '/admin/merge-suggestions', '/admin/points']}

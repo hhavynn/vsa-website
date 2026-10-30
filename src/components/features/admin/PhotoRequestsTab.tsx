@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useUrlFilter } from '../../../hooks/useUrlFilter';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { useQueryClient } from 'react-query';
 import {
@@ -14,7 +14,6 @@ import { Label } from '../../ui/Label';
 import { toUserMessage } from '../../../data/errors';
 import { MEMBER_AVATARS_QUERY_KEY } from '../../../hooks/useMemberAvatars';
 import { ConfirmDialog } from '../../common/ConfirmDialog';
-import { TOAST_OPTIONS } from '../../../lib/toastOptions';
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '8px 10px', fontSize: 13,
@@ -65,8 +64,6 @@ export default function PhotoRequestsTab() {
 
   return (
     <div>
-      <Toaster position="top-right" toastOptions={TOAST_OPTIONS} />
-
       <div className="mb-4 flex gap-2">
         {(['pending', 'all'] as StatusFilter[]).map(value => (
           <button

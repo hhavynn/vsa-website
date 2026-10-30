@@ -8,7 +8,7 @@ import { useQueryClient } from 'react-query';
 import { useDropzone } from 'react-dropzone';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { OFFICIAL_YEARS } from '../../lib/yearNormalizer';
 import { usePagination } from '../../hooks/usePagination';
 import { PaginationControls } from '../../components/common/PaginationControls';
@@ -37,7 +37,6 @@ import { ACTIVITY_ACTIONS, activitySummary } from '../../lib/adminActivity';
 import { planMemberClearReview, pruneSelection, selectedRows, setSelection, toggleSelected } from '../../lib/adminBulk';
 import { applyQuickFilter, countByFilter } from '../../lib/adminFilters';
 import { MEMBER_FILTERS, MEMBER_FILTER_KEYS, MemberRowFacts } from '../../lib/adminQueues';
-import { TOAST_OPTIONS } from '../../lib/toastOptions';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -469,8 +468,6 @@ export default function AdminMembers() {
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
     <>
-      <Toaster position="top-right" toastOptions={TOAST_OPTIONS} />
-
       {/* PAGE HEADER */}
       <AdminPageHeader
         related={['/admin/merge-suggestions', '/admin/import', '/admin/points', '/admin/photo-requests']}

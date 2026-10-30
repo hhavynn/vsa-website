@@ -4,13 +4,12 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { PageTitle } from '../../components/common/PageTitle';
 import { useAcademicTerms } from '../../hooks/useAcademicTerms';
 import { leaderboardRepository } from '../../data/repos/leaderboard';
 import { Button } from '../../components/ui/Button';
 import { Top3StoryDialog } from '../../components/features/admin/Top3StoryDialog';
-import { TOAST_OPTIONS } from '../../lib/toastOptions';
 import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -173,8 +172,6 @@ export default function AdminPoints() {
   return (
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="Points" />
-      <Toaster position="top-right" toastOptions={TOAST_OPTIONS} />
-
       <AdminPageHeader
         title="Points"
         description="Points distribution and check-in history"
