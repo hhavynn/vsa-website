@@ -35,11 +35,11 @@ export function AttentionQueue({ signals, loading = false, failed = false, now }
       ) : queue.items.length === 0 ? (
         <div className="mt-3" aria-live="polite">
           <p className="font-sans text-base font-semibold text-text-primary">
-            {queue.unchecked.length === 0 ? 'You’re all caught up' : 'Nothing needs attention in what could be checked'}
+            {queue.unchecked.length === 0 ? 'No counted items need attention' : 'Nothing needs attention in what could be checked'}
           </p>
           <p className="mt-1 text-sm text-text-secondary">
             {queue.unchecked.length === 0
-              ? 'No requests, reviews, or deadlines are waiting on you right now.'
+              ? 'Nothing is waiting in the automatically checked sources. Review manual workflows below.'
               : `Could not check: ${queue.unchecked.join(', ')}. Use Refresh counts to try again.`}
           </p>
         </div>
