@@ -84,6 +84,44 @@ export const attendanceReadinessRepository = {
     }, 'Failed to read attendance status');
   },
 
+  /**
+   * Read only canonical verified attendance rows for chosen ACE-eligible events.
+   * No attendance writes, point calculations or self-reported applicant credit.
+   * Chunk by 100 member IDs, read every page, fail the entire evaluation if
+   * ANY read fails. Admin page must separately verify event import readiness.
+   */
+  async getVerifiedSelectedAttendance(memberIds: readonly string[], eventIds: readonly string[]): Promise<Map<string, Set<string>>> {
+    const members=Array.from(new Set(memberIds)).sort();
+    const events=Array.from(new Set(eventIds)).sort();
+    if (!events.length || events.length>20) throw new ValidationError('Choose 1–20 approved eligible events');
+    if (members.length>10000) throw new ValidationError('The ACE roster is too large to review');
+    return withErrorHandling(async () => {
+      const records = new Map<string, Set<string>>();
+      const memberSet=new Set(members), eventSet=new Set(events);
+      for (let start=0;start<members.length;start+=100) {
+        const part=members.slice(start,start+100);
+        for (let from=0;;from+=500) {
+          const {data,error}=await supabase.from('member_event_attendance')
+            .select('member_id,event_id')
+            .in('member_id',part)
+            .in('event_id',events)
+            .order('member_id',{ascending:true})
+            .order('event_id',{ascending:true})
+            .range(from,from+499);
+          if(error)throw error;
+          const page=(data??[]) as Array<{member_id:string;event_id:string}>;
+          for(const row of page) {
+            if(!memberSet.has(row.member_id)||!eventSet.has(row.event_id))throw new Error('Attendance returned a row outside approved scope');
+            const prior=records.get(row.member_id)??new Set<string>();
+            prior.add(row.event_id);records.set(row.member_id,prior);
+          }
+          if(page.length<500)break;
+        }
+      }
+      return records;
+    }, 'Failed to read verified ACE attendance');
+  },
+
   async attest(eventId: string, status: 'no_signin' | 'verified' | 'cleared', note: string | null): Promise<void> {
     return withErrorHandling(async () => {
       const { error } = await supabase.rpc('admin_attest_event_attendance', { p_event_id: eventId, p_status: status, p_note: note });
