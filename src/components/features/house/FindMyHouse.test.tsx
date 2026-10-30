@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { FindMyHouse } from './FindMyHouse';
@@ -82,6 +82,7 @@ it('distinguishes missing member, missing published assignment and service failu
   badge.mockRejectedValueOnce(new Error('permission denied'));
   // Remount with another year: no stale House result should transfer.
   ui.unmount();
+  search.mockResolvedValueOnce([member('m2','Bea Example')]);
   const next = mount(2025);
   searchFor('Bea Example');
   fireEvent.click(await screen.findByRole('button', { name: /Bea Example/ }));
