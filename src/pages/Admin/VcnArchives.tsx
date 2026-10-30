@@ -219,7 +219,7 @@ export default function AdminVcnArchives() {
         </button>
       </div>
 
-      <VcnRoleRosterReview editionYear={selectedArchive?.year ?? null} />
+      <VcnRoleRosterReview editionYear={selectedArchive?.year ?? null} editionId={selectedArchive?.id ?? null} />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]" style={{ padding: '20px 28px' }}>
         <div className="rounded-md border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
