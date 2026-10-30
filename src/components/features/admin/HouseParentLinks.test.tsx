@@ -63,7 +63,7 @@ it('shows linked House Parents and flags the ones that need review', async () =>
   expect(rows[0]).toHaveTextContent('Ingyin Moh');
   expect(rows[0]).toHaveTextContent('Pinkie Pie · Linked');
   expect(rows[1]).toHaveTextContent('Needs review — No member record has this exact name.');
-  expect(screen.getByText('1 House Parent needs review.')).toBeInTheDocument();
+  expect(await screen.findByText('1 House Parent needs review.')).toBeInTheDocument();
   expect(parentsRepo.listForYear).toHaveBeenCalledWith(2026);
   expect(await within(rows[1]).findByRole('button', { name: 'Link to Martin Dang' })).toBeInTheDocument();
   expect(within(rows[0]).queryByRole('button', { name: /^Link to/ })).not.toBeInTheDocument();
