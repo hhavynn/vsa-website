@@ -283,6 +283,93 @@ describe('parseAssignmentImport', () => {
   });
 });
 
+describe('parseAssignmentImport with ACE Google Form pastes', () => {
+  const tsv = (rows: string[][]) => rows.map((row) => row.join('\t')).join('\n');
+
+  it('reads the application form, keeps Littles only, and handles multi-line answers', () => {
+    const parsed = parseAssignmentImport(
+      tsv([
+        ['Timestamp', 'Email Address', 'Name (First, Middle Initial, Last)', 'UCSD Email', 'Are You Applying to be an Anh/Chi (Big) or Em (Little)? ', 'What are YOU looking for in a Big?'],
+        ['10/1/2026 9:00:00', 'alex@example.com', 'Alex, Q, Sample', 'AQS001@ucsd.edu', 'Em (Little)', '"someone fun\nwho likes boba"'],
+        ['10/1/2026 9:05:00', 'bea@example.com', 'Bea Example', 'bex002@ucsd.edu', 'Anh/Chi (Big)', ''],
+        ['10/1/2026 9:10:00', 'cam@example.com', 'Cam R. Testcase', 'crt003@ucsd.edu', 'Em (Little)', '"line one\n\nline three"'],
+      ]),
+    );
+    expect(parsed.columns).toEqual(['email', 'name', 'ucsd email', 'big or little']);
+    expect(parsed.rows).toEqual([
+      { line: 2, name: 'Alex Sample', email: 'aqs001@ucsd.edu', bigName: null, notes: null },
+      { line: 4, name: 'Cam Testcase', email: 'crt003@ucsd.edu', bigName: null, notes: null },
+    ]);
+    expect(parsed.bigsSkipped).toBe(1);
+    expect(parsed.warnings).toEqual(['1 Big was left out. This import adds Littles only.']);
+  });
+
+  it('reads the mutual request form: requesting a Big means the person is a Little', () => {
+    const parsed = parseAssignmentImport(
+      tsv([
+        ['Timestamp', 'Email Address', 'Name (First, Middle Initial, Last)', 'UCSD Email', 'Are you mutually requesting a Big or a Little?', 'Who are you Mutually Requesting?'],
+        ['10/2/2026 10:00:00', 'dee@example.com', 'Dee Sample', 'dsa004', 'Big', 'Eli Example'],
+        ['10/2/2026 10:05:00', 'eli@example.com', 'Eli Example', 'eex005@ucsd.edu', 'Little', 'Dee Sample'],
+        ['10/2/2026 10:10:00', 'fay@example.com', 'Fay Sample', 'fsa006@ucsd.edu', '', ''],
+      ]),
+    );
+    expect(parsed.rows).toEqual([
+      { line: 2, name: 'Dee Sample', email: 'dsa004@ucsd.edu', bigName: null, notes: 'Mutual request: Eli Example' },
+      { line: 4, name: 'Fay Sample', email: 'fsa006@ucsd.edu', bigName: null, notes: null },
+    ]);
+    expect(parsed.bigsSkipped).toBe(1);
+    expect(parsed.warnings).toContain('1 row does not say Big or Little, so it was kept as Littles.');
+  });
+
+  it('keeps only the latest submission from the same email', () => {
+    const parsed = parseAssignmentImport(
+      '"Name (First, Middle Initial, Last)",UCSD Email,Are you mutually requesting a Big or a Little?,Who are you Mutually Requesting?\n' +
+        'Gia Sample,gsa007@ucsd.edu,Big,First Choice\n' +
+        'Hal Example,hex008@ucsd.edu,Big,Someone\n' +
+        'Gia Sample ,GSA007@ucsd.edu,Big,Second Choice',
+    );
+    expect(parsed.rows.map((row) => [row.name, row.notes])).toEqual([
+      ['Hal Example', 'Mutual request: Someone'],
+      ['Gia Sample', 'Mutual request: Second Choice'],
+    ]);
+    expect(parsed.repeatsReplaced).toBe(1);
+  });
+
+  it('lets a later Big application supersede an earlier Little one from the same email', () => {
+    const parsed = parseAssignmentImport(
+      tsv([
+        ['Name (First, Middle Initial, Last)', 'UCSD Email', 'Are You Applying to be an Anh/Chi (Big) or Em (Little)? '],
+        ['Lee Sample', 'lsa010@ucsd.edu', 'Em (Little)'],
+        ['Lee Sample', 'lsa010@ucsd.edu', 'Anh/Chi (Big)'],
+      ]),
+    );
+    expect(parsed.rows).toEqual([]);
+    expect(parsed).toMatchObject({ bigsSkipped: 1, repeatsReplaced: 1 });
+  });
+
+  it('keeps an answer that names both roles for review instead of guessing', () => {
+    const parsed = parseAssignmentImport(
+      tsv([
+        ['Name (First, Middle Initial, Last)', 'Are you mutually requesting a Big or a Little?'],
+        ['Max Sample', 'Im a little, requesting a big'],
+      ]),
+    );
+    expect(parsed.rows.map((row) => row.name)).toEqual(['Max Sample']);
+    expect(parsed.bigsSkipped).toBe(0);
+    expect(parsed.warnings).toContain('1 row does not say Big or Little, so it was kept as Littles.');
+  });
+
+  it('prefers UCSD Email over the sign-in Email Address', () => {
+    const parsed = parseAssignmentImport('Email Address\tUCSD Email\tName\npersonal@example.com\t\tIvy Sample\npersonal2@example.com\tjsa009@ucsd.edu\tJo Sample');
+    expect(parsed.rows.map((row) => row.email)).toEqual(['personal@example.com', 'jsa009@ucsd.edu']);
+  });
+
+  it('leaves names alone when the header is a plain name column', () => {
+    const parsed = parseAssignmentImport('name\nKay L Sample');
+    expect(parsed.rows[0].name).toBe('Kay L Sample');
+  });
+});
+
 describe('resolveImportRows', () => {
   const rows = parseAssignmentImport('name,email,big\nAmy Tran,AMY@ucsd.edu,April Pham\nKevin Le,,Emily Nguyen\nNew Person,,Nobody Known\nAndy Tran,a@b.com,').rows;
 
