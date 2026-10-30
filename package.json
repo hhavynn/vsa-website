@@ -7,7 +7,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.9.1",
+    "@hookform/resolvers": "^6.0.0",
     "@sentry/react": "^11.9.0",
     "@supabase/supabase-js": "^2.118.0",
     "clsx": "^2.1.1",
