@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { AceAssignmentDraft } from '../../../types';
+import type { AceRowApplication } from '../../../hooks/useAceApplicationProfiles';
 import { AceNodeRef, AssignmentIssue, BigLoad, LittleLinkReviewItem } from '../../../lib/aceAssignments';
 import { isRenamed } from '../../../lib/memberPhotos';
 import type { MemberOption } from '../../../lib/memberLinkMatching';
 import { AceBigPicker } from './AceBigPicker';
+import { AceProfileChips, AceProfileDetails } from './AceProfileDetails';
 import { MemberLinkPicker, MemberLinkSuggestion } from './MemberLinkPicker';
 import { RowCheckbox } from './ops';
 
@@ -24,6 +26,10 @@ interface AceAssignmentRowProps {
     patch: Partial<Pick<AceAssignmentDraft, 'little_name' | 'little_member_id' | 'big_ace_member_id' | 'notes'>>,
   ) => void;
   onRemove: (id: string) => void;
+  /** Pasted application answers for this row; in memory only. */
+  application?: AceRowApplication;
+  /** A Big's planned number of Littles, from their application. */
+  capacityFor?: (bigId: string) => number | null;
 }
 
 const fieldCls =
@@ -54,8 +60,11 @@ export function AceAssignmentRow({
   reviewed = false,
   onPatch,
   onRemove,
+  application,
+  capacityFor,
 }: AceAssignmentRowProps) {
   const [name, setName] = useState(draft.little_name);
+  const [showProfile, setShowProfile] = useState(false);
   const [notes, setNotes] = useState(draft.notes ?? '');
   useEffect(() => setName(draft.little_name), [draft.little_name]);
   useEffect(() => setNotes(draft.notes ?? ''), [draft.notes]);
@@ -121,6 +130,20 @@ export function AceAssignmentRow({
             ))}
           </ul>
         )}
+        {application && (
+          <div className="flex flex-wrap items-center gap-1">
+            <AceProfileChips application={application} />
+            <button
+              type="button"
+              onClick={() => setShowProfile((open) => !open)}
+              aria-expanded={showProfile}
+              aria-controls={`profile-${draft.id}`}
+              className="mt-1 bg-transparent px-1.5 py-0 font-sans text-[11px] font-medium text-[var(--color-text2)] underline-offset-2 hover:underline"
+            >
+              {showProfile ? 'Hide answers' : 'Show answers'}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="min-w-0">
@@ -142,6 +165,7 @@ export function AceAssignmentRow({
           value={draft.big_ace_member_id}
           nodes={nodes}
           loadFor={loadFor}
+          capacityFor={capacityFor}
           onChange={(bigId) => onPatch(draft.id, { big_ace_member_id: bigId })}
           disabled={!editable || busy}
           label={draft.little_name}
@@ -161,6 +185,18 @@ export function AceAssignmentRow({
           </button>
         )}
       </div>
+
+      {application && showProfile && (
+        <div id={`profile-${draft.id}`} className="min-w-0 md:col-span-5">
+          <AceProfileDetails
+            application={application}
+            littleName={draft.little_name}
+            editable={editable}
+            busy={busy}
+            onPickBig={(bigId) => onPatch(draft.id, { big_ace_member_id: bigId })}
+          />
+        </div>
+      )}
     </li>
   );
 }

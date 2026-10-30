@@ -401,7 +401,7 @@ function squash(value: string | undefined): string {
 }
 
 /** "Diego, L, Nguyen" or "Gwen H. Tran" → first and last, so it can match a member record. */
-function dropMiddleInitials(name: string): string {
+export function dropMiddleInitials(name: string): string {
   const parts = name.split(/[\s,]+/).filter(Boolean);
   if (parts.length < 3) return parts.join(' ');
   const middle = parts.slice(1, -1).filter((part) => !/^[a-z]\.?$/i.test(part));
@@ -409,7 +409,7 @@ function dropMiddleInitials(name: string): string {
 }
 
 /** The UCSD Email field sometimes holds only the username. */
-function ucsdEmail(value: string): string {
+export function ucsdEmail(value: string): string {
   return /^[a-z0-9._-]+$/i.test(value) ? `${value}@ucsd.edu` : value;
 }
 

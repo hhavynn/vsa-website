@@ -9,15 +9,18 @@ interface AceBigPickerProps {
   onChange: (bigId: string | null) => void;
   disabled?: boolean;
   label: string;
+  /** A Big's planned number of Littles, when application answers are loaded. */
+  capacityFor?: (bigId: string) => number | null;
 }
 
 const MAX_RESULTS = 8;
 
 export const describeBig = (node: AceNodeRef) => [node.name, node.familyName].filter(Boolean).join(' · ');
 
-function formatLoad(load: BigLoad): string {
+function formatLoad(load: BigLoad, capacity: number | null = null): string {
   const parts = [`${load.current} on tree`];
-  if (load.incoming > 0) parts.push(`${load.incoming} new`);
+  if (capacity != null) parts.push(`${load.incoming} of ${capacity} planned new`);
+  else if (load.incoming > 0) parts.push(`${load.incoming} new`);
   return parts.join(' · ');
 }
 
@@ -25,7 +28,7 @@ function formatLoad(load: BigLoad): string {
  * Chooses a Big from existing ACE tree nodes. The Little's family is whatever
  * family that Big's node belongs to, so the fam is shown with every option.
  */
-export function AceBigPicker({ value, nodes, loadFor, onChange, disabled = false, label }: AceBigPickerProps) {
+export function AceBigPicker({ value, nodes, loadFor, onChange, disabled = false, label, capacityFor }: AceBigPickerProps) {
   const searchId = useId();
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useState('');
@@ -54,7 +57,7 @@ export function AceBigPicker({ value, nodes, loadFor, onChange, disabled = false
         ) : selected ? (
           <>
             <p className="font-medium text-[var(--color-text)]">{describeBig(selected)}</p>
-            <p className="text-[11px] text-[var(--color-text3)]">{formatLoad(loadFor(selected.id))}</p>
+            <p className="text-[11px] text-[var(--color-text3)]">{formatLoad(loadFor(selected.id), capacityFor?.(selected.id))}</p>
           </>
         ) : (
           <p className="font-medium text-[var(--color-text2)]">
@@ -119,7 +122,7 @@ export function AceBigPicker({ value, nodes, loadFor, onChange, disabled = false
                     className="block w-full bg-transparent px-2.5 py-1.5 text-left text-xs text-[var(--color-text)] hover:bg-[var(--color-surface2)]"
                   >
                     <span className="font-medium">{describeBig(node)}</span>
-                    <span className="ml-2 text-[11px] text-[var(--color-text3)]">{formatLoad(loadFor(node.id))}</span>
+                    <span className="ml-2 text-[11px] text-[var(--color-text3)]">{formatLoad(loadFor(node.id), capacityFor?.(node.id))}</span>
                   </button>
                 </li>
               ))}

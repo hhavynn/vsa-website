@@ -59,6 +59,29 @@ the name).
 - Name-only matches are never auto-linked on import. Use **Link N obvious member
   matches** (unique exact names only) or the per-row picker.
 
+## Application answers while sorting
+
+**Load application answers** (draft or locked cycles) takes a paste of the ACE
+application responses from Google Sheets and shows the matching-relevant
+answers beside each row: year and warning chips, an expandable profile for the
+Little and the chosen Big, the Big's planned number of Littles against their
+load in this draft, and, for an unassigned Little, up to three suggested Bigs.
+Applicants that matched no draft row or tree node are listed so names can be
+fixed.
+
+- **In memory only.** The answers live in React state for this browser tab.
+  Nothing is written to a table, browser storage, logs, toasts, or analytics,
+  and nothing goes into a draft's notes. Leaving or refreshing clears them.
+- Only whitelisted columns are read (`src/lib/aceApplicationProfiles.ts`);
+  contact details, birthdays, hometowns, allergies, housing, car access, sizes,
+  gift wishes, major/minor, and events attended are ignored.
+- Littles attach to rows by the linked member's email (looked up once, never
+  stored), then by normalized name or preferred + last name; Bigs attach to
+  tree nodes by normalized name. Ambiguous matches are left alone.
+- Checks (gender preference, capacity, year preference, substance comfort,
+  do-not-pair) and the suggestion score are **advisory**. They never block
+  Lock or Publish. Picking a suggestion just sets the Big like the picker does.
+
 ## Database
 
 Migration `20261001213356_ace_assignment_workspace.sql` adds
