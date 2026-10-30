@@ -613,6 +613,8 @@ export function Leaderboard() {
     setCohort(nextCohort);
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
+      if (selectedYear !== null) next.set('year', String(selectedYear));
+      if (activeTab === 'events') next.set('metric', 'events');
       if (nextCohort === 'board') next.set('cohort', 'board');
       else next.delete('cohort');
       return next;
