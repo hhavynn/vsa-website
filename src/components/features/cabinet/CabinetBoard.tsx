@@ -388,7 +388,7 @@ function ExecutiveFeaturePanel({
                 <Avatar image={getCabinetPhotoUrl(member)} memberId={member.member_id} name={member.name} size={isPresident ? 112 : 104} priority={priorityMemberIds.has(member.id)} />
                 {isPresident && (
                   <div className="absolute -bottom-2 -right-1 rounded-full bg-[var(--color-surface)] p-1 shadow-sm border border-[var(--color-border)]">
-                    <div className="rounded-full bg-teal-500/10 p-1 text-teal-600 dark:text-teal-400">
+                    <div className="rounded-full bg-brand-500/10 p-1 text-brand-600 dark:text-brand-300">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                         <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                       </svg>
@@ -427,7 +427,7 @@ function ExecutiveFeaturePanel({
                 style={{ borderColor: 'var(--color-border)' }}
               >
                 {isPresident && (
-                  <div className="absolute inset-0 rounded-xl bg-teal-500/5 -z-10" />
+                  <div className="absolute inset-0 rounded-xl bg-brand-500/5 -z-10" />
                 )}
                 <p
                   className={`${isPresident ? 'font-serif text-[19px]' : 'font-serif text-[17px]'} italic leading-[1.5] tracking-tight`}

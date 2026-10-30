@@ -44,9 +44,9 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
   }
 
   return (
-    <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-md overflow-hidden flex flex-col h-full hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors duration-150">
+    <div className="border border-[var(--color-border)] bg-surface rounded-md overflow-hidden flex flex-col h-full hover:border-brand-300 dark:hover:border-brand-700 transition-colors duration-150">
       {/* Image */}
-      <div className="relative h-44 bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+      <div className="relative h-44 bg-surface2 overflow-hidden">
         <OptimizedImage
           src={imageUrl}
           // Thumbnail (720w) already covers the ~520px card slot; keep it rather than fetch the full file.
@@ -58,18 +58,18 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
           className="w-full h-full object-cover"
           fallback={
             <div className="w-full h-full flex items-center justify-center">
-              <svg className="w-10 h-10 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-10 h-10 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
           }
         />
         {/* Event type badge */}
-        <span className="absolute top-3 left-3 px-2 py-0.5 text-xs font-medium border border-zinc-200/60 bg-white/80 dark:bg-zinc-900/80 dark:border-zinc-700/60 text-zinc-700 dark:text-zinc-300 rounded backdrop-blur-sm">
+        <span className="absolute top-3 left-3 px-2 py-0.5 text-xs font-medium border border-[var(--color-border)] bg-surface text-text-secondary rounded backdrop-blur-sm">
           {EVENT_TYPE_LABELS[event.event_type] ?? event.event_type}
         </span>
         {isUpcoming && (
-          <span className="absolute top-3 right-3 px-2 py-0.5 text-xs font-medium border border-emerald-500/40 bg-white/80 dark:bg-zinc-900/80 text-emerald-600 dark:text-emerald-400 rounded backdrop-blur-sm">
+          <span className="absolute top-3 right-3 px-2 py-0.5 text-xs font-medium border border-emerald-500/40 bg-surface text-emerald-700 dark:text-emerald-300 rounded backdrop-blur-sm">
             Upcoming
           </span>
         )}
@@ -77,13 +77,13 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
 
       {/* Content */}
       <div className="p-5 flex flex-col flex-grow">
-        <h3 className="font-semibold text-zinc-900 dark:text-zinc-50 text-base mb-1.5 line-clamp-2">{event.name}</h3>
-        <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed mb-4 line-clamp-2 flex-grow">{event.description}</p>
+        <h3 className="font-semibold text-text-primary text-base mb-1.5 line-clamp-2">{event.name}</h3>
+        <p className="text-text-muted text-sm leading-relaxed mb-4 line-clamp-2 flex-grow">{event.description}</p>
 
         {/* Meta */}
         <div className="space-y-1.5 mb-4">
           {dateString && (
-            <div className="flex items-center gap-2 text-zinc-400 text-xs">
+            <div className="flex items-center gap-2 text-text-muted text-xs">
               <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
@@ -91,7 +91,7 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
             </div>
           )}
           {event.location && (
-            <div className="flex items-center gap-2 text-zinc-400 text-xs">
+            <div className="flex items-center gap-2 text-text-muted text-xs">
               <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -103,8 +103,8 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
 
         {/* Countdown */}
         {isUpcoming && event.date && (
-          <div className="mb-4 p-3 rounded border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60">
-            <p className="text-xs text-zinc-500 mb-1.5">Starts in</p>
+          <div className="mb-4 p-3 rounded border border-[var(--color-border)] bg-surface2">
+            <p className="text-xs text-text-muted mb-1.5">Starts in</p>
             <CountdownTimer targetDate={new Date(event.date)} onComplete={() => {}} />
           </div>
         )}
@@ -113,7 +113,7 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
         <button
           onClick={handleSaveToCalendar}
           disabled={!event.date}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-sm font-medium transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded border border-[var(--color-border)] text-text-secondary hover:bg-surface2 text-sm font-medium transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
