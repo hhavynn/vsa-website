@@ -51,7 +51,7 @@ pages need an authorized session; anything verified only in the harness says so.
 | Batch | Scope | Branch | Status |
 |---|---|---|---|
 | 1 Foundation | Root tokens, nav/footer chrome, admin shell, page header, quick search, sign-in, common dialogs, primitives | `design/sitewide-admin-foundation` | implemented; harness-verified |
-| 2 Story generator | StoryStudio editor + Top 3/5/10 PNG templates | `design/sitewide-story-generator` (stacked on 1) | see Batch 2 section |
+| 2 Story generator | StoryStudio editor + Top 3/5/10 PNG templates | `design/sitewide-story-generator` (stacked on 1) | implemented; exported PNGs verified |
 | 3 Core admin ops | Dashboard, Events, Import, Members, Points, Merge, Photo Requests | — | not started |
 | 4 Programs | Houses, ACE, Interns, Cabinet, Rollover, Years, Year Setup | — | not started |
 | 5 Content | Gallery, Content, Calendar, VCN, Applications, Feedback, Resources, UVSA Schools, External Events | — | not started |
@@ -166,11 +166,36 @@ counts (gray/zinc/slate/teal/coral/gold/hex) come from the Batch 1 holdout scan.
 | AceAssignmentsWorkspace | admin | 4 | tokens |
 | HouseRosterPanel, HousePaymentsPanel, HouseEventsManager/Dashboard, HouseDraftEditor, placement panels | admin | 4 | tokens; protected |
 | AttendanceReadinessPanel, ImportReviewPanel, ImportStepper | admin | 3 | tokens; protected |
-| Top3StoryDialog + StoryStudio + PNG export | admin / story / lib/story | 2 | see Batch 2 |
+| Top3StoryDialog + StoryStudio + PNG export | admin / story / lib/story | 2 | visually verified (harness + real PNG export) |
 | PhotoRequestSection | avatar | 7 | tokens |
 | SessionExpiredDialog | auth | 1 | tokens (not screenshotted) |
 | CalendarDetailModal, CabinetRoleModal, AlbumLightbox, FamSheet, PublicSearchDialog, VsaAiAssistant, MobileDrawer | public features | 7 | editorial shell (body-scoped); verify in Batch 7 |
 | Toasts | App | 1 | implemented |
+
+## Batch 2: leaderboard story generator
+
+| Item | Files | Treatment | Status |
+|---|---|---|---|
+| Canvas kit | `lib/story/storyCanvas.ts` | Blue-hour (dark) and daydream (light) fields with blooms and seeded film grain; four-point stars, iridescent bubbles, ribbon, glass cards, Polaroid prints, metallic medallions; Instrument Serif display | implemented |
+| Top 3 podium | `lib/story/drawTop3Story.ts` | Taped champion Polaroid with name caption, gold medal, serif-italic headline; runner-up glass cards with tilted mini Polaroids, silver/bronze medals, House dot + name | visually verified (exported PNG) |
+| Top 5/10 + tied Top 3 list | `lib/story/drawTopNStory.ts` | Glass rows, medals for ranks 1–3 (`T2` on ties), ringed avatars, serif names, House dot lines; row geometry retuned within the safe-zone test | visually verified (exported PNG) |
+| Editor | `story/StoryStudio.tsx`, `admin/Top3StoryDialog.tsx` | Header wash + ribbon, story-tinted preview frame, rose safe-zone guides, gradient Look swatches, brand selection states | visually verified (harness 375/1440 light+dark) |
+
+Preserved: 1080×1920 canvas, 250px safe bands, file names, download and
+native share, CORS image loading with initials fallback, tie routing
+(`shouldUseTopNList`), Top N selection, theme ids and labels. Rendered and
+reviewed: Top 3 dark/light, Top 5 dark/light, Top 10 dark/light, tied Top 3,
+Top 3 with open spots, "Take the crown" and "Heating up" presets, all with
+placeholder names (no member photos; initials fallback exercised).
+Remaining: the unknown-House fallback color in `top3Story.ts` is still teal
+`#3bbdb5` (a data fallback with a test pinning it); real-photo export not yet
+checked against live CORS headers.
+
+## Other generated graphics
+
+| Item | Files | Batch | Status |
+|---|---|---|---|
+| Member snapshot share image | `lib/snapshotImage.ts` | 7 | not started |
 
 ## Known residual legacy CSS (Batch 7)
 
@@ -185,4 +210,5 @@ initials. `StoryStudio` uses coral/gold (Batch 2).
 
 | Date | Batch | Evidence |
 |---|---|---|
+| 2026-10-29 | 2 | Real 1080×1920 PNG exports for every template/theme/state listed above; editor harness 375/1440 light+dark. Gates: typecheck, lint (18 pre-existing warnings, none in touched files), 4198/4198 Jest, build. |
 | 2026-10-29 | 1 | Before/after `/admin/login` at 375/1440 light+dark; harness: shell, header, table, filters, buttons, pagination, empty/error states, ConfirmDialog, quick search, mobile drawer at 375/1440 light+dark. Gates: typecheck, lint, full Jest suite, build (see PR). Live admin pages not yet screenshotted (no authorized session in the browser). |
