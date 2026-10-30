@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { memberLookupRepository } from '../data/repos/memberLookup';
 import type { AceNodeRef, BigLoad } from '../lib/aceAssignments';
 import {
@@ -38,6 +38,8 @@ export interface AceApplicationSummary {
 }
 
 interface Loaded {
+  /** Answers belong to the cycle they were loaded for. */
+  cycleId: string | null;
   parsed: ParsedApplicationProfiles;
   memberIdsByEmail: ReadonlyMap<string, readonly string[]>;
   emailLookupFailed: boolean;
@@ -49,13 +51,25 @@ interface Loaded {
  * analytics event. Leaving or refreshing the page clears it.
  */
 export function useAceApplicationProfiles(
+  cycleId: string | null,
   drafts: readonly AceAssignmentDraft[],
   nodes: readonly AceNodeRef[],
   loadFor: (bigId: string) => BigLoad,
 ) {
-  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const [stored, setStored] = useState<Loaded | null>(null);
+  // Switching cycles drops the answers; a lookup still running for the old cycle is ignored.
+  const cycleRef = useRef(cycleId);
+  const requestRef = useRef(0);
+  useEffect(() => {
+    cycleRef.current = cycleId;
+    requestRef.current += 1;
+    setStored(null);
+  }, [cycleId]);
+  const loaded = stored && stored.cycleId === cycleId ? stored : null;
 
   const load = useCallback(async (text: string): Promise<ParsedApplicationProfiles> => {
+    const forCycle = cycleRef.current;
+    const request = ++requestRef.current;
     const parsed = parseApplicationProfiles(text);
     const emails = parsed.profiles.flatMap((profile) => (profile.role === 'little' && profile.email ? [profile.email] : []));
     let memberIdsByEmail = new Map<string, string[]>();
@@ -69,11 +83,16 @@ export function useAceApplicationProfiles(
         emailLookupFailed = true;
       }
     }
-    setLoaded({ parsed, memberIdsByEmail, emailLookupFailed });
+    if (request === requestRef.current && forCycle === cycleRef.current) {
+      setStored({ cycleId: forCycle, parsed, memberIdsByEmail, emailLookupFailed });
+    }
     return parsed;
   }, []);
 
-  const clear = useCallback(() => setLoaded(null), []);
+  const clear = useCallback(() => {
+    requestRef.current += 1;
+    setStored(null);
+  }, []);
 
   const littleByDraft = useMemo(
     () => (loaded ? matchProfilesToDrafts(loaded.parsed.profiles, drafts, loaded.memberIdsByEmail) : new Map<string, ApplicationProfile>()),
