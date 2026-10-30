@@ -45,6 +45,7 @@ import {
 } from '../../../lib/aceAssignments';
 import { AceAssignmentCycle, AceAssignmentDraft } from '../../../types';
 import { AceAssignmentImportPanel } from './AceAssignmentImportPanel';
+import { AceMutualRequestPanel } from './AceMutualRequestPanel';
 import { AceAssignmentPreflightPanel } from './AceAssignmentPreflightPanel';
 import { AceAssignmentRow } from './AceAssignmentRow';
 import {
@@ -111,6 +112,7 @@ export function AceAssignmentsWorkspace() {
   const [newYear, setNewYear] = useState(String(currentAcademicYearStart()));
   const [newLittle, setNewLittle] = useState('');
   const [importOpen, setImportOpen] = useState(false);
+  const [mutualOpen, setMutualOpen] = useState(false);
   const [confirmPublish, setConfirmPublish] = useState(false);
   const [filter, setFilter] = useUrlFilter(ACE_DRAFT_FILTER_KEYS);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
@@ -633,6 +635,9 @@ export function AceAssignmentsWorkspace() {
             <button type="button" onClick={() => setImportOpen((open) => !open)} className={ghostBtnCls}>
               {importOpen ? 'Close import' : 'Import CSV / TSV'}
             </button>
+            <button type="button" onClick={() => setMutualOpen((open) => !open)} className={ghostBtnCls}>
+              {mutualOpen ? 'Close mutual check' : 'Check mutual requests'}
+            </button>
             {obviousLinks.length > 0 && (
               <button type="button" onClick={linkObvious} disabled={busy} className={ghostBtnCls}>
                 Link {obviousLinks.length} obvious member {obviousLinks.length === 1 ? 'match' : 'matches'}
@@ -646,6 +651,17 @@ export function AceAssignmentsWorkspace() {
               existingNames={drafts.map((draft) => draft.little_name)}
               onImport={importLittles}
               onClose={() => setImportOpen(false)}
+            />
+          )}
+          {mutualOpen && (
+            <AceMutualRequestPanel
+              nodes={nodes}
+              existingNames={drafts.map((draft) => draft.little_name)}
+              onImport={async (resolution) => {
+                await importLittles(resolution);
+                setMutualOpen(false);
+              }}
+              onClose={() => setMutualOpen(false)}
             />
           )}
         </div>

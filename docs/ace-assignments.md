@@ -131,6 +131,30 @@ the name).
 - Name-only matches are never auto-linked on import. Use **Link N obvious member
   matches** (unique exact names only) or the per-row picker.
 
+## Checking mutual requests
+
+**Check mutual requests** takes a paste of the "ACE Mutual Request" Google Form
+responses, header row included. Logic: `src/lib/aceMutualRequests.ts`.
+
+- "Requesting a Big" means the respondent is a Little. Repeat submissions are
+  keyed on UCSD email (a bare username means `@ucsd.edu`); the latest
+  timestamp wins, and someone who answered as both roles is flagged.
+- Requested names are pulled out of free text and resolved against the
+  opposite role only: full name, then first + last, then preferred name +
+  last, then a first name that is unique. A near spelling is only a *possible*
+  match until the chair accepts it. Ties are never guessed.
+- A pair counts only when both people requested each other. One-sided
+  requests, unresolved names, and conflicts (a Little mutually matched with
+  several Bigs, or both roles) are listed separately; conflicts stay out of
+  the confirmed pairs. **Download follow-ups CSV** has names and request text
+  only.
+- **Add N confirmed pairs to draft** uses the same import path as above: the
+  member links only by a unique email match, the Big is assigned only when
+  exactly one tree node has that name (otherwise the note says
+  `Mutual Big: … (not on tree)`), and Littles already in the draft are skipped.
+- The paste lives only in the panel's state. Phone, social and personal-email
+  columns are never read, and nothing is saved before the draft rows.
+
 ## Database
 
 Migration `20261001213356_ace_assignment_workspace.sql` adds
