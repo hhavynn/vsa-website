@@ -1,6 +1,7 @@
 import {
   ACTIVITY_ACTIONS,
   ActivityEntry,
+  UNDOABLE_ACTIONS,
   UNDO_WINDOW_MS,
   actionPrefixesFor,
   activityFilterFor,
@@ -33,6 +34,23 @@ function entry(overrides: Partial<ActivityEntry> = {}): ActivityEntry {
     ...overrides,
   };
 }
+
+describe('intern shadow summaries', () => {
+  it('lists the positions on both sides of the change', () => {
+    expect(activitySummary.internShadow('Sarah Nguyen', ['Treasurer'], ['Treasurer', 'Secretary'])).toBe(
+      "Changed Sarah Nguyen's shadow positions: Treasurer → Treasurer, Secretary",
+    );
+    expect(activitySummary.internShadow('Sarah Nguyen', ['Treasurer'], [])).toBe("Changed Sarah Nguyen's shadow positions: Treasurer → none");
+  });
+
+  it('files the change under Interns in Recent Changes', () => {
+    expect(activityFilterFor(ACTIVITY_ACTIONS.internShadowChanged)).toBe('interns');
+  });
+
+  it('leaves no intern change undoable', () => {
+    expect(Object.values(UNDOABLE_ACTIONS).sort()).toEqual(['ace_draft_big', 'ace_node_link', 'house_draft_house']);
+  });
+});
 
 describe('activity filters', () => {
   it('maps every domain prefix to the filter the Recent Changes page offers', () => {
@@ -147,12 +165,13 @@ describe('isUndoable', () => {
     ACTIVITY_ACTIONS.internCohortPublished,
     ACTIVITY_ACTIONS.yearSetupCreated,
     ACTIVITY_ACTIONS.houseBulkChanged,
+    ACTIVITY_ACTIONS.internShadowChanged,
   ])('never offers one-click undo for %s, even with an undo block attached', (action) => {
     expect(isUndoable(entry({ action }), { now: NOW })).toBe(false);
   });
 
   it('rejects a spec whose kind does not match the action', () => {
-    const wrong = entry({ metadata: buildUndoMetadata({ kind: 'intern_mentor', target: { cycleId: 'c', draftId: 'd' }, before: null, after: 'm' }) });
+    const wrong = entry({ metadata: buildUndoMetadata({ kind: 'ace_node_link', target: { nodeId: 'n' }, before: null, after: 'm' }) });
     expect(isUndoable(wrong, { now: NOW })).toBe(false);
   });
 

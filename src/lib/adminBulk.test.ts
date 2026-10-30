@@ -6,7 +6,6 @@ import {
   planCabinetCategory,
   planHouseAssign,
   planHouseClear,
-  planInternMentor,
   planInternTrack,
   planMarkReviewed,
   planMemberClearReview,
@@ -126,19 +125,9 @@ describe('House planners', () => {
 
 describe('Intern planners', () => {
   const rows = [
-    { id: 'a', mentor_cabinet_member_id: 'm1', role_or_track: 'Events' },
-    { id: 'b', mentor_cabinet_member_id: null, role_or_track: null },
+    { id: 'a', role_or_track: 'Events' },
+    { id: 'b', role_or_track: null },
   ];
-
-  it('sets a mentor on rows that do not already have it', () => {
-    expect(planInternMentor(rows, 'm1', true).eligible.map((row) => row.id)).toEqual(['b']);
-  });
-
-  it('treats removing a mentor as destructive', () => {
-    const plan = planInternMentor(rows, null, true);
-    expect(plan.eligible.map((row) => row.id)).toEqual(['a']);
-    expect(plan.needsConfirm).toBe(true);
-  });
 
   it('requires a track value and skips rows that already match', () => {
     expect(planInternTrack(rows, '  ', true).eligible).toHaveLength(0);

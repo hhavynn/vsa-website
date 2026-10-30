@@ -96,12 +96,10 @@ export function internProgress(input: {
   status: string | null;
   accepted: number;
   linked: number;
-  mentored: number;
 }): ProgressStep[] {
   return [
     flagStep('added', 'Added', input.accepted > 0),
     countStep('links', 'Member Links', input.linked, input.accepted),
-    countStep('mentors', 'Mentors', input.mentored, input.accepted),
     flagStep('locked', 'Locked', isLocked(input.status)),
     flagStep('published', 'Published', isPublished(input.status)),
   ];

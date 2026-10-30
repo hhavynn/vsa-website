@@ -8,10 +8,11 @@ import {
   InternCohortCycle,
   InternCohortDraft,
   InternCohortDraftInsert,
-  MentorOption,
   INTERN_CATEGORY,
+  SHADOW_POSITION_CATEGORIES,
   buildInternPreflight,
   cabinetMemberFromIntern,
+  distinctPositionTitles,
   sortDrafts,
 } from '../../lib/internCohort';
 import { NotFoundError, ValidationError, withErrorHandling } from '../errors';
@@ -20,7 +21,7 @@ const INSERT_CHUNK = 200;
 
 export type InternDraftPatch = Partial<Pick<
   InternCohortDraft,
-  'name' | 'member_id' | 'mentor_cabinet_member_id' | 'role_or_track' | 'caption' | 'internal_notes' | 'display_order'
+  'name' | 'member_id' | 'shadow_positions' | 'role_or_track' | 'caption' | 'internal_notes' | 'display_order'
 >>;
 
 export interface PublishInternCohortResult {
@@ -281,18 +282,24 @@ export class InternCohortRepository {
     }, 'Failed to publish intern cohort');
   }
 
-  /** Cabinet members who can mentor, for the cycle's cabinet year. */
-  async listMentorOptions(cabinetYearId: string): Promise<MentorOption[]> {
+  /**
+   * Position titles an intern can shadow in the cycle's cabinet year, one per
+   * title even when two people hold it. Sorted board by board, as the Cabinet
+   * page shows them ("Executive Board" sorts before "General Board"), and by
+   * display order within a board.
+   */
+  async listShadowPositionOptions(cabinetYearId: string): Promise<string[]> {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('cabinet_members')
-        .select('id, name, role')
+        .select('role')
         .eq('cabinet_year_id', cabinetYearId)
-        .neq('category', INTERN_CATEGORY)
+        .in('category', SHADOW_POSITION_CATEGORIES)
+        .order('category', { ascending: true })
         .order('display_order', { ascending: true });
       if (error) throw error;
-      return data ?? [];
-    }, 'Failed to load mentors');
+      return distinctPositionTitles((data ?? []).map((row) => row.role));
+    }, 'Failed to load cabinet positions');
   }
 }
 

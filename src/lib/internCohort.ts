@@ -14,10 +14,40 @@ export type CabinetMemberInsert = Database['public']['Tables']['cabinet_members'
 export const INTERN_DEFAULT_ROLE = 'Intern';
 export const INTERN_CATEGORY = 'Interns';
 
-export interface MentorOption {
-  id: string;
-  name: string;
-  role: string;
+/** The most cabinet positions one intern shadows; the database enforces it too. */
+export const MAX_SHADOW_POSITIONS = 3;
+/** Boards whose positions can be shadowed. */
+export const SHADOW_POSITION_CATEGORIES = ['Executive Board', 'General Board'];
+
+/** Trimmed, non-empty, first occurrence of each title, in the given order. */
+export function distinctPositionTitles(titles: readonly string[]): string[] {
+  return Array.from(new Set(titles.map((title) => title.trim()).filter(Boolean)));
+}
+
+/**
+ * An intern's list after choosing `value` in picker `slot` ('' clears it).
+ * Always compact, free of repeats, and within the limit.
+ */
+export function withShadowPosition(current: readonly string[], slot: number, value: string): string[] {
+  const next = [...current];
+  if (slot >= next.length) next.push(value);
+  else next[slot] = value;
+  return distinctPositionTitles(next).slice(0, MAX_SHADOW_POSITIONS);
+}
+
+/**
+ * Titles picker `slot` may offer: every option no other picker holds, plus the
+ * slot's own value, so a title since renamed on Cabinet stays visible.
+ */
+export function shadowPositionChoices(options: readonly string[], current: readonly string[], slot: number): string[] {
+  const own = current[slot];
+  const taken = new Set(current.filter((_, index) => index !== slot));
+  const available = options.filter((option) => !taken.has(option));
+  return own && !available.includes(own) ? [own, ...available] : available;
+}
+
+export function sameShadowPositions(a: readonly string[], b: readonly string[]) {
+  return a.length === b.length && a.every((title, index) => title === b[index]);
 }
 
 export interface ParsedInternName {
@@ -98,7 +128,7 @@ export function sortDrafts(drafts: InternCohortDraft[]) {
 }
 
 export interface InternPreflightIssue {
-  code: 'empty' | 'duplicate_member' | 'unlinked' | 'duplicate_name' | 'missing_mentor';
+  code: 'empty' | 'duplicate_member' | 'unlinked' | 'duplicate_name';
   message: string;
   draftIds: string[];
 }
@@ -110,8 +140,6 @@ export interface InternPreflight {
   blockers: InternPreflightIssue[];
   /** Worth a look, never a stop. */
   warnings: InternPreflightIssue[];
-  /** Optional fields left empty. */
-  notes: InternPreflightIssue[];
   canLock: boolean;
 }
 
@@ -122,7 +150,6 @@ function plural(count: number, one: string, many = `${one}s`) {
 export function buildInternPreflight(drafts: InternCohortDraft[]): InternPreflight {
   const blockers: InternPreflightIssue[] = [];
   const warnings: InternPreflightIssue[] = [];
-  const notes: InternPreflightIssue[] = [];
 
   if (drafts.length === 0) {
     blockers.push({ code: 'empty', message: 'The cohort has no interns.', draftIds: [] });
@@ -164,28 +191,18 @@ export function buildInternPreflight(drafts: InternCohortDraft[]): InternPreflig
     });
   }
 
-  const noMentor = drafts.filter((draft) => !draft.mentor_cabinet_member_id);
-  if (noMentor.length > 0) {
-    notes.push({
-      code: 'missing_mentor',
-      message: `${plural(noMentor.length, 'missing mentor')} (optional).`,
-      draftIds: noMentor.map((draft) => draft.id),
-    });
-  }
-
   return {
     accepted: drafts.length,
     linked: drafts.length - unlinked.length,
     blockers,
     warnings,
-    notes,
     canLock: blockers.length === 0,
   };
 }
 
 /**
  * The public cabinet_members row for an intern. Only fields that map cleanly
- * go public: mentor, caption, and internal notes stay in the private draft.
+ * go public: shadow positions, caption, and internal notes stay in the private draft.
  */
 export function cabinetMemberFromIntern(draft: InternCohortDraft, cabinetYearId: string): CabinetMemberInsert {
   return {
