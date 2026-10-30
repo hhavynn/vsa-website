@@ -78,10 +78,10 @@ describe('admin navigation ↔ router parity', () => {
     ]);
   });
 
-  it('keeps all 32 destinations, each in exactly one group, with unique group ids', () => {
-    expect(ADMIN_NAV_ITEMS).toHaveLength(32);
+  it('keeps all 33 destinations, each in exactly one group, with unique group ids', () => {
+    expect(ADMIN_NAV_ITEMS).toHaveLength(33);
     const grouped = ADMIN_NAV_GROUPS.flatMap((group) => group.items.map((item) => item.to));
-    expect(new Set(grouped).size).toBe(32);
+    expect(new Set(grouped).size).toBe(33);
     const ids = ADMIN_NAV_GROUPS.map((group) => group.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -89,7 +89,7 @@ describe('admin navigation ↔ router parity', () => {
   it('places the tools where the redesign says they live', () => {
     const labels = (name: string) => ADMIN_NAV_GROUPS.find((group) => group.group === name)?.items.map((item) => item.label);
     expect(labels('Events & Attendance')).toEqual(['Events', 'Attendance Imports', 'Members', 'Points Tools', 'Merge Review', 'Photo Requests']);
-    expect(labels('Programs & People')).toEqual(['Houses', 'ACE Families', 'Intern Cohort', 'Applications', 'Cabinet', 'Cabinet Rollover']);
+    expect(labels('Programs & People')).toEqual(['Houses', 'ACE Families', 'Role Assignment', 'Intern Cohort', 'Applications', 'Cabinet', 'Cabinet Rollover']);
     expect(labels('Content & Outreach')).toEqual([
       'Homepage & Programs', 'Gallery', 'Content Calendar', 'VCN Archives', 'Resources Index', 'Ask VSA Knowledge', 'External Events', 'UVSA Schools',
     ]);

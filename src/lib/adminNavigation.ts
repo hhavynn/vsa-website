@@ -162,6 +162,14 @@ export const ADMIN_NAV_GROUPS: readonly AdminNavGroup[] = [
         affects: '/ace and ACE family displays',
       },
       {
+        to: '/admin/member-roles',
+        label: 'Role Assignment',
+        icon: FiUserCheck,
+        keywords: ['bulk roles', 'role matcher', 'board member', 'intern', 'canonical member', 'link names'],
+        summary: 'Paste names and review safe links to real year-scoped role records.',
+        affects: 'Approved Cabinet and Intern identities; source editors own publication',
+      },
+      {
         to: '/admin/interns',
         label: 'Intern Cohort',
         icon: FiBriefcase,

@@ -109,6 +109,10 @@
       "page": "src/pages/SignIn.tsx"
     },
     {
+      "path": "/admin/member-roles",
+      "page": "src/pages/Admin/MemberRoles.tsx"
+    },
+    {
       "path": "/admin/members",
       "page": "src/pages/Admin/Members.tsx"
     },
@@ -679,6 +683,13 @@
       "path": "src/data/repos/resourceLinks.ts",
       "tables": [
         "resource_links"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/roleReview.ts",
+      "tables": [
+        "cabinet_members"
       ],
       "rpcs": []
     },

@@ -56,14 +56,14 @@ it('shows linked House Parents and flags the ones that need review', async () =>
     parent('hp2', 'Pinkie Pie', 1, 'Martin Dang', null, 'No member record has this exact name. Link one by hand.'),
   ]);
   lookup.findMemberById.mockResolvedValue(option('m-ingyin', 'Ingyin Moh'));
-  lookup.listMemberDirectory.mockResolvedValue([option('m-martin', 'Martin Dang')]);
+  lookup.listMemberDirectory.mockResolvedValue([option('m-ingyin', 'Ingyin Moh'), option('m-martin', 'Martin Dang')]);
   renderLinks();
 
   const rows = await screen.findAllByTestId('house-parent-link');
   expect(rows[0]).toHaveTextContent('Ingyin Moh');
   expect(rows[0]).toHaveTextContent('Pinkie Pie · Linked');
   expect(rows[1]).toHaveTextContent('Needs review — No member record has this exact name.');
-  expect(screen.getByText('1 House Parent needs review.')).toBeInTheDocument();
+  expect(await screen.findByText('1 House Parent needs review.')).toBeInTheDocument();
   expect(parentsRepo.listForYear).toHaveBeenCalledWith(2026);
   expect(await within(rows[1]).findByRole('button', { name: 'Link to Martin Dang' })).toBeInTheDocument();
   expect(within(rows[0]).queryByRole('button', { name: /^Link to/ })).not.toBeInTheDocument();
@@ -78,4 +78,39 @@ it('links a member only when the admin chooses one', async () => {
   const accept = await within(row).findByRole('button', { name: 'Link to Martin Dang' });
   await userEvent.click(accept);
   await waitFor(() => expect(parentsRepo.setMember).toHaveBeenCalledWith('hp2', 'm-martin'));
+});
+
+
+it('filters same-year House Parent review queue by status and House without editing memberships', async () => {
+  parentsRepo.listForYear.mockResolvedValue([
+    parent('hp1', 'Pinkie Pie', 0, 'Ada Example', 'm-ada'),
+    parent('hp2', 'Rarity', 1, 'Bea Sample', null),
+    parent('hp3', 'Rarity', 2, 'Cai Sample', 'missing-id'),
+  ]);
+  lookup.listMemberDirectory.mockResolvedValue([
+    option('m-ada', 'Ada Example'),
+    option('m-bea-1', 'Bea Sample'),
+    option('m-bea-2', 'Bea Sample'),
+  ]);
+  renderLinks();
+  await screen.findByText('2 House Parents need review.');
+  expect(screen.getByRole('option', { name: /Ambiguous \(1\)/ })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: /Duplicate \/ stale link \(1\)/ })).toBeInTheDocument();
+  await userEvent.selectOptions(screen.getByLabelText('Filter House Parent links by status'), 'ambiguous');
+  expect(screen.getAllByTestId('house-parent-link')).toHaveLength(1);
+  expect(screen.getByText('Ambiguous identity')).toBeInTheDocument();
+  await userEvent.selectOptions(screen.getByLabelText('Filter House Parent links by House'), 'p-Pinkie Pie');
+  expect(screen.queryAllByTestId('house-parent-link')).toHaveLength(0);
+  expect(parentsRepo.setMember).not.toHaveBeenCalled();
+});
+
+it('fails closed when the canonical member directory is unavailable', async () => {
+  parentsRepo.listForYear.mockResolvedValue([parent('hp1', 'Pinkie Pie', 0, 'Ada Example', 'm-ada')]);
+  lookup.listMemberDirectory.mockRejectedValue(new Error('offline'));
+  renderLinks();
+  expect(await screen.findByRole('alert')).toHaveTextContent('Member directory unavailable');
+  expect(screen.queryByText('Every House Parent link is verified.')).not.toBeInTheDocument();
+  const row = screen.getByTestId('house-parent-link');
+  expect(within(row).getByRole('button', { name: 'Change' })).toBeDisabled();
+  expect(parentsRepo.setMember).not.toHaveBeenCalled();
 });
