@@ -19,7 +19,7 @@ export function VcnRoleRosterReview({ editionYear }: { editionYear: number | nul
     return {
       total: rows.length,
       verified: rows.filter(r=>r.verification==='verified' && r.role).length,
-      unresolved: rows.filter(r=>r.state!=='ready-for-human-review').length,
+      unresolved: rows.filter(r=>r.state!=='ready-for-human-review' || !confirmed.has(r.sourceLine)).length,
       reviewed: rows.filter(r=>confirmed.has(r.sourceLine)).length,
     };
   }, [result,confirmed]);
@@ -74,7 +74,7 @@ export function VcnRoleRosterReview({ editionYear }: { editionYear: number | nul
               className="vsa-btn-primary min-h-11">Preview identities</button>
             <button type="button" className="vsa-btn-secondary min-h-11" onClick={()=>{setCsv('');setResult(null);setConfirmed(new Map());setFailure('');}}>Clear private roster</button>
           </div>
-          {directory.error && <p role="alert" className="text-sm text-red-600">Member directory read failed. Identity status is unknown, not unmatched.</p>}
+          {!!directory.error && <p role="alert" className="text-sm text-red-600">Member directory read failed. Identity status is unknown, not unmatched.</p>}
           {failure && <p role="alert" className="text-sm text-red-600">{failure}</p>}
           {result && (
             <div className="space-y-3">
