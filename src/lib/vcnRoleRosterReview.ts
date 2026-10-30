@@ -23,18 +23,21 @@ function parseDelimited(input: string, delimiter: string): string[][] {
   let row: string[] = [];
   let cell = '';
   let quoted = false;
+  let justClosedQuote = false;
   for (let i = 0; i < input.length; i++) {
     const char = input[i];
     if (char === '"') {
       if (quoted && input[i + 1] === '"') { cell += '"'; i++; }
-      else if (cell === '' || quoted) quoted = !quoted;
+      else if (quoted) { quoted = false; justClosedQuote = true; }
+      else if (cell === '' && !justClosedQuote) quoted = true;
       else throw new Error('Unexpected quote in roster field');
     } else if (quoted) cell += char;
-    else if (char === delimiter) { row.push(cell); cell = ''; }
+    else if (char === delimiter) { row.push(cell); cell = ''; justClosedQuote = false; }
     else if (char === '\n' || char === '\r') {
       if (char === '\r' && input[i + 1] === '\n') i++;
-      row.push(cell); records.push(row); row = []; cell = '';
-    } else cell += char;
+      row.push(cell); records.push(row); row = []; cell = ''; justClosedQuote = false;
+    } else if (justClosedQuote) throw new Error('Unexpected character after quoted roster field');
+    else cell += char;
   }
   if (quoted) throw new Error('Unclosed quoted roster field');
   if (cell || row.length) { row.push(cell); records.push(row); }
