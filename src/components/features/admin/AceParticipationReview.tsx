@@ -90,7 +90,7 @@ export function AceParticipationReview({cycleId,year}:{cycleId:string;year:numbe
                 <label className="text-sm font-semibold text-[var(--color-text)]" htmlFor="ace-minimum">
                   Minimum approved events
                   <input id="ace-minimum" type="number" min={1} max={20} step={1} value={minimum} disabled={busy}
-                    onChange={e=>{setMinimum(e.target.value);setRows(null);}}
+                    onChange={e=>{setMinimum(e.target.value);setPolicy(null);}}
                     className="mt-1 block min-h-11 w-28 rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-3"/>
                 </label>
                 <button type="button" className="vsa-btn-primary min-h-11" disabled={busy||!selected.size||!minimum}
