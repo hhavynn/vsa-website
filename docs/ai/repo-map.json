@@ -666,6 +666,14 @@
       "rpcs": []
     },
     {
+      "path": "src/data/repos/memberRoles.ts",
+      "tables": [
+        "cabinet_members",
+        "cabinet_years"
+      ],
+      "rpcs": []
+    },
+    {
       "path": "src/data/repos/photoRequests.ts",
       "tables": [
         "member_photo_request_events",
