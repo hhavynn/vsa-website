@@ -22,9 +22,12 @@
  * Usage:
  *   node scripts/measure-public-quality.mjs --tools /tmp/vsa-tools \
  *     --build build --out /tmp/vsa-measure/before [--runs 5] \
- *     [--stages lighthouse,probe] [--routes /,/events] [--port 3010]
+ *     [--stages lighthouse,probe] [--routes /,/events] [--port 3010] [--theme light|dark]
  *
  * Browser: set CHROME_PATH (defaults to Microsoft Edge on macOS).
+ *
+ * Lighthouse follows the OS colour scheme, so its theme is whatever the machine
+ * happens to be set to unless --theme pins it. The probe stage always covers both.
  */
 import { createRequire } from 'node:module';
 import http from 'node:http';
@@ -46,6 +49,9 @@ const OUT = path.resolve(args.out || '/tmp/vsa-measure/run');
 const RUNS = Number(args.runs || 5);
 const PORT = Number(args.port || 3010);
 const STAGES = String(args.stages || 'lighthouse,probe').split(',');
+const THEME = args.theme;
+// Blink's PreferredColorScheme enum: 0 = dark, 1 = light.
+const THEME_FLAGS = THEME ? [`--blink-settings=preferredColorScheme=${THEME === 'dark' ? 0 : 1}`] : [];
 const ROUTES = String(
   args.routes || '/,/events,/leaderboard,/gallery,/house,/points,/get-involved'
 ).split(',');
@@ -139,7 +145,7 @@ async function runLighthouse() {
     for (let i = 0; i < RUNS; i++) {
       const chrome = await chromeLauncher.launch({
         chromePath: CHROME,
-        chromeFlags: ['--headless=new', '--no-sandbox'],
+        chromeFlags: ['--headless=new', '--no-sandbox', ...THEME_FLAGS],
       });
       try {
         const runner = await lighthouse(
@@ -481,6 +487,7 @@ try {
         platform: `${process.platform} ${process.arch}`,
         chrome: CHROME,
         runs: RUNS,
+        theme: THEME || 'os default',
         routes: ROUTES,
         build: BUILD,
         date: new Date().toISOString(),

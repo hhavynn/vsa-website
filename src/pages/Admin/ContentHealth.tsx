@@ -63,7 +63,7 @@ function FindingCard({ finding, busy, onAcknowledge }: { finding: ContentHealthF
           <p className="mt-2 font-sans text-[11px] text-text-muted">Last checked {dateTime(finding.checkedAt)}</p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
-          <Link to={finding.fixPath} className={cn(btn, 'bg-brand-600 !text-white hover:!bg-brand-700 dark:bg-brand-400 dark:!text-[#050810]')}>
+          <Link to={finding.fixPath} className={cn(btn, 'bg-brand-600 !text-white hover:!bg-brand-700 dark:bg-brand-400 dark:!text-brand-950')}>
             {finding.check === 'ask-vsa-stale' ? 'Review snippet' : 'Fix it'} →
           </Link>
           {finding.acknowledgeable && (

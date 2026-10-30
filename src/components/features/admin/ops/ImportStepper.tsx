@@ -29,9 +29,9 @@ export function ImportStepper({ step, unresolved = 0 }: { step: ImportStep; /** 
                 aria-hidden
                 className={cn(
                   'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold',
-                  state === 'current' && 'bg-brand-600 text-white dark:bg-brand-400 dark:text-zinc-900',
+                  state === 'current' && 'bg-brand-600 text-white dark:bg-brand-400 dark:text-brand-950',
                   state === 'done' && 'bg-emerald-500 text-white',
-                  state === 'todo' && 'bg-zinc-200 text-[var(--color-text3)] dark:bg-zinc-700',
+                  state === 'todo' && 'bg-surface2 text-[var(--color-text3)] ring-1 ring-[var(--color-border)]',
                 )}
               >
                 {state === 'done' ? '✓' : index + 1}
@@ -43,7 +43,7 @@ export function ImportStepper({ step, unresolved = 0 }: { step: ImportStep; /** 
                 </span>
                 <span className="hidden text-xs text-[var(--color-text3)] sm:block">{entry.hint}</span>
               </span>
-              {index < STEPS.length - 1 && <span aria-hidden className="mx-1 mt-3.5 hidden h-px w-8 bg-zinc-200 dark:bg-zinc-700 sm:block" />}
+              {index < STEPS.length - 1 && <span aria-hidden className="mx-1 mt-3.5 hidden h-px w-8 bg-[var(--color-border)] sm:block" />}
             </li>
           );
         })}

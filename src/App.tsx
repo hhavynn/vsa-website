@@ -7,6 +7,7 @@ import { SiteSettingsProvider } from "./context/SiteSettingsContext";
 import { AnalyticsConsentProvider } from "./context/AnalyticsConsentContext";
 import { AnalyticsConsentBanner } from "./components/common/AnalyticsConsentBanner";
 import { Toaster } from "react-hot-toast";
+import { TOAST_OPTIONS } from "./lib/toastOptions";
 import { MotionConfig } from "framer-motion";
 
 const queryClient = new QueryClient({
@@ -34,22 +35,7 @@ function App() {
                   <AppRoutes />
                   <AnalyticsConsentBanner />
                 </MotionConfig>
-                <Toaster
-                  position="top-right"
-                  toastOptions={{
-                    // Tokens, so toasts follow the theme and portal anywhere.
-                    style: {
-                      background: 'var(--color-surface)',
-                      color: 'var(--color-text)',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: '8px',
-                      boxShadow: '0 12px 32px rgba(22, 30, 61, 0.16)',
-                      fontFamily: '"DM Sans", system-ui, sans-serif',
-                      fontSize: '13px',
-                    },
-                    success: { iconTheme: { primary: '#4356a1', secondary: '#ffffff' } },
-                  }}
-                />
+                <Toaster position="top-right" toastOptions={TOAST_OPTIONS} />
               </SiteSettingsProvider>
             </AuthProvider>
           </AnalyticsConsentProvider>

@@ -63,6 +63,7 @@ import {
 } from '../../lib/cabinetRoster';
 import { MemberOption, buildMemberNameIndex } from '../../lib/memberLinkMatching';
 import { CabinetYear } from '../../types';
+import { TOAST_OPTIONS } from '../../lib/toastOptions';
 
 const fieldCls =
   'w-full rounded border bg-[var(--color-surface2)] px-3 py-2 text-sm text-[var(--color-text)] focus:border-[var(--brand)] focus:outline-none focus:ring-1 focus:ring-[var(--brand)] disabled:opacity-60';
@@ -657,7 +658,7 @@ export default function AdminCabinetRollover() {
   return (
     <>
       <PageTitle title="Cabinet Rollover" />
-      <Toaster position="top-right" />
+      <Toaster position="top-right" toastOptions={TOAST_OPTIONS} />
       <datalist id="roster-year-options">{YEAR_OPTIONS.map((option) => <option key={option} value={option} />)}</datalist>
       <datalist id="roster-college-options">{COLLEGE_OPTIONS.map((option) => <option key={option} value={option} />)}</datalist>
 

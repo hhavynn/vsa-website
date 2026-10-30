@@ -49,7 +49,7 @@ function matchLabel(match: ApplicantMemberMatch) {
 function matchTone(match: ApplicantMemberMatch) {
   if (match.status === 'match') return 'text-emerald-700 dark:text-emerald-400';
   if (match.status === 'review') return 'text-amber-700 dark:text-amber-400';
-  return 'text-zinc-500 dark:text-zinc-400';
+  return 'text-text-muted';
 }
 
 export function previewExportRows(rows: readonly PlacementPreviewRow[], memberName: (memberId: string) => string | null = () => null): PlacementExportRow[] {

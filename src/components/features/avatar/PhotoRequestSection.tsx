@@ -216,7 +216,7 @@ export function PhotoRequestSection({
       </div>
 
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => !submitting && setModalOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim backdrop-blur-sm" onClick={() => !submitting && setModalOpen(false)}>
           <div
             className="w-full max-w-md border rounded shadow-xl max-h-[90vh] overflow-y-auto focus:outline-none"
             style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: 24 }}
