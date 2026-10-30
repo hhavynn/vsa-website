@@ -8,7 +8,7 @@ const fictionalMembers: MemberOption[] = [
   { id: 'member-b', fullName: 'Bea Sample', displayName: 'Bea Sample · Muir · Junior', college: 'Muir', year: 'Junior' },
   { id: 'member-c', fullName: 'Bea Sample', displayName: 'Bea Sample · Warren · Sophomore', college: 'Warren', year: 'Sophomore' },
 ];
-const fictionalDirectory = {
+const mockDirectory = {
   members: fictionalMembers,
   byId: new Map(fictionalMembers.map((person) => [person.id, person])),
   nameIndex: buildMemberNameIndex(fictionalMembers),
@@ -16,11 +16,11 @@ const fictionalDirectory = {
   error: null,
   refetch: jest.fn(),
 };
-const fictionalSources = [
+const mockSources = [
   { id: 'source-a', name: 'Ada Example', role: 'Events Chair', category: 'General Board', cabinet_year_id: 'cabinet-year-2026', member_id: null },
   { id: 'source-b', name: 'Bea Sample', role: 'Intern', category: 'Interns', cabinet_year_id: 'cabinet-year-2026', member_id: null },
 ];
-let sourceUnavailable = false;
+let mockSourceUnavailable = false;
 
 jest.mock('../../hooks/useCabinetYears', () => ({
   useCabinetYears: () => ({
@@ -30,14 +30,14 @@ jest.mock('../../hooks/useCabinetYears', () => ({
   }),
 }));
 jest.mock('../../hooks/useMemberDirectory', () => ({
-  useMemberDirectory: () => fictionalDirectory,
+  useMemberDirectory: () => mockDirectory,
 }));
 jest.mock('react-query', () => ({
   ...jest.requireActual('react-query'),
   useQuery: () => ({
-    data: fictionalSources,
+    data: mockSources,
     isLoading: false,
-    isError: sourceUnavailable,
+    isError: mockSourceUnavailable,
     refetch: jest.fn(),
   }),
 }));
@@ -46,7 +46,7 @@ function renderPage() {
   render(<MemoryRouter initialEntries={['/admin/member-roles']}><AdminMemberRoles /></MemoryRouter>);
 }
 
-beforeEach(() => { sourceUnavailable = false; });
+beforeEach(() => { mockSourceUnavailable = false; });
 
 it('registers a labelled admin-only role review and parses three independent names', () => {
   renderPage();
@@ -84,7 +84,7 @@ it('does not use an Intern as Board, and resets stale selections when switching 
 });
 
 it('fails closed when published role source cannot be read', () => {
-  sourceUnavailable = true;
+  mockSourceUnavailable = true;
   renderPage();
   fireEvent.change(screen.getByLabelText(/Member names, up to 150 rows/), { target: { value: 'Ada Example' } });
   fireEvent.click(screen.getByRole('button', { name: 'Parse names' }));
