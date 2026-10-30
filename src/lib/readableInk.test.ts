@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { HOUSE_COLORS } from '../constants/houses';
 import { contrastRatio, readableInk } from './readableInk';
 
@@ -26,5 +28,21 @@ describe('readableInk', () => {
 
   it('expands 3-digit hex', () => {
     expect(readableInk('#fff')).toBe('#061014');
+  });
+
+  // axe reports the selected Leaderboard chip as "incomplete" (its ::before hides the
+  // background), so nothing else catches this pair drifting below AA.
+  it('keeps --color-on-accent at 4.5:1 or better on --color-accent in both themes', () => {
+    const css = fs.readFileSync(path.join(process.cwd(), 'src/index.css'), 'utf8');
+    const values = (token: string) =>
+      Array.from(css.matchAll(new RegExp(`${token}:\\s*(#[0-9a-f]{6})`, 'gi'))).map((m) => m[1]);
+    const accents = values('--color-accent');
+    const inks = values('--color-on-accent');
+
+    expect(accents).toHaveLength(2);
+    expect(inks).toHaveLength(2);
+    accents.forEach((accent, theme) => {
+      expect(contrastRatio(accent, inks[theme])).toBeGreaterThanOrEqual(4.5);
+    });
   });
 });
