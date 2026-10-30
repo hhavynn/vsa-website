@@ -82,6 +82,8 @@ describe('Source-aware review status — no writes', () => {
       .toBe('name-mismatch');
     expect(getRoleReviewStatus(firstRow, 'id-1', source, 'board', 'year-2026', ['cabinet-row-1', 'cabinet-row-1']))
       .toBe('conflict');
+    expect(getRoleReviewStatus(firstRow, 'id-2', source, 'board', 'year-2026', ['cabinet-row-1'], 'Béa Sample'))
+      .toBe('name-mismatch');
     const duplicate = parseRoleNames('Ada Example; ada example', 'first-last')[1];
     expect(getRoleReviewStatus(duplicate, 'id-1', source, 'board', 'year-2026', ['cabinet-row-1']))
       .toBe('identity-review');
