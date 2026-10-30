@@ -18,7 +18,7 @@ export function PublicMemberRoleBadges({ roles, house, className, compact = fals
   if (roles.length === 0 && !house) return null;
   return (
     <div
-      aria-label="Revealed House and verified VSA roles"
+      aria-label={house ? 'Revealed House and verified VSA roles' : 'Verified VSA roles'}
       className={cn('flex min-w-0 flex-wrap items-center gap-1.5', className)}
     >
       <PublishedHouseBadge house={house} compact={compact} />
