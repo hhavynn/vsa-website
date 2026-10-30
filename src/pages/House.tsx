@@ -22,7 +22,7 @@ import { getHousePagePath, houseSlugFromKey } from '../utils/houseSlug';
 import { getLegacyHouseArchiveByYear, getLegacyHouseArchiveYears, getVerifiedLegacyHouseYears } from '../data/legacyHouseArchive';
 import { HouseYearSelector } from '../components/features/house/HouseYearSelector';
 import { FindMyHouse } from '../components/features/house/FindMyHouse';
-import { hasRevealedHouseMemberships } from '../data/repos/publicHouseLookup';
+import { hasRevealedHouseMemberships } from '../data/repos/houseMemberships';
 
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
