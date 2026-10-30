@@ -44,6 +44,9 @@ function renderCTA() {
   );
 }
 
+// Each clock spy is restored even when an assertion fails.
+afterEach(() => jest.restoreAllMocks());
+
 describe('ApplicationCTA message precedence', () => {
   beforeEach(() => supabaseMock.reset());
 
@@ -95,6 +98,8 @@ describe('ApplicationCTA message precedence', () => {
   });
 
   it('points closed-window visitors to a different genuinely open program page, never its form URL', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-28T12:00:00Z'));
+
     supabaseMock.setDefault('public_application_links', {
       data: [
         linkRow({ status: 'closed' }),
@@ -109,6 +114,8 @@ describe('ApplicationCTA message precedence', () => {
   });
 
   it('does not suggest other programs when this application window is already open', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-28T12:00:00Z'));
+
     supabaseMock.setDefault('public_application_links', {
       data: [
         linkRow({ status: 'open', target_url: 'https://open-form.invalid/house' }),
