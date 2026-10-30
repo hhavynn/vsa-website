@@ -1,5 +1,5 @@
 import type { AssignmentPreflight } from '../../../lib/aceAssignments';
-import { aceIssues, buildReadiness } from '../../../lib/adminPreflight';
+import { UnifiedIssue, aceIssues, buildReadiness } from '../../../lib/adminPreflight';
 import { ReadinessPanel } from './ops';
 
 interface AceAssignmentPreflightPanelProps {
@@ -9,6 +9,8 @@ interface AceAssignmentPreflightPanelProps {
   readyLabel?: string;
   /** Selecting an issue's fix applies that quick filter to the rows below. */
   onFilter?: (key: string) => void;
+  /** More warnings from outside the draft rows, e.g. attendance eligibility. */
+  extraIssues?: readonly UnifiedIssue[];
 }
 
 /**
@@ -17,8 +19,8 @@ interface AceAssignmentPreflightPanelProps {
  * severity, why it matters, how many Littles, and a direct fix. Blockers stop
  * Publish; warnings (mostly member-link gaps) never do.
  */
-export function AceAssignmentPreflightPanel({ preflight, heading = 'Preflight', readyLabel, onFilter }: AceAssignmentPreflightPanelProps) {
-  const readiness = buildReadiness(aceIssues(preflight), { ready: readyLabel });
+export function AceAssignmentPreflightPanel({ preflight, heading = 'Preflight', readyLabel, onFilter, extraIssues = [] }: AceAssignmentPreflightPanelProps) {
+  const readiness = buildReadiness([...aceIssues(preflight), ...extraIssues], { ready: readyLabel });
   const passed = [
     `${preflight.littleCount} ${preflight.littleCount === 1 ? 'Little' : 'Littles'}`,
     `${preflight.linkedCount} canonical member ${preflight.linkedCount === 1 ? 'link' : 'links'}`,

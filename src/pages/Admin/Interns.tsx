@@ -14,8 +14,8 @@ import { useOperatingYear } from '../../hooks/useOperatingYear';
 import { useReviewMarks } from '../../hooks/useReviewMarks';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import { useUrlFilter, useUrlParam } from '../../hooks/useUrlFilter';
-import { ACTIVITY_ACTIONS, activitySummary, buildUndoMetadata } from '../../lib/adminActivity';
-import { planInternMentor, planInternTrack, planMarkReviewed, pruneSelection, selectedRows, toggleSelected } from '../../lib/adminBulk';
+import { ACTIVITY_ACTIONS, activitySummary } from '../../lib/adminActivity';
+import { planInternTrack, planMarkReviewed, pruneSelection, selectedRows, toggleSelected } from '../../lib/adminBulk';
 import { internDuplicates, duplicateRowIds } from '../../lib/adminConflicts';
 import { applyQuickFilter, countByFilter } from '../../lib/adminFilters';
 import { reviewInternNames } from '../../lib/adminImportReview';
@@ -28,7 +28,6 @@ import { internDraftsToPreviewMembers } from '../../lib/adminPreviewMappers';
 import { InternCohortPreviewDialog } from '../../components/features/admin/preview/CohortPreviewDialogs';
 import {
   BulkActionBar,
-  BulkConfirm,
   EmptyState,
   FilterChips,
   ImportReviewPanel,
@@ -46,14 +45,17 @@ import { useCabinetYears } from '../../hooks/useCabinetYears';
 import {
   InternCohortCycle,
   InternCohortDraft,
-  MentorOption,
+  MAX_SHADOW_POSITIONS,
   buildInternDraftRows,
   buildInternPreflight,
   formatCohortYears,
   moveId,
   parseInternNames,
   resequence,
+  sameShadowPositions,
+  shadowPositionChoices,
   sortDrafts,
+  withShadowPosition,
 } from '../../lib/internCohort';
 import { InternDraftPatch } from '../../data/repos/internCohort';
 import { MemberNameIndex, MemberOption, buildMemberNameIndex } from '../../lib/memberLinkMatching';
@@ -83,7 +85,7 @@ interface InternRowProps {
   memberById: Map<string, MemberOption>;
   nameIndex: MemberNameIndex;
   claimedByOthers: ReadonlySet<string>;
-  mentors: MentorOption[];
+  shadowOptions: string[];
   selected: boolean;
   onToggleSelect: (id: string) => void;
   reviewed: boolean;
@@ -93,13 +95,14 @@ interface InternRowProps {
   onRemove: (draft: InternCohortDraft) => void;
 }
 
-function InternRow({ draft, index, count, editable, busy, memberById, nameIndex, claimedByOthers, mentors, selected, onToggleSelect, reviewed, highlighted, onSave, onMove, onRemove }: InternRowProps) {
+function InternRow({ draft, index, count, editable, busy, memberById, nameIndex, claimedByOthers, shadowOptions, selected, onToggleSelect, reviewed, highlighted, onSave, onMove, onRemove }: InternRowProps) {
   const [name, setName] = useState(draft.name);
   const [track, setTrack] = useState(draft.role_or_track ?? '');
   const [caption, setCaption] = useState(draft.caption ?? '');
   const [notes, setNotes] = useState(draft.internal_notes ?? '');
   const member = draft.member_id ? memberById.get(draft.member_id) ?? null : null;
-  const mentor = mentors.find((option) => option.id === draft.mentor_cabinet_member_id) ?? null;
+  // Absent only while this frontend is live before its migration.
+  const shadowPositions = draft.shadow_positions ?? [];
 
   function commit<K extends keyof InternDraftPatch>(key: K, value: string, current: string | null) {
     const next = value.trim();
@@ -141,7 +144,7 @@ function InternRow({ draft, index, count, editable, busy, memberById, nameIndex,
         </div>
       </div>
 
-      <div className="mt-3 grid gap-3 md:grid-cols-3">
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
         <div>
           <span className={labelCls} style={{ color: 'var(--color-text3)' }}>Member</span>
           <MemberLinkPicker
@@ -153,22 +156,6 @@ function InternRow({ draft, index, count, editable, busy, memberById, nameIndex,
             onLink={(option) => onSave(draft, { member_id: option.id })}
             onUnlink={() => onSave(draft, { member_id: null })}
           />
-        </div>
-        <div>
-          <label className={labelCls} style={{ color: 'var(--color-text3)' }} htmlFor={`intern-mentor-${draft.id}`}>Mentor (optional)</label>
-          <select
-            id={`intern-mentor-${draft.id}`}
-            className={smallFieldCls}
-            style={{ borderColor: 'var(--color-border)' }}
-            value={draft.mentor_cabinet_member_id ?? ''}
-            disabled={!editable || busy}
-            onChange={(event) => onSave(draft, { mentor_cabinet_member_id: event.target.value || null })}
-          >
-            <option value="">No mentor</option>
-            {mentors.map((option) => (
-              <option key={option.id} value={option.id}>{option.name} · {option.role}</option>
-            ))}
-          </select>
         </div>
         <div>
           <label className={labelCls} style={{ color: 'var(--color-text3)' }} htmlFor={`intern-track-${draft.id}`}>Role / track</label>
@@ -184,6 +171,30 @@ function InternRow({ draft, index, count, editable, busy, memberById, nameIndex,
           />
         </div>
       </div>
+
+      <fieldset className="mt-3 min-w-0">
+        <legend className={labelCls} style={{ color: 'var(--color-text3)' }}>Shadow positions (optional, up to {MAX_SHADOW_POSITIONS})</legend>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {Array.from({ length: MAX_SHADOW_POSITIONS }, (_, slot) => (
+            <div key={slot}>
+              <label className="sr-only" htmlFor={`intern-shadow-${draft.id}-${slot}`}>Shadow position {slot + 1} for {draft.name}</label>
+              <select
+                id={`intern-shadow-${draft.id}-${slot}`}
+                className={smallFieldCls}
+                style={{ borderColor: 'var(--color-border)' }}
+                value={shadowPositions[slot] ?? ''}
+                disabled={!editable || busy || slot > shadowPositions.length}
+                onChange={(event) => onSave(draft, { shadow_positions: withShadowPosition(shadowPositions, slot, event.target.value) })}
+              >
+                <option value="">No position</option>
+                {shadowPositionChoices(shadowOptions, shadowPositions, slot).map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
+          ))}
+        </div>
+      </fieldset>
 
       <div className="mt-3 grid gap-3 md:grid-cols-2">
         <div>
@@ -217,7 +228,7 @@ function InternRow({ draft, index, count, editable, busy, memberById, nameIndex,
       <p className="mt-3 text-xs" style={{ color: 'var(--color-text2)' }}>
         {draft.member_id ? '✅' : '⚠'} {draft.name}
         {' · '}Member: {member ? member.displayName : 'not linked'}
-        {' · '}Mentor: {mentor ? `${mentor.name} · ${mentor.role}` : 'none'}
+        {' · '}Shadowing: {shadowPositions.length > 0 ? shadowPositions.join(', ') : 'none'}
         {' · '}Track: {draft.role_or_track || 'Intern'}
         {draft.published_cabinet_member_id ? ' · published' : ''}
         {reviewed ? ' · ✓ reviewed' : ''}
@@ -234,7 +245,7 @@ export default function AdminInterns() {
   const [loadingCycles, setLoadingCycles] = useState(true);
   const [cycleId, setCycleId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<InternCohortDraft[]>([]);
-  const [mentors, setMentors] = useState<MentorOption[]>([]);
+  const [shadowOptions, setShadowOptions] = useState<string[]>([]);
   const [directory, setDirectory] = useState<MemberOption[]>([]);
   const [busy, setBusy] = useState(false);
   const [deleteDraftOpen, setDeleteDraftOpen] = useState(false);
@@ -246,9 +257,7 @@ export default function AdminInterns() {
   const [cycleParam] = useUrlParam('cycle');
   const [rowParam] = useUrlParam('row');
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
-  const [bulkMentorId, setBulkMentorId] = useState('');
   const [bulkTrack, setBulkTrack] = useState('');
-  const [pendingRemoveMentor, setPendingRemoveMentor] = useState(false);
   const [nextStep, setNextStep] = useState<NextStep | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -272,7 +281,6 @@ export default function AdminInterns() {
   );
   const filterCounts = useMemo(() => countByFilter(facts, INTERN_FILTERS), [facts]);
   const visibleFacts = useMemo(() => applyQuickFilter(facts, INTERN_FILTERS, filter), [facts, filter]);
-  const mentorNameOf = useCallback((id: string | null) => (id ? mentors.find((option) => option.id === id)?.name ?? null : null), [mentors]);
 
   const nameIndex = useMemo(() => buildMemberNameIndex(directory), [directory]);
   const linkedIds = useMemo(() => ordered.map((draft) => draft.member_id).filter((id): id is string => !!id), [ordered]);
@@ -300,14 +308,18 @@ export default function AdminInterns() {
     setPublishConfirmed(false);
     if (!cycle) {
       setDrafts([]);
-      setMentors([]);
+      setShadowOptions([]);
       return;
     }
     internCohortRepository.getDrafts(cycle.id).then(setDrafts).catch((err) => {
       console.error(err);
       toast.error('Failed to load interns.');
     });
-    internCohortRepository.listMentorOptions(cycle.cabinet_year_id).then(setMentors).catch(() => setMentors([]));
+    internCohortRepository.listShadowPositionOptions(cycle.cabinet_year_id).then(setShadowOptions).catch((err) => {
+      console.error(err);
+      setShadowOptions([]);
+      toast.error('Failed to load cabinet positions.');
+    });
   }, [cycle]);
 
   // Quick Search deep link: ?cycle=<id>&row=<draft id> opens that cohort and scrolls to the intern.
@@ -387,7 +399,7 @@ export default function AdminInterns() {
         academicYearStart: cycle.academic_year_start,
         summary: activitySummary.internAdded(created.length, cycle.academic_year_start),
       });
-      setNextStep({ id: 'intern_added', message: `${created.length} ${created.length === 1 ? 'intern' : 'interns'} added`, actions: created.some((d) => !d.member_id) ? [{ label: `Review ${created.filter((d) => !d.member_id).length} Unlinked`, filter: 'unlinked' }] : [{ label: 'Review Missing Mentor', filter: 'missing_mentor' }] });
+      setNextStep({ id: 'intern_added', message: `${created.length} ${created.length === 1 ? 'intern' : 'interns'} added`, actions: created.some((d) => !d.member_id) ? [{ label: `Review ${created.filter((d) => !d.member_id).length} Unlinked`, filter: 'unlinked' }] : [{ label: 'Review Missing Profile Info', filter: 'missing_info' }] });
     }, 'Failed to add interns.');
   }
 
@@ -396,19 +408,13 @@ export default function AdminInterns() {
     return run(async () => {
       await internCohortRepository.updateDraft(cycle.id, draft.id, patch);
       setDrafts((current) => current.map((item) => (item.id === draft.id ? { ...item, ...patch } : item)));
-      if ('mentor_cabinet_member_id' in patch && (patch.mentor_cabinet_member_id ?? null) !== (draft.mentor_cabinet_member_id ?? null)) {
+      if (patch.shadow_positions && !sameShadowPositions(patch.shadow_positions, draft.shadow_positions ?? [])) {
         logAdminActivity({
-          action: ACTIVITY_ACTIONS.internMentorChanged,
+          action: ACTIVITY_ACTIONS.internShadowChanged,
           entityType: 'intern_cohort_draft',
           entityId: draft.id,
           academicYearStart: cycle.academic_year_start,
-          summary: activitySummary.internMentor(draft.name, mentorNameOf(draft.mentor_cabinet_member_id), mentorNameOf(patch.mentor_cabinet_member_id ?? null)),
-          metadata: buildUndoMetadata({
-            kind: 'intern_mentor',
-            target: { cycleId: cycle.id, draftId: draft.id },
-            before: draft.mentor_cabinet_member_id ?? null,
-            after: patch.mentor_cabinet_member_id ?? null,
-          }),
+          summary: activitySummary.internShadow(draft.name, draft.shadow_positions ?? [], patch.shadow_positions),
         });
       } else if ('member_id' in patch && (patch.member_id ?? null) !== (draft.member_id ?? null)) {
         logAdminActivity({
@@ -519,8 +525,6 @@ export default function AdminInterns() {
 
   // ─── Bulk actions ──────────────────────────────────────────────────────────
   const selectedDrafts = useMemo(() => selectedRows(ordered, selected, (draft) => draft.id), [ordered, selected]);
-  const mentorPlan = useMemo(() => planInternMentor(selectedDrafts, bulkMentorId || null, !!editable), [selectedDrafts, bulkMentorId, editable]);
-  const removeMentorPlan = useMemo(() => planInternMentor(selectedDrafts, null, !!editable), [selectedDrafts, editable]);
   const trackPlan = useMemo(() => planInternTrack(selectedDrafts, bulkTrack, !!editable), [selectedDrafts, bulkTrack, editable]);
   const reviewPlan = useMemo(() => planMarkReviewed(selectedDrafts, reviewed, 'intern'), [selectedDrafts, reviewed]);
 
@@ -548,24 +552,9 @@ export default function AdminInterns() {
       });
       toast.success(success);
       setSelected(new Set());
-      setPendingRemoveMentor(false);
     }, 'Failed to update the selected interns.');
   }
 
-  function bulkSetMentor() {
-    if (!bulkMentorId) {
-      toast.error('Choose a mentor first.');
-      return;
-    }
-    if (mentorPlan.eligible.length === 0) {
-      toast.error(mentorPlan.skipped[0]?.reason ?? 'Nothing to change.');
-      return;
-    }
-    return applyBulk(mentorPlan.eligible, { mentor_cabinet_member_id: bulkMentorId }, activitySummary.bulk(`Set mentor ${mentorNameOf(bulkMentorId) ?? ''} for`, mentorPlan.eligible.length, 'intern'), `Set the mentor for ${mentorPlan.eligible.length} ${mentorPlan.eligible.length === 1 ? 'intern' : 'interns'}.`);
-  }
-  function bulkRemoveMentor() {
-    return applyBulk(removeMentorPlan.eligible, { mentor_cabinet_member_id: null }, activitySummary.bulk('Removed the mentor from', removeMentorPlan.eligible.length, 'intern'), `Removed the mentor from ${removeMentorPlan.eligible.length} ${removeMentorPlan.eligible.length === 1 ? 'intern' : 'interns'}.`);
-  }
   function bulkSetTrack() {
     if (trackPlan.eligible.length === 0) {
       toast.error(trackPlan.skipped[0]?.reason ?? 'Nothing to change.');
@@ -682,7 +671,6 @@ export default function AdminInterns() {
               status: cycle.status,
               accepted: preflight.accepted,
               linked: preflight.linked,
-              mentored: ordered.filter((draft) => !!draft.mentor_cabinet_member_id).length,
             })}
           />
 
@@ -742,18 +730,9 @@ export default function AdminInterns() {
               </div>
             )}
             <div className={cn('mb-3 overflow-hidden rounded border', selected.size > 0 ? 'border-[var(--color-border)]' : 'border-transparent')}>
-              <BulkActionBar count={selected.size} noun="intern" onClear={() => { setSelected(new Set()); setPendingRemoveMentor(false); }}>
+              <BulkActionBar count={selected.size} noun="intern" onClear={() => setSelected(new Set())}>
                 {editable && (
                   <>
-                    <label htmlFor="bulk-mentor" className="sr-only">Mentor for selected interns</label>
-                    <select id="bulk-mentor" className={`${smallFieldCls} w-auto`} style={{ borderColor: 'var(--color-border)' }} value={bulkMentorId} onChange={(event) => setBulkMentorId(event.target.value)}>
-                      <option value="">Set mentor →</option>
-                      {mentors.map((option) => (
-                        <option key={option.id} value={option.id}>{option.name} · {option.role}</option>
-                      ))}
-                    </select>
-                    <button type="button" className={bulkBtnCls} disabled={busy || !bulkMentorId} onClick={bulkSetMentor}>Set mentor</button>
-                    <button type="button" className={bulkBtnCls} disabled={busy} onClick={() => setPendingRemoveMentor(true)}>Remove mentor</button>
                     <label htmlFor="bulk-track" className="sr-only">Track for selected interns</label>
                     <input id="bulk-track" className={`${smallFieldCls} w-40`} style={{ borderColor: 'var(--color-border)' }} placeholder="Track…" value={bulkTrack} onChange={(event) => setBulkTrack(event.target.value)} />
                     <button type="button" className={bulkBtnCls} disabled={busy || !bulkTrack.trim()} onClick={bulkSetTrack}>Set track</button>
@@ -761,9 +740,6 @@ export default function AdminInterns() {
                 )}
                 <button type="button" className={bulkBtnCls} disabled={busy} onClick={bulkMarkReviewed}>Mark reviewed</button>
               </BulkActionBar>
-              {pendingRemoveMentor && selected.size > 0 && (
-                <BulkConfirm plan={removeMentorPlan} busy={busy} onConfirm={bulkRemoveMentor} onCancel={() => setPendingRemoveMentor(false)} skippedLabel={(draft) => draft.name} />
-              )}
             </div>
             {ordered.length === 0 ? (
               <EmptyState
@@ -792,7 +768,7 @@ export default function AdminInterns() {
                       memberById={memberById}
                       nameIndex={nameIndex}
                       claimedByOthers={new Set(linkedIds.filter((id) => id !== draft.member_id))}
-                      mentors={mentors}
+                      shadowOptions={shadowOptions}
                       selected={selected.has(draft.id)}
                       onToggleSelect={(id) => setSelected((current) => toggleSelected(current, id))}
                       reviewed={isReviewed}
@@ -822,7 +798,7 @@ export default function AdminInterns() {
         description="This deletes the private draft cohort and its interns. It cannot be undone."
         consequences={[
           'Draft only: nothing published changes. The public Cabinet page and Internship page are untouched.',
-          'Member links and mentor choices on the draft are removed with it. Club member records are not deleted.',
+          'Member links and shadow positions on the draft are removed with it. Club member records are not deleted.',
         ]}
         confirmLabel="Delete draft"
         onConfirm={confirmDiscard}

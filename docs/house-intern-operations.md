@@ -16,10 +16,10 @@ Flow: Import → Match → Save draft → Review → Preflight → Lock → Reve
 
 ## Intern cohort (`/admin/interns`)
 
-- A cycle belongs to one cabinet year (`intern_cohort_cycles`); interns are `intern_cohort_drafts` rows with optional canonical `member_id`, optional cabinet mentor, role/track, caption, internal notes, and order.
+- A cycle belongs to one cabinet year (`intern_cohort_cycles`); interns are `intern_cohort_drafts` rows with optional canonical `member_id`, up to 3 optional `shadow_positions` (position titles from that cabinet year's Executive and General Boards, not people, because two people can hold one position), role/track, caption, internal notes, and order.
 - Pasted names link to a member only on one exact, unclaimed name match; near-misses are offered, never applied.
-- Preflight blocks locking on an empty cohort or the same member linked twice. Unlinked members and duplicate names are warnings; a missing mentor is optional.
-- **Publish** creates or updates `cabinet_members` rows with `category = 'Interns'` for the cycle's cabinet year (name, role = track or `Intern`, display order, `member_id`). That is the only public source; the approved-avatar system resolves through `member_id`. The new row's id is stored on the draft (`published_cabinet_member_id`); an existing Interns row for the same member (or same name, if unlinked) is adopted rather than duplicated. Mentor, caption, and internal notes stay private.
+- Preflight blocks locking on an empty cohort or the same member linked twice. Unlinked members and duplicate names are warnings. Shadow positions are optional, so an empty list is never flagged.
+- **Publish** creates or updates `cabinet_members` rows with `category = 'Interns'` for the cycle's cabinet year (name, role = track or `Intern`, display order, `member_id`). That is the only public source; the approved-avatar system resolves through `member_id`. The new row's id is stored on the draft (`published_cabinet_member_id`); an existing Interns row for the same member (or same name, if unlinked) is adopted rather than duplicated. Shadow positions, caption, and internal notes stay private.
 - The live-only `intern_cohort_members` table (not in migrations; see `docs/anon-key-exposure-audit-2026-08-19.md`) is not used.
 
 ## Migrations (apply manually, in order, after staging verification)
@@ -33,8 +33,9 @@ Flow: Import → Match → Save draft → Review → Preflight → Lock → Reve
 4. `20261026200000_house_2026_my_little_pony.sql` — the 2026-2027 My Little Pony House profiles and the admin-only `house_parents` member links ([house-2026-my-little-pony.md](house-2026-my-little-pony.md)). Applied to production 2026-10-26 in the SQL Editor; its history row was inserted under the file's own version `20261026200000`.
 5. `20261027120000_house_placement_override_rpc.sql` — `admin_apply_house_placement_override`, the atomic move/swap for automatic placement drafts (SECURITY INVOKER, EXECUTE for `authenticated` only; writes only draft rows). **Applied to production 2026-10-26 (Los Angeles), recorded version `20261027120000`.** The frontend requires this RPC for both moves and swaps; either operation fails closed until it is applied ([house-auto-placement.md](house-auto-placement.md#deploying)).
 6. `20261028050216_house_payment_eligibility.sql` — private payment eligibility roster, post-payment reruns and the payment-cleared Lock/Reveal gate ([house-payment-eligibility.md](house-payment-eligibility.md)). Applied to production 2026-10-28 (recorded version `20261028050216`; renamed from `20261028000000` to match), after staging verification against the production schema.
+7. `20261030184046_intern_shadow_positions.sql` — replaces the old per-intern person column on `intern_cohort_drafts` with `shadow_positions` (`text[]`, at most 3). No grant or RLS changes; the table stays admin only. It aborts without changing anything if the old column still holds a value. Not applied yet; apply **before** deploying the frontend that writes `shadow_positions`.
 
-Both are additive: RLS enabled, `revoke all` from `anon, authenticated` then admin-only policies via `is_admin_user()`, plus triggers that stop a locked/published batch or cohort from being edited or deleted and enforce legal status transitions. Apply them **before** deploying the frontend (the pages need the tables).
+Migrations 1 and 2 are additive: RLS enabled, `revoke all` from `anon, authenticated` then admin-only policies via `is_admin_user()`, plus triggers that stop a locked/published batch or cohort from being edited or deleted and enforce legal status transitions. Apply them **before** deploying the frontend (the pages need the tables).
 
 ## Member lookup
 

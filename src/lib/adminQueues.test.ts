@@ -6,6 +6,7 @@ import {
   HOUSE_ROW_FILTERS,
   HouseRowFacts,
   INTERN_FILTERS,
+  INTERN_FILTER_KEYS,
   InternRowFacts,
   MEMBER_FILTERS,
   ROSTER_FILTERS,
@@ -132,19 +133,20 @@ describe('Roster filters', () => {
 
 describe('Intern filters', () => {
   const intern = (id: string, patch: Partial<InternRowFacts['draft']>, extra: Partial<InternRowFacts> = {}): InternRowFacts => ({
-    draft: { id, member_id: null, mentor_cabinet_member_id: null, role_or_track: null, caption: null, ...patch } as InternRowFacts['draft'],
+    draft: { id, member_id: null, shadow_positions: [], role_or_track: null, caption: null, ...patch } as InternRowFacts['draft'],
     duplicate: false,
     reviewed: false,
     ...extra,
   });
   const rows = [
-    intern('complete', { member_id: 'm', mentor_cabinet_member_id: 'c', role_or_track: 'Events', caption: 'hi' }),
+    intern('complete', { member_id: 'm', role_or_track: 'Events', caption: 'hi' }),
     intern('bare', {}),
-    intern('no-caption', { member_id: 'm2', mentor_cabinet_member_id: 'c', role_or_track: 'Events' }),
+    intern('no-caption', { member_id: 'm2', role_or_track: 'Events' }),
   ];
 
-  it('counts missing mentor and profile info independently of linking', () => {
-    expect(countByFilter(rows, INTERN_FILTERS)).toEqual({ all: 3, needs_review: 1, unlinked: 1, missing_mentor: 1, missing_info: 2 });
+  it('counts profile info independently of linking, with no filter for optional shadow positions', () => {
+    expect(countByFilter(rows, INTERN_FILTERS)).toEqual({ all: 3, needs_review: 1, unlinked: 1, missing_info: 2 });
+    expect(INTERN_FILTER_KEYS).toEqual(['all', 'needs_review', 'unlinked', 'missing_info']);
   });
 });
 

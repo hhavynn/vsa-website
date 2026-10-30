@@ -389,11 +389,13 @@ function columnForHeader(header: string): ImportColumn | null {
 
 type Role = 'big' | 'little' | null;
 
+/** An answer naming both roles ("Im a little, requesting a big") is left unknown, not guessed. */
 function roleFromAnswer(answer: string): Role {
   const value = answer.toLowerCase();
-  if (/little|\bem\b/.test(value)) return 'little';
-  if (/big|anh|chi/.test(value)) return 'big';
-  return null;
+  const little = /little|\bem\b/.test(value);
+  const big = /big|anh|chi/.test(value);
+  if (little === big) return null;
+  return little ? 'little' : 'big';
 }
 
 function squash(value: string | undefined): string {
@@ -447,9 +449,8 @@ export function parseAssignmentImport(text: string): ParsedImport {
   const nameIndex = columnIndex.get('name');
   const nameHasInitials = hasHeader && nameIndex !== undefined && /^namefirst/.test(headerKey(headerCells[nameIndex]));
   const hasRole = columnIndex.has('big or little') || columnIndex.has('requesting');
-  let unknownRole = 0;
 
-  const rows: ParsedImportRow[] = [];
+  const candidates: Array<ParsedImportRow & { role: Role }> = [];
   const dataRecords = hasHeader ? records.slice(1) : records;
   dataRecords.forEach((cells, offset) => {
     const cell = (column: ImportColumn) => {
@@ -463,37 +464,43 @@ export function parseAssignmentImport(text: string): ParsedImport {
       return;
     }
 
-    if (hasRole) {
-      const applied = roleFromAnswer(cell('big or little'));
-      const requesting = roleFromAnswer(cell('requesting'));
-      const role: Role = applied ?? (requesting === 'big' ? 'little' : requesting === 'little' ? 'big' : null);
-      if (role === 'big') {
-        result.bigsSkipped += 1;
-        return;
-      }
-      if (role === null) unknownRole += 1;
-    }
-
+    const applied = roleFromAnswer(cell('big or little'));
+    const requesting = roleFromAnswer(cell('requesting'));
+    const role: Role = applied ?? (requesting === 'big' ? 'little' : requesting === 'little' ? 'big' : null);
     const notes = [cell('notes'), cell('mutual request') && `Mutual request: ${cell('mutual request')}`].filter(Boolean);
     const email = (cell('ucsd email') && ucsdEmail(cell('ucsd email'))) || cell('email');
-    rows.push({
+    candidates.push({
       line: offset + (hasHeader ? 2 : 1),
       name,
       email: email.toLowerCase() || null,
       bigName: cell('big') || null,
       notes: notes.length > 0 ? notes.join('; ') : null,
+      role,
     });
   });
 
-  // Form responses are in submission order, so the last one per email is the latest.
+  // Form responses are in submission order, so the last one per email is the
+  // latest. Pick it before filtering by role, so a later Big application
+  // supersedes an earlier Little one instead of leaving it behind.
   const seen = new Set<string>();
-  for (let i = rows.length - 1; i >= 0; i -= 1) {
-    const email = rows[i].email;
+  const latest: typeof candidates = [];
+  for (let i = candidates.length - 1; i >= 0; i -= 1) {
+    const email = candidates[i].email;
     if (email && seen.has(email)) {
       result.repeatsReplaced += 1;
     } else {
       if (email) seen.add(email);
-      result.rows.unshift(rows[i]);
+      latest.unshift(candidates[i]);
+    }
+  }
+
+  let unknownRole = 0;
+  for (const { role, ...row } of latest) {
+    if (hasRole && role === 'big') {
+      result.bigsSkipped += 1;
+    } else {
+      if (hasRole && role === null) unknownRole += 1;
+      result.rows.push(row);
     }
   }
 

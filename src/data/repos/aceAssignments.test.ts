@@ -1,6 +1,6 @@
-import { aceAssignmentsRepository } from './aceAssignments';
+import { ACE_ELIGIBILITY_UNAVAILABLE, aceAssignmentsRepository } from './aceAssignments';
 import { ValidationError } from '../errors';
-import { supabaseMock } from '../../test-utils/supabaseMock';
+import { postgrestError, supabaseMock } from '../../test-utils/supabaseMock';
 
 jest.mock('../../lib/supabase', () => ({
   get supabase() {
@@ -141,5 +141,54 @@ describe('published-cycle ACE participation roster (#649)',()=>{
     supabaseMock.queueResult('ace_assignment_drafts',{data:Array.from({length:500},(_,i)=>sample(String(i))),error:null});
     supabaseMock.queueResult('ace_assignment_drafts',{data:null,error:{message:'denied',code:'42501'}});
     await expect(aceAssignmentsRepository.listPublishedCycleLittles('cycle',2026)).rejects.toThrow();
+  });
+});
+
+describe('saved eligibility policy', () => {
+  it('saves both minimums and a de-duplicated event set in one RPC', async () => {
+    supabaseMock.queueResult('rpc:save_ace_eligibility_policy', {
+      data: { cycle_id: 'c1', little_min_events: 4, big_min_events: 3, event_count: 2, added: 2, removed: 0 },
+      error: null,
+    });
+    await expect(
+      aceAssignmentsRepository.saveEligibilityPolicy('c1', { littleMin: 4, bigMin: 3, eventIds: ['e2', 'e1', 'e2'] }),
+    ).resolves.toEqual({ cycleId: 'c1', eventCount: 2, added: 2, removed: 0 });
+    expect(supabaseMock.queriesFor('rpc:save_ace_eligibility_policy')[0].calls[0].args[0]).toEqual({
+      p_cycle_id: 'c1',
+      p_little_min_events: 4,
+      p_big_min_events: 3,
+      p_event_ids: ['e1', 'e2'],
+    });
+    expect(supabaseMock.queriesFor('ace_assignment_cycle_events')).toHaveLength(0);
+  });
+
+  it('refuses minimums outside 1–20 and more than 100 events before touching the database', async () => {
+    await expect(aceAssignmentsRepository.saveEligibilityPolicy('c1', { littleMin: 0, bigMin: 3, eventIds: [] })).rejects.toBeInstanceOf(ValidationError);
+    await expect(aceAssignmentsRepository.saveEligibilityPolicy('c1', { littleMin: 4, bigMin: 21, eventIds: [] })).rejects.toBeInstanceOf(ValidationError);
+    const many = Array.from({ length: 101 }, (_, i) => `e${i}`);
+    await expect(aceAssignmentsRepository.saveEligibilityPolicy('c1', { littleMin: 4, bigMin: 3, eventIds: many })).rejects.toBeInstanceOf(ValidationError);
+    expect(supabaseMock.queriesFor('rpc:save_ace_eligibility_policy')).toHaveLength(0);
+  });
+
+  it('surfaces the frozen-policy refusal from the database', async () => {
+    supabaseMock.queueResult('rpc:save_ace_eligibility_policy', {
+      data: null,
+      error: postgrestError('The eligibility policy is locked and cannot be edited. Unlock the cycle first.', 'P0001'),
+    });
+    await expect(aceAssignmentsRepository.saveEligibilityPolicy('c1', { littleMin: 4, bigMin: 3, eventIds: [] })).rejects.toThrow(/locked/);
+  });
+
+  it('asks for the migration when the policy table or function is missing', async () => {
+    supabaseMock.queueResult('ace_assignment_cycle_events', { data: null, error: postgrestError('missing', 'PGRST205') });
+    await expect(aceAssignmentsRepository.listEligibilityEventIds('c1')).rejects.toThrow(ACE_ELIGIBILITY_UNAVAILABLE);
+    supabaseMock.queueResult('rpc:save_ace_eligibility_policy', { data: null, error: postgrestError('missing', 'PGRST202') });
+    await expect(aceAssignmentsRepository.saveEligibilityPolicy('c1', { littleMin: 4, bigMin: 3, eventIds: [] })).rejects.toThrow(ACE_ELIGIBILITY_UNAVAILABLE);
+  });
+
+  it('reads only the event ids of one cycle', async () => {
+    supabaseMock.queueResult('ace_assignment_cycle_events', { data: [{ event_id: 'e1' }, { event_id: 'e2' }], error: null });
+    await expect(aceAssignmentsRepository.listEligibilityEventIds('c1')).resolves.toEqual(['e1', 'e2']);
+    expect(callsOf('ace_assignment_cycle_events', 'select')[0].args[0]).toBe('event_id');
+    expect(supabaseMock.filtersFor('ace_assignment_cycle_events')).toContainEqual(['cycle_id', 'c1']);
   });
 });

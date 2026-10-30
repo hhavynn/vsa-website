@@ -65,6 +65,37 @@ function missingFunction(code: string | undefined) {
   return code === 'PGRST202' || code === '42883';
 }
 
+async function readSelectedAttendance(memberIds: readonly string[], events: readonly string[]): Promise<Map<string, Set<string>>> {
+  const members=Array.from(new Set(memberIds)).sort();
+  if (members.length>10000) throw new ValidationError('The ACE roster is too large to review');
+  const records = new Map<string, Set<string>>();
+  const memberSet=new Set(members), eventSet=new Set(events);
+  for (let eventStart=0;eventStart<events.length;eventStart+=50) {
+    const eventPart=events.slice(eventStart,eventStart+50);
+    for (let start=0;start<members.length;start+=100) {
+      const part=members.slice(start,start+100);
+      for (let from=0;;from+=500) {
+        const {data,error}=await supabase.from('member_event_attendance')
+          .select('member_id,event_id')
+          .in('member_id',part)
+          .in('event_id',eventPart)
+          .order('member_id',{ascending:true})
+          .order('event_id',{ascending:true})
+          .range(from,from+499);
+        if(error)throw error;
+        const page=(data??[]) as Array<{member_id:string;event_id:string}>;
+        for(const row of page) {
+          if(!memberSet.has(row.member_id)||!eventSet.has(row.event_id))throw new Error('Attendance returned a row outside approved scope');
+          const prior=records.get(row.member_id)??new Set<string>();
+          prior.add(row.event_id);records.set(row.member_id,prior);
+        }
+        if(page.length<500)break;
+      }
+    }
+  }
+  return records;
+}
+
 export const attendanceReadinessRepository = {
   async getReadiness(academicYearStart: number, termId: string | null): Promise<AttendanceReadiness> {
     return withErrorHandling(async () => {
@@ -91,35 +122,19 @@ export const attendanceReadinessRepository = {
    * ANY read fails. Admin page must separately verify event import readiness.
    */
   async getVerifiedSelectedAttendance(memberIds: readonly string[], eventIds: readonly string[]): Promise<Map<string, Set<string>>> {
-    const members=Array.from(new Set(memberIds)).sort();
     const events=Array.from(new Set(eventIds)).sort();
     if (!events.length || events.length>20) throw new ValidationError('Choose 1–20 approved eligible events');
-    if (members.length>10000) throw new ValidationError('The ACE roster is too large to review');
-    return withErrorHandling(async () => {
-      const records = new Map<string, Set<string>>();
-      const memberSet=new Set(members), eventSet=new Set(events);
-      for (let start=0;start<members.length;start+=100) {
-        const part=members.slice(start,start+100);
-        for (let from=0;;from+=500) {
-          const {data,error}=await supabase.from('member_event_attendance')
-            .select('member_id,event_id')
-            .in('member_id',part)
-            .in('event_id',events)
-            .order('member_id',{ascending:true})
-            .order('event_id',{ascending:true})
-            .range(from,from+499);
-          if(error)throw error;
-          const page=(data??[]) as Array<{member_id:string;event_id:string}>;
-          for(const row of page) {
-            if(!memberSet.has(row.member_id)||!eventSet.has(row.event_id))throw new Error('Attendance returned a row outside approved scope');
-            const prior=records.get(row.member_id)??new Set<string>();
-            prior.add(row.event_id);records.set(row.member_id,prior);
-          }
-          if(page.length<500)break;
-        }
-      }
-      return records;
-    }, 'Failed to read verified ACE attendance');
+    return withErrorHandling(() => readSelectedAttendance(memberIds, events), 'Failed to read verified ACE attendance');
+  },
+
+  /**
+   * The same read for a saved ACE eligibility policy (up to 100 events), with
+   * events chunked as well so no request grows past the URL limit.
+   */
+  async getPolicyEventAttendance(memberIds: readonly string[], eventIds: readonly string[]): Promise<Map<string, Set<string>>> {
+    const events=Array.from(new Set(eventIds)).sort();
+    if (!events.length || events.length>100) throw new ValidationError('Choose 1–100 qualifying events');
+    return withErrorHandling(() => readSelectedAttendance(memberIds, events), 'Failed to read ACE eligibility attendance');
   },
 
   async attest(eventId: string, status: 'no_signin' | 'verified' | 'cleared', note: string | null): Promise<void> {
