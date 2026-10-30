@@ -38,6 +38,7 @@ export interface Top3StoryContent {
   asOfLabel: string;
   handle: string;
   theme: StoryTheme;
+  cohort?: 'members' | 'board';
 }
 
 export interface Top3StoryAssets {
@@ -312,7 +313,7 @@ export function drawTop3Story(ctx: CanvasRenderingContext2D, content: Top3StoryC
   drawStar(ctx, 980, 1230, 30, p.star, p.starGlow);
   drawStar(ctx, 900, 1730, 54, p.star, p.starGlow);
 
-  drawStoryHeader(ctx, p, assets.logo, `${content.yearLabel} LEADERBOARD`);
+  drawStoryHeader(ctx, p, assets.logo, `${content.yearLabel} ${content.cohort === 'board' ? 'BOARD' : 'LEADERBOARD'}`);
   drawEyebrow(ctx, p, content.preset.headline[0].toUpperCase(), 446);
   drawSerifHeadline(ctx, p, content.preset.headline[1], 600, 176, 110);
   drawChampion(ctx, p, first, avatarFor(first));

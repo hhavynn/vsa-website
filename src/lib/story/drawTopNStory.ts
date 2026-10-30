@@ -18,6 +18,7 @@ export interface TopNStoryContent {
   asOfLabel: string;
   handle: string;
   theme: StoryTheme;
+  cohort?: 'members' | 'board';
 }
 
 export interface StoryRowBounds {
@@ -155,6 +156,7 @@ function row(
 
 export function drawTopNStory(ctx: CanvasRenderingContext2D, content: TopNStoryContent, assets: Top3StoryAssets) {
   const { limit, theme, entries } = content;
+  const board = content.cohort === 'board';
   // A tie inside Top 3 uses the ranked-list template so every member of
   // the shared rank is shown. The podium remains for no-tie Top 3.
   const p = STORY_PALETTES[theme];
@@ -169,9 +171,11 @@ export function drawTopNStory(ctx: CanvasRenderingContext2D, content: TopNStoryC
   drawStar(ctx, 930, 1760, 50, p.star, p.starGlow);
 
   // No header or footer text enters Instagram's 250px reserved bands.
-  drawStoryHeader(ctx, p, assets.logo, `${content.yearLabel} LEADERBOARD`);
+  drawStoryHeader(ctx, p, assets.logo, `${content.yearLabel} ${board ? 'BOARD' : 'LEADERBOARD'}`);
   const current = content.preset.id === 'current';
-  drawEyebrow(ctx, p, current ? 'PUBLIC MEMBER LEADERBOARD' : `PUBLIC LEADERBOARD · TOP ${limit}`, 432, 22);
+  drawEyebrow(ctx, p, current
+    ? (board ? 'VERIFIED BOARD LEADERBOARD' : 'PUBLIC MEMBER LEADERBOARD')
+    : `${board ? 'BOARD' : 'PUBLIC'} LEADERBOARD · TOP ${limit}`, 432, 22);
   drawSerifHeadline(
     ctx, p,
     current ? `Top ${limit}` : content.preset.headline.join(' '),
