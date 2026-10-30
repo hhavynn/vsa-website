@@ -18,8 +18,8 @@ export interface ParsedCsvTable {
   unterminatedQuoteLine: number | null;
 }
 
-/** Splits CSV text into records of raw cells. Handles CRLF, LF and lone CR. */
-export function parseCsvRecords(raw: string): { records: string[][]; unterminatedQuote: boolean; unterminatedQuoteLine: number | null } {
+/** Splits CSV (or, with `delimiter: '\t'`, TSV) text into records of raw cells. Handles CRLF, LF and lone CR. */
+export function parseCsvRecords(raw: string, delimiter = ','): { records: string[][]; unterminatedQuote: boolean; unterminatedQuoteLine: number | null } {
   const text = raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw;
   const records: string[][] = [];
   let record: string[] = [];
@@ -63,7 +63,7 @@ export function parseCsvRecords(raw: string): { records: string[][]; unterminate
       inQuotes = true;
       quoteLine = line;
       i += 1;
-    } else if (char === ',') {
+    } else if (char === delimiter) {
       endCell();
       i += 1;
     } else if (char === '\r' || char === '\n') {
