@@ -13,6 +13,9 @@ import { PaginationControls } from '../components/common/PaginationControls';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { useLeaderboardYears } from '../hooks/useLeaderboardYears';
 import { useIndividualLeaderboard, type IndividualLeaderboardMember as Member } from '../hooks/useIndividualLeaderboard';
+import { usePublishedLeaderboardRoles } from '../hooks/usePublishedLeaderboardRoles';
+import { rolesForSelectedYear, type PublicMemberRole } from '../lib/memberRoles';
+import { PublicMemberRoleBadges } from '../components/features/leaderboard/PublicMemberRoleBadges';
 import { leaderboardRepository } from '../data/repos/leaderboard';
 import { useMemberAvatars } from '../hooks/useMemberAvatars';
 import type { MemberAvatarMap } from '../lib/memberPhotos';
@@ -268,12 +271,16 @@ function PublicMemberProfileModal({
   avatarUrl,
   activeTab,
   selectedYear,
+  roles,
+  roleUnavailable,
   onClose,
 }: {
   member: LeaderboardEntry;
   avatarUrl: string | null;
   activeTab: 'points' | 'events';
   selectedYear: SelectedYear | null;
+  roles: PublicMemberRole[];
+  roleUnavailable: boolean;
   onClose: () => void;
 }) {
   const displayName = getMemberDisplayName(member);
@@ -355,7 +362,10 @@ function PublicMemberProfileModal({
                     {houseBadge.display_name}
                   </span>
                 )}
+                <PublicMemberRoleBadges roles={roles} />
               </div>
+              {roleUnavailable && <p className="mt-2 text-xs text-[var(--text3)]">Verified role information is temporarily unavailable.</p>}
+              {selectedYear === 'all' && <p className="mt-2 text-xs text-[var(--text3)]">Choose an academic year to see roles for that year.</p>}
             </div>
           </div>
           <button
@@ -600,6 +610,17 @@ export function Leaderboard() {
   // Skip the podium when a tie spills past 3rd place: there's no fair way to
   // pick which tied members get the last podium spots.
   const showPodium = top3.length >= 3 && top3.every((entry) => isWithinTop(entry, 3));
+
+  // One bounded role read for the actual page, any visible podium members and
+  // the opened profile. This never joins on display name or changes rankings.
+  const visibleRoleIds = Array.from(new Set([
+    ...paginatedData.map((entry) => entry.id),
+    ...(showPodium ? top3.map((entry) => entry.id) : []),
+    ...(selectedMember ? [selectedMember.id] : []),
+  ]));
+  const { data: publishedRoles, isError: rolesUnavailable } = usePublishedLeaderboardRoles(selectedYear, visibleRoleIds);
+  const rolesById = publishedRoles ?? new Map<string, PublicMemberRole[]>();
+  const getRoles = (memberId: string) => rolesForSelectedYear(rolesById, memberId, selectedYear);
   const waitingForInitialYear = selectedYear === null && !defaultYearReady;
 
   if ((waitingForInitialYear || loading) && selectedYear === null) return <LeaderboardSkeleton />;
@@ -730,6 +751,8 @@ export function Leaderboard() {
               top3={top3}
               activeTab={activeTab}
               memberAvatars={memberAvatars}
+              rolesById={rolesById}
+              selectedYear={selectedYear}
               onSelectMember={setSelectedMember}
             />
           )}
@@ -740,6 +763,9 @@ export function Leaderboard() {
                 <h2 className="font-serif text-2xl font-bold">Full Standings</h2>
               </div>
 
+              {rolesUnavailable && typeof selectedYear === 'number' && (
+                <p role="status" className="mb-3 font-sans text-xs text-[var(--text3)]">Member roles are temporarily unavailable. Individual points and rankings are unaffected.</p>
+              )}
               <div className="mb-6 relative">
                 <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text3)]" />
                 <Input
@@ -820,6 +846,7 @@ export function Leaderboard() {
                           <div className="truncate font-sans text-[11px]" style={{ color: 'var(--text3)' }}>
                             {[entry.year, entry.college].filter(Boolean).join(' • ') || 'VSA Member'}
                           </div>
+                          <PublicMemberRoleBadges roles={getRoles(entry.id)} compact className="mt-1.5" />
                           {/* On phones the gap caption lives under the name so it can
                               wrap instead of squeezing the name/score columns. */}
                           <div className="sm:hidden">
@@ -922,6 +949,8 @@ export function Leaderboard() {
           avatarUrl={memberAvatars.get(selectedMember.id) ?? null}
           activeTab={activeTab}
           selectedYear={selectedYear}
+          roles={getRoles(selectedMember.id)}
+          roleUnavailable={rolesUnavailable}
           onClose={() => setSelectedMember(null)}
         />
       )}
