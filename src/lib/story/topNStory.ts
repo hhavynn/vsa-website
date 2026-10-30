@@ -6,6 +6,16 @@ import type { MemberAvatarMap } from '../memberPhotos';
 import type { StoryTheme } from './storyCanvas';
 import { formatStoryName, formatStoryPoints, toStoryHouse, type Top3SourceMember, type Top3StoryEntry, type Top3StoryPreset } from './top3Story';
 
+/** The same canonical year-linked Board cohort used on /leaderboard.
+ * Never infer from name, rank or an Intern-only record. */
+export function selectPublishedStoryCohort<T extends { id: string }>(
+  members: readonly T[],
+  boardIds: ReadonlySet<string>,
+  cohort: 'members' | 'board',
+): T[] {
+  return members.filter((member) => boardIds.has(member.id) === (cohort === 'board'));
+}
+
 export type StoryLimit = 3 | 5 | 10;
 export const STORY_LIMITS: readonly StoryLimit[] = [3, 5, 10];
 
