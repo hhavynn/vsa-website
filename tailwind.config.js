@@ -68,6 +68,8 @@ module.exports = {
             dim:     '#dcdcea',
             rim:     '#e5e4ec',
             key:     '#d1cfdb',
+            // Printed labels on the body (DISP, MENU, wheel arrows).
+            ink:     '#8e8fa6',
           },
           screen:  '#1d2235',
           shutter: '#e2475a',

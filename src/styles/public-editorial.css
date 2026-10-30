@@ -589,6 +589,91 @@ html.dark .vsa-editorial-shell .scrapbook-sticker-gold {
   border-radius: 0;
 }
 
+/* ─── Point-and-shoot camera finishes (gallery/CameraFrame.tsx) ───────────
+   A pearl body with a faint lavender/pink sheen, a glossy black bezel, glass
+   glare on the screen, and brushed-metal controls. The camera is a physical
+   object, so it keeps these finishes in dark mode. */
+.vsa-camera-body {
+  background:
+    radial-gradient(120% 70% at 15% 0%, rgba(255, 255, 255, 0.95), transparent 55%),
+    radial-gradient(90% 80% at 100% 100%, rgba(240, 204, 217, 0.45), transparent 60%),
+    linear-gradient(150deg, #ffffff 0%, #f2f1f9 38%, #e5e7f6 72%, #ece4f3 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -5px 10px rgba(78, 86, 150, 0.14),
+    inset -4px 0 8px rgba(78, 86, 150, 0.08),
+    0 1px 0 rgba(255, 255, 255, 0.6),
+    0 10px 20px rgba(28, 30, 90, 0.16),
+    0 34px 70px -12px rgba(28, 30, 90, 0.42);
+}
+
+html.dark .vsa-camera-body {
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -5px 10px rgba(78, 86, 150, 0.18),
+    0 10px 20px rgba(0, 0, 0, 0.3),
+    0 34px 70px -12px rgba(0, 0, 0, 0.6);
+}
+
+.vsa-camera-bezel {
+  background: linear-gradient(160deg, #2c3148 0%, #161a2a 55%, #0f1220 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.35),
+    0 1px 0 rgba(255, 255, 255, 0.9),
+    0 -1px 0 rgba(78, 86, 150, 0.18);
+}
+
+/* Glass: a diagonal reflection across the upper screen. */
+.vsa-camera-glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 34%, transparent 34.5%);
+  pointer-events: none;
+}
+
+.vsa-camera-button {
+  background: radial-gradient(circle at 35% 28%, #ffffff 0%, #ebebf3 45%, #cfd0dd 100%);
+  box-shadow:
+    inset 0 -1px 2px rgba(40, 44, 90, 0.18),
+    0 1px 1.5px rgba(40, 44, 90, 0.28),
+    0 0 0 0.5px rgba(40, 44, 90, 0.12);
+}
+
+.vsa-camera-wheel {
+  background:
+    radial-gradient(circle, transparent 62%, rgba(40, 44, 90, 0.1) 63%, transparent 66%),
+    conic-gradient(from 210deg, #d7d8e4, #fafafe, #c8c9d7, #f4f4fa, #cfd0dd, #fafafe, #d7d8e4);
+  box-shadow:
+    inset 0 1px 2px rgba(40, 44, 90, 0.2),
+    0 1px 0 rgba(255, 255, 255, 0.95),
+    0 0 0 1px rgba(40, 44, 90, 0.1);
+}
+
+.vsa-camera-rec {
+  background: radial-gradient(circle at 38% 32%, #ff8b96 0%, #e2475a 48%, #a8192e 100%);
+  box-shadow:
+    0 0 0 2px #e9e9f1,
+    0 0 0 2.5px rgba(40, 44, 90, 0.18),
+    0 1px 2px 2px rgba(40, 44, 90, 0.18);
+}
+
+/* Speaker grille: a short field of punched holes. */
+.vsa-camera-grille {
+  background-image: radial-gradient(circle, rgba(60, 64, 110, 0.38) 0.9px, transparent 1.3px);
+  background-size: 4px 4px;
+}
+
+/* The shutter: a polished button set in a slightly darker zoom collar. */
+.vsa-camera-shutter {
+  background:
+    radial-gradient(60% 120% at 50% 100%, #fbfbff 0 38%, transparent 40%),
+    linear-gradient(180deg, #e4e4ee 0%, #c9cad8 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 -1px 2px rgba(40, 44, 90, 0.12);
+}
+
 /* ─── Gallery album wall: a camera roll of photo objects ─────────────────
    Gallery.tsx deals each album one of three objects in a fixed rhythm —
    Polaroid, stacked print, point-and-shoot camera — tilted by the wall's
@@ -666,26 +751,54 @@ html.dark .vsa-editorial-shell .gallery-memory-card--print {
 
 /* Camera: light plastic body, dark-bezelled screen, button rail. */
 html .vsa-editorial-shell .gallery-memory-card--camera {
-  padding: 12px 52px 16px 12px;
-  border-radius: 22px;
-  background: #f4f3f8;
-  box-shadow: 0 24px 60px rgba(20, 24, 80, 0.28), inset 0 -3px 0 rgba(40, 53, 77, 0.08);
+  padding: 16px 58px 16px 16px;
+  border-radius: 26px;
+  background:
+    radial-gradient(120% 70% at 15% 0%, rgba(255, 255, 255, 0.95), transparent 55%),
+    radial-gradient(90% 80% at 100% 100%, rgba(240, 204, 217, 0.45), transparent 60%),
+    linear-gradient(150deg, #ffffff 0%, #f2f1f9 38%, #e5e7f6 72%, #ece4f3 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -5px 10px rgba(78, 86, 150, 0.14),
+    0 10px 20px rgba(28, 30, 90, 0.14),
+    0 30px 60px -12px rgba(28, 30, 90, 0.38);
 }
 
+/* The photo sits in a glossy black bezel with glass glare. */
 .vsa-editorial-shell .gallery-memory-card--camera .gallery-memory-image {
-  border-radius: 8px;
-  box-shadow: 0 0 0 4px #1d2235;
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 6px #171b2b,
+    0 0 0 7px rgba(255, 255, 255, 0.12),
+    0 1px 0 7px rgba(255, 255, 255, 0.9);
 }
 
+.vsa-editorial-shell .gallery-memory-card--camera .gallery-memory-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 34%, transparent 34.5%);
+  pointer-events: none;
+}
+
+.vsa-editorial-shell .gallery-memory-card--camera .gallery-memory-caption {
+  padding-top: 18px;
+}
+
+/* Shutter in its zoom collar on the top plate. */
 .vsa-editorial-shell .gallery-memory-card--camera::before {
   display: block;
-  top: -8px;
+  top: -10px;
   left: auto;
-  right: 18%;
-  width: 56px;
-  height: 10px;
-  border-radius: 5px 5px 0 0;
-  background: #e5e4ec;
+  right: 16%;
+  width: 64px;
+  height: 12px;
+  border-radius: 999px 999px 0 0;
+  background:
+    radial-gradient(60% 120% at 50% 100%, #fbfbff 0 38%, transparent 40%),
+    linear-gradient(180deg, #e4e4ee 0%, #c9cad8 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 -1px 2px rgba(40, 44, 90, 0.12);
   transform: none;
 }
 
