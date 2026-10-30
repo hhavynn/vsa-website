@@ -83,10 +83,10 @@ it('distinguishes missing member, missing published assignment and service failu
   // Remount with another year: no stale House result should transfer.
   view.unmount();
   search.mockResolvedValueOnce([member('m2','Bea Example')]);
-  const nextView = mount(2025);
+  const utils = mount(2025);
   searchFor('Bea Example');
   fireEvent.click(await screen.findByRole('button', { name: /Bea Example/ }));
   expect(await screen.findByRole('alert')).toHaveTextContent(/could not be verified/i);
   expect(badge).toHaveBeenLastCalledWith('m2', 2025);
-  nextView.unmount();
+  utils.unmount();
 });
