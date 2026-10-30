@@ -5,6 +5,9 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
+import { MemberLinkPicker } from '../../components/features/admin/MemberLinkPicker';
+import { memberLookupRepository } from '../../data/repos/memberLookup';
+import type { MemberOption } from '../../lib/memberLinkMatching';
 import { useCabinetYears } from '../../hooks/useCabinetYears';
 import { getCurrentCabinetYear } from '../../lib/cabinetYears';
 import { CabinetYear } from '../../types';
@@ -185,6 +188,21 @@ export default function AdminCabinet() {
   const [previewTarget, setPreviewTarget] = useState<'create' | 'edit' | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedMemberBaseline, setSelectedMemberBaseline] = useState<CabinetMember | null>(null);
+  const [resolvedLinkedMember, setResolvedLinkedMember] = useState<MemberOption | null>(null);
+  const [memberLinkReadError, setMemberLinkReadError] = useState(false);
+
+  // Resolve only the selected Cabinet row's explicit canonical member ID.
+  // No name-based badge assertion, member auto-link, or full member directory.
+  useEffect(() => {
+    let current = true;
+    setResolvedLinkedMember(null);
+    setMemberLinkReadError(false);
+    if (!selectedMember?.member_id) return () => { current = false; };
+    memberLookupRepository.findMemberById(selectedMember.member_id)
+      .then((option) => { if (current) setResolvedLinkedMember(option); })
+      .catch(() => { if (current) setMemberLinkReadError(true); });
+    return () => { current = false; };
+  }, [selectedMember?.member_id]);
 
   // Once cabinet years load, default to the active/most-recent year
   useEffect(() => {
@@ -251,6 +269,9 @@ export default function AdminCabinet() {
       (!m.cabinet_year_id && selectedAdminYearId === currentCabinetYear?.id)
     );
   }, [members, selectedAdminYearId, currentCabinetYear?.id]);
+
+  const linkedMemberCount = filteredMembers.filter((member) => !!member.member_id).length;
+  const unlinkedMemberCount = filteredMembers.length - linkedMemberCount;
 
   // When saving, fall back to the currently selected admin year if no year was explicitly chosen
   const resolveCabinetYearId = (cabinetYearId?: string | null) =>
@@ -434,7 +455,9 @@ export default function AdminCabinet() {
       const previousName = members.find((member) => member.id === selectedMember.id)?.name;
       const { error } = await supabase.from('cabinet_members').update({
         name: selectedMember.name,
-        ...(isRenamed(previousName, selectedMember.name) ? { member_id: null } : {}),
+        // A reviewed canonical link is saved only by explicit selection, and
+        // a rename always clears the previous person's link for re-review.
+        member_id: isRenamed(previousName, selectedMember.name) ? null : selectedMember.member_id,
         role: selectedMember.role,
         category: selectedMember.category,
         display_order: selectedMember.display_order,
@@ -619,6 +642,30 @@ export default function AdminCabinet() {
                 <label className={labelCls}>Fun Fact</label>
                 <textarea value={newMember.fun_fact || ''} onChange={e => setNewMember({...newMember, fun_fact: e.target.value})} className={inputCls} rows={2} />
               </div>
+              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-4" aria-label="Link Cabinet entry to VSA member">
+                <p className={labelCls}>Leaderboard role identity</p>
+                <p className="mb-3 font-sans text-xs leading-relaxed text-[var(--color-text2)]">
+                  Only a verified member ID will show this published Cabinet role on that person's leaderboard profile for the selected academic year. Select the right person explicitly; same names can belong to different members.
+                </p>
+                {memberLinkReadError && <p role="status" className="mb-2 font-sans text-xs text-amber-700 dark:text-amber-400">Could not verify the existing member link. You can review or change it manually.</p>}
+                <MemberLinkPicker
+                  linkedMemberId={selectedMember.member_id}
+                  linkedMember={resolvedLinkedMember}
+                  onLink={(member) => {
+                    setSelectedMember((previous) => previous ? { ...previous, member_id: member.id } : null);
+                    setResolvedLinkedMember(member);
+                  }}
+                  onUnlink={() => {
+                    setSelectedMember((previous) => previous ? { ...previous, member_id: null } : null);
+                    setResolvedLinkedMember(null);
+                  }}
+                  busy={uploading}
+                  disabledReason={isRenamed(selectedMemberBaseline?.name, selectedMember.name)
+                    ? 'Save the renamed Cabinet entry before linking it to another person.'
+                    : null}
+                />
+                <p className="mt-2 font-sans text-xs text-[var(--color-text3)]">This member link is saved with Save Changes. Unlinked or yearless Cabinet rows do not earn a role badge.</p>
+              </div>
               <div>
                 <label className={labelCls}>Profile Photo</label>
                 <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
@@ -654,9 +701,14 @@ export default function AdminCabinet() {
                 </button>
               )}
             </div>
-            <p className="-mt-3 mb-6 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+            <p className="-mt-3 mb-3 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
               Showing members for {selectedAdminYear?.label ?? 'the selected cabinet year'}. Use the Cabinet Year selector above before adding or moving members.
             </p>
+            {!loading && filteredMembers.length > 0 && (
+              <p role="status" className="mb-6 font-sans text-xs text-[var(--color-text2)]">
+                Published Cabinet identity review: {linkedMemberCount} linked, {unlinkedMemberCount} need a VSA member link. Unlinked entries cannot display verified leaderboard role badges.
+              </p>
+            )}
             {loading ? (
               <p className="py-8 text-center text-sm" style={{ color: 'var(--color-text3)' }}>Loading...</p>
             ) : filteredMembers.length === 0 && !loading ? (
@@ -695,6 +747,9 @@ export default function AdminCabinet() {
                             <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>
                               {getCabinetYearLabel(m.cabinet_year_id)}
                             </p>
+                            <span className={m.member_id ? 'mt-1 inline-block text-[11px] text-brand-600 dark:text-brand-400' : 'mt-1 inline-block text-[11px] text-amber-700 dark:text-amber-400'}>
+                              {m.member_id ? 'Linked to VSA member' : 'Needs member link'}
+                            </span>
                           </div>
                         </div>
                         <div className="flex shrink-0 gap-2 pl-11 sm:pl-0">
