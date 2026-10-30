@@ -21,7 +21,7 @@ export const NavLogo = memo(function NavLogo() {
       >
         <img
           src={getSupabaseImageUrl(logoSrc, { width: 96, height: 96, resize: 'contain', quality: 80 })}
-          alt={settings.logoAlt || 'VSA logo'}
+          alt=""
           className="h-10 w-10 object-contain"
           decoding="async"
         />
@@ -40,7 +40,7 @@ export const NavLogo = memo(function NavLogo() {
     >
       <img
         src={getSupabaseImageUrl(logoSrc, { width: 96, height: 96, resize: 'cover', quality: 78 })}
-        alt={settings.logoAlt || 'VSA logo'}
+        alt=""
         className="h-9 w-9 rotate-[-2deg] rounded-lg border object-cover shadow-[0_2px_8px_rgba(20,32,40,0.12)]"
         style={{ borderColor: 'var(--border2)', background: 'var(--surface)' }}
         decoding="async"

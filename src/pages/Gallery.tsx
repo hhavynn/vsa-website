@@ -17,7 +17,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { AlbumFallback, AlbumLightbox } from '../components/features/gallery/AlbumLightbox';
 import { GalleryFilters } from '../components/features/gallery/GalleryFilters';
 import { GalleryLoadMore } from '../components/features/gallery/GalleryLoadMore';
-import { GalleryHeroContactSheet, hasContactSheetCovers } from '../components/features/gallery/GalleryHeroContactSheet';
+import { GalleryHeroContactSheet, GalleryHeroContactSheetPlaceholder, hasContactSheetCovers } from '../components/features/gallery/GalleryHeroContactSheet';
 import { CameraRail, cameraDateStamp } from '../components/features/gallery/CameraFrame';
 
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
@@ -198,7 +198,11 @@ export default function Gallery() {
               ? 'Showing memory wall matches from GBMs, retreats, cultural programs, and VSA traditions.'
               : `${totalCount} albums from GBMs, retreats, cultural programs, and VSA traditions.`}
           </p>
-          {showContactSheet && <GalleryHeroContactSheet albums={albums} />}
+          {showContactSheet ? (
+            <GalleryHeroContactSheet albums={albums} />
+          ) : (
+            !isFiltered && isInitialLoading && <GalleryHeroContactSheetPlaceholder />
+          )}
         </div>
       </div>
 

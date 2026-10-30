@@ -55,7 +55,7 @@ describe('ProgramPhotoStack', () => {
         ]}
       />,
     );
-    const link = screen.getByRole('link', { name: 'Fictional Culture Night photo album (opens Google Photos)' });
+    const link = screen.getByRole('link', { name: 'Fictional Culture Night 2026 photo album (opens Google Photos)' });
     expect(link).toHaveAttribute('href', 'https://photos.app.goo.gl/fictional');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     expect(within(link).getByAltText('')).toHaveAttribute('src', '/images/gallery/fictional_thumb.webp');
@@ -110,7 +110,7 @@ describe('useProgramHeroMedia', () => {
     supabaseMock.setDefault('gallery_events', { data: [album({ title: "WNC '26" })], error: null });
     renderProbe();
     expect(
-      await screen.findByRole('link', { name: "WNC '26 photo album (opens Google Photos)" }),
+      await screen.findByRole('link', { name: "WNC '26 2026 photo album (opens Google Photos)" }),
     ).toBeInTheDocument();
   });
 });

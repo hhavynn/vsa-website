@@ -527,7 +527,7 @@ function CameraAlbum({ album, total }: { album: HomeAlbum; total: number }) {
           width={960}
           height={640}
           sizes="(min-width: 1024px) 50vw, 90vw"
-          alt={album.title}
+          alt=""
           className="aspect-[3/2] h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
         />
         <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-black/70 to-transparent px-3 pb-2.5 pt-8 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-white sm:px-4 sm:pb-3">
@@ -622,7 +622,7 @@ export function EditorialGallery() {
                         width={540}
                         height={360}
                         sizes="(min-width: 1024px) 20vw, 45vw"
-                        alt={album.title}
+                        alt=""
                         className="aspect-[3/2] w-full bg-figma-mist object-cover"
                       />
                       <span className="mt-2 flex items-baseline justify-between gap-2 font-mono text-[9px] font-semibold uppercase tracking-[0.08em] sm:text-[10px]">

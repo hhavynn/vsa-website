@@ -38,7 +38,7 @@ function AlbumPolaroid({ album, className }: { album: ProgramAlbum; className: s
       href={sanitizeHref(album.google_photos_url)}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label={`${album.title} photo album (opens Google Photos)`}
+      aria-label={`${album.title} ${albumYear(album.date)} photo album (opens Google Photos)`}
       className={cn(
         'home-editorial-polaroid group absolute block p-2 pb-9 transition-transform duration-300 ease-out hover:rotate-0 hover:scale-[1.02] focus-visible:rotate-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ed-ink motion-reduce:transition-none motion-reduce:hover:scale-100',
         className,
@@ -54,7 +54,7 @@ function AlbumPolaroid({ album, className }: { album: ProgramAlbum; className: s
         fallback={<div className="aspect-[4/3] w-full bg-figma-mist" />}
       />
       <span className="mt-2.5 flex items-baseline justify-between gap-3 font-mono text-[9px] font-semibold uppercase tracking-[0.1em]">
-        <span className="truncate">{album.title}</span>
+        <span className="truncate">{album.title}</span>{' '}
         <span className="shrink-0">
           {albumYear(album.date)} <span aria-hidden="true">↗</span>
         </span>
@@ -79,9 +79,9 @@ export function ProgramPhotoStack({
 }) {
   if (isLoading) {
     return (
-      // Desktop only: beside the title it holds the layout steady; on phones it
-      // would push the page down and then vanish if the program has no album.
-      <div aria-hidden="true" className="relative hidden aspect-[7/6] w-full lg:block">
+      // Holds the stack's box so the page below doesn't jump when the albums
+      // arrive. Only /vcn and /wild-n-culture use it, and both have albums.
+      <div aria-hidden="true" className="relative aspect-[7/6] w-full">
         <Skeleton className="absolute left-0 top-0 aspect-[4/3] w-[74%] -rotate-[2.5deg]" />
         <Skeleton className="absolute bottom-[8%] right-0 aspect-[4/3] w-[58%] rotate-[3deg]" />
       </div>

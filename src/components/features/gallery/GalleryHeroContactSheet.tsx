@@ -13,6 +13,21 @@ function contactSheetCovers(albums: GalleryAlbum[]) {
   return albums.filter((album) => album.cover_thumbnail_url || album.cover_image_url).slice(0, 3);
 }
 
+/**
+ * The phone camera's box while the albums load, so the page below doesn't drop
+ * ~180px when the covers arrive. Large screens position the sheet absolutely
+ * and need no placeholder.
+ */
+export function GalleryHeroContactSheetPlaceholder() {
+  return (
+    <div aria-hidden="true" className="ml-auto mt-6 max-w-[260px] rotate-[2deg] sm:max-w-[300px] lg:hidden">
+      <CameraFrame size="sm">
+        <div className="aspect-[3/2] w-full bg-figma-screen" />
+      </CameraFrame>
+    </div>
+  );
+}
+
 /** Whether the camera will render, so the hero text only narrows when it does. */
 export function hasContactSheetCovers(albums: GalleryAlbum[]): boolean {
   return contactSheetCovers(albums).length >= 1;
