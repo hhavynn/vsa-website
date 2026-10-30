@@ -476,6 +476,7 @@ export default function AdminMembers() {
         description={loading ? 'Loading members…' : loadError ? 'Could not load members' : `${members.length} total members`}
         actions={
           <>
+            <Link to="/admin/member-roles" className="inline-flex min-h-11 items-center rounded border border-border-strong bg-surface px-3 text-sm font-semibold text-text-primary hover:bg-surface2">Bulk role matching</Link>
             <Button onClick={() => setAddingMember(true)} disabled={loading || loadError}>Add Member</Button>
             <button
               onClick={() => {
