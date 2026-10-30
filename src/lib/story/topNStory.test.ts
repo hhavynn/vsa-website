@@ -4,6 +4,7 @@ import { topNRowBounds } from './drawTopNStory';
 import {
   buildTopNStoryEntries,
   formatTopNFileName,
+  selectPublishedStoryCohort,
   selectTopNMembers,
   shouldUseTopNList,
   storyPresetForLimit,
@@ -12,6 +13,28 @@ import { TOP3_STORY_PRESETS } from './top3Story';
 
 const member = (id: string, points: number, events = 1) => ({
   id, first_name: id, last_name: 'Fictional', points, events_attended: events,
+});
+
+describe('Story cohort parity with the year-scoped published leaderboard (#628)', () => {
+  const members = [member('officer', 90), member('intern', 80), member('dual', 70), member('general', 60)];
+  const boardIds = new Set(['officer', 'dual']);
+
+  it('does not include verified officers in Member Top N and keeps interns without Board titles in Members', () => {
+    const result = selectPublishedStoryCohort(members, boardIds, 'members');
+    expect(result.map((m) => m.id)).toEqual(['intern', 'general']);
+    expect(selectTopNMembers(result, 5).selected.map((m) => [m.id, m.rank]))
+      .toEqual([['intern', 1], ['general', 2]]);
+  });
+  it('resets Board Top N ranks within its verified category and leaves original points unchanged', () => {
+    const before = JSON.stringify(members);
+    const selected = selectTopNMembers(selectPublishedStoryCohort(members, boardIds, 'board'), 3);
+    expect(selected.selected.map((m) => [m.id, m.rank])).toEqual([['officer', 1], ['dual', 2]]);
+    expect(JSON.stringify(members)).toBe(before);
+  });
+  it('identifies Board story in file name without changing legacy Members Top N names', () => {
+    expect(formatTopNFileName(2026, 10, 'current', 'dark', 'board')).toBe('vsa-board-leaderboard-top10-2026-27-current-dark.png');
+    expect(formatTopNFileName(2026, 10, 'current', 'dark')).toBe('vsa-public-leaderboard-top10-2026-27-current-dark.png');
+  });
 });
 
 describe('Top N member story from the published comparator (#629)', () => {
