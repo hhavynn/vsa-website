@@ -2774,10 +2774,10 @@ export type Database = {
           id: string;
           internal_notes: string | null;
           member_id: string | null;
-          mentor_cabinet_member_id: string | null;
           name: string;
           published_cabinet_member_id: string | null;
           role_or_track: string | null;
+          shadow_positions: string[];
           updated_at: string;
         };
         Insert: {
@@ -2788,10 +2788,10 @@ export type Database = {
           id?: string;
           internal_notes?: string | null;
           member_id?: string | null;
-          mentor_cabinet_member_id?: string | null;
           name: string;
           published_cabinet_member_id?: string | null;
           role_or_track?: string | null;
+          shadow_positions?: string[];
           updated_at?: string;
         };
         Update: {
@@ -2802,10 +2802,10 @@ export type Database = {
           id?: string;
           internal_notes?: string | null;
           member_id?: string | null;
-          mentor_cabinet_member_id?: string | null;
           name?: string;
           published_cabinet_member_id?: string | null;
           role_or_track?: string | null;
+          shadow_positions?: string[];
           updated_at?: string;
         };
         Relationships: [];

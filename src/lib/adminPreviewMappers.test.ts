@@ -6,7 +6,7 @@ const roster = (id: string, patch: Partial<CabinetRosterDraft>): CabinetRosterDr
   ({ id, cycle_id: 'c', role: 'Treasurer', category: 'Executive Board', display_order: 0, name: null, member_id: null, year: null, college: null, major: null, pronouns: null, favorite_snack: null, fun_fact: null, created_at: '', updated_at: '', ...patch }) as CabinetRosterDraft;
 
 const intern = (id: string, patch: Partial<InternCohortDraft>): InternCohortDraft =>
-  ({ id, cycle_id: 'c', name: id, member_id: null, mentor_cabinet_member_id: 'mentor-secret', role_or_track: null, caption: 'private bio', internal_notes: 'private note', display_order: 0, published_cabinet_member_id: null, created_at: '', updated_at: '', ...patch }) as InternCohortDraft;
+  ({ id, cycle_id: 'c', name: id, member_id: null, shadow_positions: ['shadow-secret'], role_or_track: null, caption: 'private bio', internal_notes: 'private note', display_order: 0, published_cabinet_member_id: null, created_at: '', updated_at: '', ...patch }) as InternCohortDraft;
 
 describe('rosterDraftsToPreviewMembers', () => {
   it('previews only filled positions, as the public board would show them', () => {
@@ -29,10 +29,10 @@ describe('rosterDraftsToPreviewMembers', () => {
 });
 
 describe('internDraftsToPreviewMembers', () => {
-  it('uses the Interns board and the default role, exposing no mentor, caption, or notes', () => {
+  it('uses the Interns board and the default role, exposing no shadow positions, caption, or notes', () => {
     const [member] = internDraftsToPreviewMembers([intern('Sam', {})], 'cy1');
     expect(member).toMatchObject({ name: 'Sam', role: 'Intern', category: 'Interns' });
-    expect(JSON.stringify(member)).not.toContain('mentor-secret');
+    expect(JSON.stringify(member)).not.toContain('shadow-secret');
     expect(JSON.stringify(member)).not.toContain('private');
   });
 
