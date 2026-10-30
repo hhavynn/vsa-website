@@ -21,6 +21,29 @@ export interface PublishResult {
   alreadyPublished: boolean;
 }
 
+export interface AceEligibilityPolicyInput {
+  littleMin: number;
+  bigMin: number;
+  eventIds: readonly string[];
+}
+
+export interface SavedEligibilityPolicy {
+  cycleId: string;
+  eventCount: number;
+  added: number;
+  removed: number;
+}
+
+export const ACE_ELIGIBILITY_UNAVAILABLE =
+  'The ACE eligibility check is not available yet. Ask a site administrator to apply database migration 20261030120000.';
+
+/** Missing table, column or function: the eligibility migration is not applied yet. */
+function missingEligibilitySchema(code: string | undefined) {
+  return code === 'PGRST202' || code === 'PGRST205' || code === '42883' || code === '42P01' || code === '42703';
+}
+
+const isMinimum = (value: number) => Number.isInteger(value) && value >= 1 && value <= 20;
+
 export type AceAssignmentDraftPatch = Partial<
   Pick<AceAssignmentDraft, 'little_name' | 'little_member_id' | 'big_ace_member_id' | 'notes' | 'display_order'>
 >;
@@ -122,6 +145,57 @@ export class AceAssignmentsRepository {
       }
       return roster;
     }, 'Failed to load complete published ACE participation roster');
+  }
+
+  /** The cycle's saved qualifying events (at most 100). */
+  async listEligibilityEventIds(cycleId: string): Promise<string[]> {
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase
+        .from('ace_assignment_cycle_events')
+        .select('event_id')
+        .eq('cycle_id', cycleId)
+        .order('event_id', { ascending: true });
+      if (error) {
+        if (missingEligibilitySchema(error.code)) throw new ValidationError(ACE_ELIGIBILITY_UNAVAILABLE);
+        throw error;
+      }
+      return ((data ?? []) as Array<{ event_id: string }>).map((row) => row.event_id);
+    }, 'Failed to load the eligibility policy');
+  }
+
+  /**
+   * Saves both minimums and the qualifying event set in one transaction. The
+   * database refuses it once the cycle has left draft, and refuses any event
+   * that is not completed, dated, published and in the cycle's year.
+   */
+  async saveEligibilityPolicy(cycleId: string, policy: AceEligibilityPolicyInput): Promise<SavedEligibilityPolicy> {
+    if (!isMinimum(policy.littleMin) || !isMinimum(policy.bigMin)) {
+      throw new ValidationError('Minimums must be whole numbers from 1 to 20', 'minimum');
+    }
+    const eventIds = Array.from(new Set(policy.eventIds)).sort();
+    if (eventIds.length > 100) throw new ValidationError('Choose at most 100 qualifying events', 'events');
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase.rpc('save_ace_eligibility_policy', {
+        p_cycle_id: cycleId,
+        p_little_min_events: policy.littleMin,
+        p_big_min_events: policy.bigMin,
+        p_event_ids: eventIds,
+      });
+      if (error) {
+        if (missingEligibilitySchema(error.code)) throw new ValidationError(ACE_ELIGIBILITY_UNAVAILABLE);
+        throw error;
+      }
+      const row = (data ?? {}) as Record<string, unknown>;
+      if (row.cycle_id !== cycleId || typeof row.event_count !== 'number') {
+        throw new ValidationError('Saving the eligibility policy returned an unexpected response');
+      }
+      return {
+        cycleId,
+        eventCount: row.event_count,
+        added: typeof row.added === 'number' ? row.added : 0,
+        removed: typeof row.removed === 'number' ? row.removed : 0,
+      };
+    }, 'Failed to save the eligibility policy');
   }
 
   async listDrafts(cycleId: string): Promise<AceAssignmentDraft[]> {

@@ -260,11 +260,13 @@
     {
       "path": "src/data/repos/aceAssignments.ts",
       "tables": [
+        "ace_assignment_cycle_events",
         "ace_assignment_cycles",
         "ace_assignment_drafts"
       ],
       "rpcs": [
-        "publish_ace_assignment_cycle"
+        "publish_ace_assignment_cycle",
+        "save_ace_eligibility_policy"
       ]
     },
     {

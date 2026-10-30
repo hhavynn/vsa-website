@@ -68,3 +68,23 @@ describe('ACE read-only selected-event verified attendance (#649)',()=>{
     expect(supabaseMock.queriesFor('member_event_attendance')).toHaveLength(0);
   });
 });
+
+describe('ACE saved-policy attendance read (pre-sort eligibility)',()=>{
+  it('chunks more than 50 qualifying events so no request grows unbounded',async()=>{
+    const events=Array.from({length:51},(_,i)=>'e'+String(i).padStart(2,'0'));
+    supabaseMock.queueResult('member_event_attendance',{data:[{member_id:'m1',event_id:'e00'}],error:null});
+    supabaseMock.queueResult('member_event_attendance',{data:[{member_id:'m1',event_id:'e50'}],error:null});
+    const got=await attendanceReadinessRepository.getPolicyEventAttendance(['m1'],events);
+    expect(got.get('m1')).toEqual(new Set(['e00','e50']));
+    const eventFilters=supabaseMock.queriesFor('member_event_attendance')
+      .map(q=>q.calls.find(c=>c.method==='in'&&c.args[0]==='event_id')?.args[1] as string[]);
+    expect(eventFilters.map(ids=>ids.length)).toEqual([50,1]);
+  });
+  it('refuses zero or more than 100 events, and rows outside the requested scope',async()=>{
+    await expect(attendanceReadinessRepository.getPolicyEventAttendance(['m1'],[])).rejects.toThrow();
+    await expect(attendanceReadinessRepository.getPolicyEventAttendance(['m1'],Array.from({length:101},(_,i)=>String(i)))).rejects.toThrow();
+    expect(supabaseMock.queriesFor('member_event_attendance')).toHaveLength(0);
+    supabaseMock.queueResult('member_event_attendance',{data:[{member_id:'m-other',event_id:'e1'}],error:null});
+    await expect(attendanceReadinessRepository.getPolicyEventAttendance(['m1'],['e1'])).rejects.toThrow();
+  });
+});

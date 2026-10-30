@@ -148,31 +148,70 @@ export type Database = {
         };
         Relationships: [];
       };
+      ace_assignment_cycle_events: {
+        Row: {
+          created_at: string;
+          cycle_id: string;
+          event_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          cycle_id: string;
+          event_id: string;
+        };
+        Update: {
+          created_at?: string;
+          cycle_id?: string;
+          event_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ace_assignment_cycle_events_cycle_id_fkey";
+            columns: ["cycle_id"];
+            isOneToOne: false;
+            referencedRelation: "ace_assignment_cycles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ace_assignment_cycle_events_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       ace_assignment_cycles: {
         Row: {
           academic_year_end: number;
           academic_year_start: number;
+          big_min_events: number | null;
           created_at: string;
           created_by: string | null;
           id: string;
+          little_min_events: number | null;
           status: string;
           updated_at: string;
         };
         Insert: {
           academic_year_end: number;
           academic_year_start: number;
+          big_min_events?: number | null;
           created_at?: string;
           created_by?: string | null;
           id?: string;
+          little_min_events?: number | null;
           status?: string;
           updated_at?: string;
         };
         Update: {
           academic_year_end?: number;
           academic_year_start?: number;
+          big_min_events?: number | null;
           created_at?: string;
           created_by?: string | null;
           id?: string;
+          little_min_events?: number | null;
           status?: string;
           updated_at?: string;
         };
@@ -4371,6 +4410,15 @@ export type Database = {
       };
       publish_ace_assignment_cycle: {
         Args: { p_cycle_id: string };
+        Returns: Json;
+      };
+      save_ace_eligibility_policy: {
+        Args: {
+          p_cycle_id: string;
+          p_little_min_events: number;
+          p_big_min_events: number;
+          p_event_ids: string[];
+        };
         Returns: Json;
       };
       set_ace_member_pickup_year: {

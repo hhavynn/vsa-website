@@ -1,5 +1,6 @@
--- Verifies migration 20261001213356_ace_assignment_workspace.sql against a
--- LOCAL or STAGING database. Never run it against production.
+-- Verifies migrations 20261001213356_ace_assignment_workspace.sql and
+-- 20261030120000_ace_assignment_eligibility_policy.sql against a LOCAL or
+-- STAGING database. Never run it against production.
 --
 --   psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f scripts/verify-ace-assignments.sql
 --
@@ -8,7 +9,10 @@
 --
 -- Checks: admin-only RLS, lifecycle guards (lock freezes drafts, only the
 -- publish function can publish), hard publish blockers, correct family_id +
--- parent_member_id on published Littles, and idempotent re-publish.
+-- parent_member_id on published Littles, and idempotent re-publish; plus the
+-- saved eligibility policy: admin-only RLS on the qualifying-event table and
+-- the save function, the 1–20 minimums, completed/dated/published same-year
+-- events only, and the policy freeze once the cycle leaves draft.
 
 begin;
 
@@ -31,6 +35,17 @@ insert into public.ace_families (id, name, slug) values
 insert into public.ace_family_members (id, family_id, name, role_label) values
   ('30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', 'April Pham', 'Little'),
   ('30000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000002', 'Emily Nguyen', 'Little');
+
+insert into public.academic_terms (id, code, label, academic_year_start, academic_year_end, quarter) values
+  ('60000000-0000-0000-0000-000000000001', 'VERIFY-FA26', 'Verify Fall 2026', 2026, 2027, 'fall'),
+  ('60000000-0000-0000-0000-000000000002', 'VERIFY-FA25', 'Verify Fall 2025', 2025, 2026, 'fall');
+
+insert into public.events (id, name, date, is_published, academic_term_id) values
+  ('70000000-0000-0000-0000-000000000001', 'Verify past GBM', now() - interval '20 days', true, '60000000-0000-0000-0000-000000000001'),
+  ('70000000-0000-0000-0000-000000000002', 'Verify past social', now() - interval '10 days', true, '60000000-0000-0000-0000-000000000001'),
+  ('70000000-0000-0000-0000-000000000003', 'Verify future GBM', now() + interval '10 days', true, '60000000-0000-0000-0000-000000000001'),
+  ('70000000-0000-0000-0000-000000000004', 'Verify unpublished past', now() - interval '5 days', false, '60000000-0000-0000-0000-000000000001'),
+  ('70000000-0000-0000-0000-000000000005', 'Verify last year GBM', now() - interval '400 days', true, '60000000-0000-0000-0000-000000000002');
 
 -- One call per check, impersonating a role; errors are captured, not raised.
 create function pg_temp.try_as(p_sub text, p_role text, p_sql text)
@@ -88,6 +103,92 @@ select pg_temp.check_true('admin can add drafts',
       ('50000000-0000-0000-0000-000000000003', '40000000-0000-0000-0000-000000000001', 'No Record Person', null, null, 2)
   $q$) = 'ok');
 
+
+-- Eligibility policy (draft) ----------------------------------------------
+select pg_temp.check_true('a new cycle has no saved minimums',
+  (select little_min_events is null and big_min_events is null
+   from public.ace_assignment_cycles where id = '40000000-0000-0000-0000-000000000001'));
+select pg_temp.check_true('anon cannot read qualifying events',
+  pg_temp.try_as('', 'anon', 'select * from public.ace_assignment_cycle_events') like 'permission denied%');
+select pg_temp.check_true('anon cannot call the policy save',
+  pg_temp.try_as('', 'anon',
+    $q$select public.save_ace_eligibility_policy('40000000-0000-0000-0000-000000000001', 4, 3,
+       array['70000000-0000-0000-0000-000000000001']::uuid[])$q$) like 'permission denied%');
+select pg_temp.check_true('anon has no EXECUTE on the policy save',
+  not has_function_privilege('anon', 'public.save_ace_eligibility_policy(uuid,integer,integer,uuid[])', 'EXECUTE'));
+select pg_temp.check_true('non-admin cannot save a policy',
+  pg_temp.try_as('00000000-0000-0000-0000-0000000000b2', 'authenticated',
+    $q$select public.save_ace_eligibility_policy('40000000-0000-0000-0000-000000000001', 4, 3,
+       array['70000000-0000-0000-0000-000000000001']::uuid[])$q$) like '%Admin access required%');
+select pg_temp.check_true('non-admin cannot add a qualifying event directly',
+  pg_temp.try_as('00000000-0000-0000-0000-0000000000b2', 'authenticated',
+    $q$insert into public.ace_assignment_cycle_events (cycle_id, event_id)
+       values ('40000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000001')$q$)
+    like '%row-level security%');
+
+select pg_temp.check_true('admin saves 4/3 with two qualifying events',
+  pg_temp.try_as('00000000-0000-0000-0000-0000000000a1', 'authenticated',
+    $q$select public.save_ace_eligibility_policy('40000000-0000-0000-0000-000000000001', 4, 3,
+       array['70000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000002']::uuid[])$q$) = 'ok');
+select pg_temp.check_true('the saved minimums and events are stored on the cycle',
+  (select little_min_events = 4 and big_min_events = 3
+   from public.ace_assignment_cycles where id = '40000000-0000-0000-0000-000000000001')
+  and (select count(*) from public.ace_assignment_cycle_events
+       where cycle_id = '40000000-0000-0000-0000-000000000001') = 2);
+select pg_temp.try_as('00000000-0000-0000-0000-0000000000b2', 'authenticated',
+  'create temp table seen_events as select * from public.ace_assignment_cycle_events');
+select pg_temp.check_true('non-admin cannot read qualifying events',
+  (select count(*) from pg_temp.seen_events) = 0);
+select pg_temp.check_true('admin can save a smaller event set',
+  pg_temp.try_as('00000000-0000-0000-0000-0000000000a1', 'authenticated',
+    $q$select public.save_ace_eligibility_policy('40000000-0000-0000-0000-000000000001', 4, 3,
+       array['70000000-0000-0000-0000-000000000002']::uuid[])$q$) = 'ok');
+select pg_temp.check_true('saving replaces the event set',
+  (select array_agg(event_id) from public.ace_assignment_cycle_events
+       where cycle_id = '40000000-0000-0000-0000-000000000001')
+      = array['70000000-0000-0000-0000-000000000002']::uuid[]);
+select pg_temp.try_as('00000000-0000-0000-0000-0000000000a1', 'authenticated',
+  $q$select public.save_ace_eligibility_policy('40000000-0000-0000-0000-000000000001', 4, 3,
+     array['70000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000002']::uuid[])$q$);
+
+select pg_temp.check_true('a minimum of 0 is rejected',
+  pg_temp.try_as('00000000-0000-0000-0000-0000000000a1', 'authenticated',
+    $q$select public.save_ace_eligibility_policy('40000000-0000-0000-0000-000000000001', 0, 3, array[]::uuid[])$q$)
+    like '%1 to 20%');
+select pg_temp.check_true('a minimum of 21 is rejected by the column check',
+  pg_temp.try_as('00000000-0000-0000-0000-0000000000a1', 'authenticated',
+    $q$update public.ace_assignment_cycles set big_min_events = 21
+       where id = '40000000-0000-0000-0000-000000000001'$q$) like '%big_min_events_check%');
+select pg_temp.check_true('a future event cannot qualify',
+  pg_temp.try_as('00000000-0000-0000-0000-0000000000a1', 'authenticated',
+    $q$insert into public.ace_assignment_cycle_events (cycle_id, event_id)
+       values ('40000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000003')$q$)
+    like '%completed, dated, published%');
+select pg_temp.check_true('an unpublished event cannot qualify',
+  pg_temp.try_as('00000000-0000-0000-0000-0000000000a1', 'authenticated',
+    $q$select public.save_ace_eligibility_policy('40000000-0000-0000-0000-000000000001', 4, 3,
+       array['70000000-0000-0000-0000-000000000004']::uuid[])$q$) like '%completed, dated, published%');
+select pg_temp.check_true('an event from another academic year cannot qualify',
+  pg_temp.try_as('00000000-0000-0000-0000-0000000000a1', 'authenticated',
+    $q$insert into public.ace_assignment_cycle_events (cycle_id, event_id)
+       values ('40000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000005')$q$)
+    like '%academic year%');
+select pg_temp.check_true('the same event cannot be added twice',
+  pg_temp.try_as('00000000-0000-0000-0000-0000000000a1', 'authenticated',
+    $q$insert into public.ace_assignment_cycle_events (cycle_id, event_id)
+       values ('40000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000001')$q$)
+    like '%duplicate key%');
+select pg_temp.check_true('qualifying event rows cannot be updated in place',
+  pg_temp.try_as('00000000-0000-0000-0000-0000000000a1', 'authenticated',
+    $q$update public.ace_assignment_cycle_events set event_id = '70000000-0000-0000-0000-000000000002'
+       where event_id = '70000000-0000-0000-0000-000000000001'$q$) like 'permission denied%');
+select pg_temp.check_true('a rejected save left the policy unchanged',
+  (select count(*) from public.ace_assignment_cycle_events
+   where cycle_id = '40000000-0000-0000-0000-000000000001') = 2);
+select pg_temp.check_true('no published_* view reads the assignment tables',
+  not exists (select 1 from pg_views where schemaname = 'public' and viewname like 'published%'
+              and definition ilike '%ace_assignment%'));
+
 -- Lifecycle ---------------------------------------------------------------
 select pg_temp.check_true('cannot publish an unlocked cycle',
   pg_temp.try_as('00000000-0000-0000-0000-0000000000a1', 'authenticated',
@@ -121,6 +222,28 @@ select pg_temp.check_true('locked cycle rejects draft deletes',
   pg_temp.try_as('00000000-0000-0000-0000-0000000000a1', 'authenticated',
     $q$delete from public.ace_assignment_drafts where id = '50000000-0000-0000-0000-000000000001'$q$)
     like '%cannot be edited%');
+select pg_temp.check_true('locked cycle refuses a policy save',
+  pg_temp.try_as('00000000-0000-0000-0000-0000000000a1', 'authenticated',
+    $q$select public.save_ace_eligibility_policy('40000000-0000-0000-0000-000000000001', 5, 3,
+       array['70000000-0000-0000-0000-000000000001']::uuid[])$q$) like '%policy is locked%');
+select pg_temp.check_true('locked cycle freezes the minimums',
+  pg_temp.try_as('00000000-0000-0000-0000-0000000000a1', 'authenticated',
+    $q$update public.ace_assignment_cycles set little_min_events = 5
+       where id = '40000000-0000-0000-0000-000000000001'$q$) like '%policy is locked%');
+select pg_temp.check_true('locked cycle rejects adding a qualifying event',
+  pg_temp.try_as('00000000-0000-0000-0000-0000000000a1', 'authenticated',
+    $q$insert into public.ace_assignment_cycle_events (cycle_id, event_id)
+       values ('40000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000001')$q$)
+    like '%policy is locked%');
+select pg_temp.check_true('locked cycle rejects removing a qualifying event',
+  pg_temp.try_as('00000000-0000-0000-0000-0000000000a1', 'authenticated',
+    $q$delete from public.ace_assignment_cycle_events
+       where event_id = '70000000-0000-0000-0000-000000000001'$q$) like '%policy is locked%');
+select pg_temp.check_true('a frozen policy is intact',
+  (select little_min_events = 4 and big_min_events = 3
+   from public.ace_assignment_cycles where id = '40000000-0000-0000-0000-000000000001')
+  and (select count(*) from public.ace_assignment_cycle_events
+       where cycle_id = '40000000-0000-0000-0000-000000000001') = 2);
 select pg_temp.check_true('locking made nothing public (no new tree nodes)',
   (select count(*) from public.ace_family_members) = 2);
 
@@ -214,5 +337,25 @@ select pg_temp.check_true('a frozen draft does not block deleting its live node'
 select pg_temp.check_true('the deleted node is nulled on its draft',
   (select published_ace_member_id from public.ace_assignment_drafts
    where id = '50000000-0000-0000-0000-000000000002') is null);
+
+-- Eligibility policy after publish ----------------------------------------
+select pg_temp.check_true('published cycle refuses a policy save',
+  pg_temp.try_as('00000000-0000-0000-0000-0000000000a1', 'authenticated',
+    $q$select public.save_ace_eligibility_policy('40000000-0000-0000-0000-000000000001', 4, 3, array[]::uuid[])$q$)
+    like '%policy is published%');
+select pg_temp.check_true('deleting a chosen event is not blocked by the frozen policy',
+  pg_temp.try_as('00000000-0000-0000-0000-0000000000a1', 'authenticated',
+    $q$delete from public.events where id = '70000000-0000-0000-0000-000000000002'$q$) = 'ok');
+select pg_temp.check_true('the deleted event left the frozen policy',
+  (select count(*) from public.ace_assignment_cycle_events
+       where cycle_id = '40000000-0000-0000-0000-000000000001') = 1);
+select pg_temp.check_true('admin can archive the published cycle',
+  pg_temp.try_as('00000000-0000-0000-0000-0000000000a1', 'authenticated',
+    $q$update public.ace_assignment_cycles set status = 'archived'
+       where id = '40000000-0000-0000-0000-000000000001'$q$) = 'ok');
+select pg_temp.check_true('archived cycle freezes the minimums',
+  pg_temp.try_as('00000000-0000-0000-0000-0000000000a1', 'authenticated',
+    $q$update public.ace_assignment_cycles set big_min_events = 1
+       where id = '40000000-0000-0000-0000-000000000001'$q$) like '%policy is archived%');
 
 rollback;
