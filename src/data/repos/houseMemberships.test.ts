@@ -216,3 +216,51 @@ describe('getPublicHousesByMemberId — ended memberships', () => {
     expect((await houseMembershipsRepository.getPublicHousesByMemberId(2026, '2027-08-01')).get('m-left')?.label).toBe('Rarity');
   });
 });
+
+
+describe('visible leaderboard House affiliation batches (#627/#692)', () => {
+  const sourceRow = (id: string, year = 2026, from = '2026-09-01', to: string | null = null) => ({
+    member_id: id, academic_year_start: year, effective_start_date: from,
+    effective_end_date: to, house_profile_id: 'hp-' + id,
+    house_key: 'fictional-' + id, display_name: 'Fictional House ' + id, accent_color: '#334455',
+  });
+
+  it('requests only selected-year visible IDs and approved House identity fields, never points or emails', async () => {
+    supabaseMock.queueResult('public_house_memberships', {
+      data: [sourceRow('visible'), sourceRow('other', 2026, '2026-08-01', '2026-10-01'),
+        sourceRow('other', 2026, '2026-10-01')], error: null,
+    });
+    const badges = await houseMembershipsRepository.getPublishedHousesForMemberIds(2026,['visible','other'], '2026-10-30');
+    expect(badges.get('visible')?.label).toBe('Fictional House visible');
+    expect(badges.get('other')?.houseProfileId).toBe('hp-other');
+    const calls = supabaseMock.queriesFor('public_house_memberships')[0].calls;
+    expect(calls).toContainEqual({method:'eq',args:['academic_year_start',2026]});
+    expect(calls).toContainEqual({method:'in',args:['member_id',['other','visible']]});
+    const projection=String(calls.find(c=>c.method==='select')?.args[0]);
+    expect(projection).not.toMatch(/total_points|member_event_attendance|email|\*/);
+    expect(calls).toContainEqual({method:'range',args:[0,499]});
+    expect(supabaseMock.queriesFor('house_member_yearly_points')).toHaveLength(0);
+  });
+
+  it('rejects unexpected year/member rows from its projection rather than displaying stale identity', async () => {
+    supabaseMock.queueResult('public_house_memberships', {data:[sourceRow('visible',2025)], error:null});
+    await expect(houseMembershipsRepository.getPublishedHousesForMemberIds(2026,['visible'],'2026-10-30')).rejects.toThrow();
+    supabaseMock.queueResult('public_house_memberships', {data:[sourceRow('unrequested')],error:null});
+    await expect(houseMembershipsRepository.getPublishedHousesForMemberIds(2026,['visible'],'2026-10-30')).rejects.toThrow();
+  });
+
+  it('fails the entire visible badge result on an association permission denial', async () => {
+    supabaseMock.queueResult('public_house_memberships', {
+      data:null, error:postgrestError('permission denied for published House memberships','42501'),
+    });
+    await expect(houseMembershipsRepository.getPublishedHousesForMemberIds(2026,['visible'],'2026-10-30')).rejects.toThrow();
+  });
+
+  it('never fetches an all-time household roster, and refuses more than 100 visible IDs', async () => {
+    await expect(houseMembershipsRepository.getPublishedHousesForMemberIds(2026,[], '2026-10-30'))
+      .resolves.toEqual(new Map());
+    await expect(houseMembershipsRepository.getPublishedHousesForMemberIds(
+      2026,Array.from({length:101},(_,i)=>String(i)), '2026-10-30')).rejects.toThrow(/100/);
+    expect(supabaseMock.queriesFor('public_house_memberships')).toHaveLength(0);
+  });
+});
