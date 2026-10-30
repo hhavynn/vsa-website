@@ -71,7 +71,7 @@ it('requires narrower search instead of presenting a truncated list as exhaustiv
 
 it('distinguishes missing member, missing published assignment and service failures', async () => {
   search.mockResolvedValueOnce([]);
-  const ui = mount();
+  const view = mount();
   searchFor('Nobody Found');
   expect(await screen.findByText(/No matching member record found/)).toBeInTheDocument();
   search.mockResolvedValueOnce([member('m2','Bea Example')]);
@@ -81,12 +81,12 @@ it('distinguishes missing member, missing published assignment and service failu
   expect(await screen.findByText(/No published House affiliation is linked/)).toBeInTheDocument();
   badge.mockRejectedValueOnce(new Error('permission denied'));
   // Remount with another year: no stale House result should transfer.
-  ui.unmount();
+  view.unmount();
   search.mockResolvedValueOnce([member('m2','Bea Example')]);
-  const next = mount(2025);
+  const nextView = mount(2025);
   searchFor('Bea Example');
   fireEvent.click(await screen.findByRole('button', { name: /Bea Example/ }));
   expect(await screen.findByRole('alert')).toHaveTextContent(/could not be verified/i);
   expect(badge).toHaveBeenLastCalledWith('m2', 2025);
-  next.unmount();
+  nextView.unmount();
 });
