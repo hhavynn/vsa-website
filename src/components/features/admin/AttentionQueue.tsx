@@ -83,6 +83,27 @@ export function AttentionQueue({ signals, loading = false, failed = false, now }
           )}
         </>
       )}
+      <div className="mt-5 border-t border-[var(--color-border)] pt-4" aria-label="Manual admin reviews">
+        <h3 className="font-sans text-sm font-semibold text-text-primary">Manual checks (not counted above)</h3>
+        <p className="mt-1 text-xs text-text-secondary">
+          Merge suggestions and launch readiness require deeper checks. The dashboard cannot
+          safely infer how many are unresolved from the fast count scan.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-3">
+          <Link
+            to="/admin/merge-suggestions"
+            className="inline-flex min-h-11 items-center rounded-md border border-[var(--color-border)] px-3 py-2 text-sm font-semibold text-brand-700 hover:bg-surface2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:text-brand-300"
+          >
+            Review merge suggestions
+          </Link>
+          <Link
+            to="/admin/launch-checklist"
+            className="inline-flex min-h-11 items-center rounded-md border border-[var(--color-border)] px-3 py-2 text-sm font-semibold text-brand-700 hover:bg-surface2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:text-brand-300"
+          >
+            Check launch readiness
+          </Link>
+        </div>
+      </div>
     </section>
   );
 }
