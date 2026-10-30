@@ -37,7 +37,7 @@ export function reviewExplicitFamHeads(
       const elsewhere = allLinks.filter((ref) => ref.nodeId !== node.id && ref.memberId === node.member_id);
       if (elsewhere.length > 0) notes.push('Canonical member is also linked to another ACE node');
     }
-    const status = !evidenceReady ? 'unknown' : notes.length ? 'needs-review' : 'verified-source';
+    const status: FamHeadReviewRow['status'] = !evidenceReady ? 'unknown' : notes.length ? 'needs-review' : 'verified-source';
     return { node, linkedMember, notes, status };
   }).sort((a,b) => a.node.display_order - b.node.display_order || a.node.name.localeCompare(b.node.name));
 }
