@@ -5,13 +5,14 @@ import { reviewExplicitFamHeads } from '../../../lib/aceFamHeadReview';
 import { formatAcademicYear } from '../../../lib/academicTerms';
 
 export function AceFamHeadReview({
-  family, nodes, directoryById, allLinks, evidenceReady,
+  family, nodes, directoryById, allLinks, evidenceReady, onReviewNode,
 }: {
   family: AceFamily;
   nodes: readonly AceFamilyMember[];
   directoryById: ReadonlyMap<string, MemberOption>;
   allLinks: readonly AceMemberLinkRef[];
   evidenceReady: boolean;
+  onReviewNode: (nodeId: string) => void;
 }) {
   const rows = reviewExplicitFamHeads(family, nodes, directoryById, allLinks, evidenceReady);
   const reviewCount = rows.filter((row) => row.status === 'needs-review').length;
@@ -49,9 +50,7 @@ export function AceFamHeadReview({
                     {' · '}{linkedMember ? linkedMember.displayName : node.member_id ? 'Canonical member not verified' : 'Not linked'}
                   </p>
                 </div>
-                <button type="button" className="vsa-btn-secondary min-h-11 shrink-0 text-xs" onClick={() =>
-                  document.getElementById('ace-node-' + node.id)?.scrollIntoView?.({ block: 'center', behavior: 'smooth' })
-                }>
+                <button type="button" className="vsa-btn-secondary min-h-11 shrink-0 text-xs" onClick={() => onReviewNode(node.id)}>
                   Review node
                 </button>
               </div>
