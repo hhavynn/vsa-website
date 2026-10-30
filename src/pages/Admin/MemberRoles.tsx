@@ -25,7 +25,7 @@ const actionCls = 'inline-flex min-h-11 items-center justify-center rounded bord
 const STATUS_LABELS: Record<RoleReviewStatus, string> = {
   'identity-review': 'Needs identity review',
   'source-review': 'Needs program source',
-  'name-mismatch': 'Source name differs — review in Cabinet',
+  'name-mismatch': 'Names differ — check identity and Cabinet record',
   'conflict': 'Conflicting source',
   'already-linked': 'Already assigned · no change needed',
   'ready': 'Ready to review in Cabinet',
@@ -78,7 +78,8 @@ export default function AdminMemberRoles() {
   const reviews = rows.map((row) => {
     const selectedMemberId = directory.byId.has(memberIds[row.index]) ? memberIds[row.index] : null;
     const source = sourceById.get(sourceIds[row.index]) ?? null;
-    const status = getRoleReviewStatus(row, selectedMemberId, source, role, year?.id ?? '', selectedSources);
+    const status = getRoleReviewStatus(row, selectedMemberId, source, role, year?.id ?? '', selectedSources,
+      selectedMemberId ? directory.byId.get(selectedMemberId)?.fullName : undefined);
     return { row, status, source };
   });
   const readyCount = reviews.filter((item) => item.status === 'ready').length;
