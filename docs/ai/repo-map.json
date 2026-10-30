@@ -535,18 +535,18 @@
       ]
     },
     {
-      "path": "src/data/repos/houseMembershipWrites.ts",
-      "tables": [
-        "house_memberships",
-        "members"
-      ],
-      "rpcs": []
-    },
-    {
       "path": "src/data/repos/houseMemberships.ts",
       "tables": [
         "house_memberships",
         "public_house_memberships"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/houseMembershipWrites.ts",
+      "tables": [
+        "house_memberships",
+        "members"
       ],
       "rpcs": []
     },
@@ -649,6 +649,14 @@
       "tables": [
         "members",
         "public_members"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/memberRoles.ts",
+      "tables": [
+        "cabinet_members",
+        "cabinet_years"
       ],
       "rpcs": []
     },
@@ -904,8 +912,8 @@
         "src/data/repos/houseAssets.ts",
         "src/data/repos/houseAssignments.ts",
         "src/data/repos/houseEvents.ts",
-        "src/data/repos/houseMembershipWrites.ts",
         "src/data/repos/houseMemberships.ts",
+        "src/data/repos/houseMembershipWrites.ts",
         "src/data/repos/houseOverview.ts",
         "src/data/repos/houseParents.ts",
         "src/data/repos/housePayments.ts",
