@@ -109,6 +109,10 @@
       "page": "src/pages/SignIn.tsx"
     },
     {
+      "path": "/admin/member-roles",
+      "page": "src/pages/Admin/MemberRoles.tsx"
+    },
+    {
       "path": "/admin/members",
       "page": "src/pages/Admin/Members.tsx"
     },
@@ -515,6 +519,13 @@
       "rpcs": []
     },
     {
+      "path": "src/data/repos/houseAssignmentCoverage.ts",
+      "tables": [
+        "house_assignment_drafts"
+      ],
+      "rpcs": []
+    },
+    {
       "path": "src/data/repos/houseAssignments.ts",
       "tables": [
         "house_assignment_batches",
@@ -681,6 +692,13 @@
       "path": "src/data/repos/resourceLinks.ts",
       "tables": [
         "resource_links"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/roleReview.ts",
+      "tables": [
+        "cabinet_members"
       ],
       "rpcs": []
     },
@@ -904,6 +922,7 @@
       ],
       "repositories": [
         "src/data/repos/houseAssets.ts",
+        "src/data/repos/houseAssignmentCoverage.ts",
         "src/data/repos/houseAssignments.ts",
         "src/data/repos/houseEvents.ts",
         "src/data/repos/houseMembershipWrites.ts",
