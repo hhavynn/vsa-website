@@ -339,7 +339,7 @@ export default function AdminExternalEvents() {
                     type="checkbox"
                     checked={formData.is_featured || false}
                     onChange={e => setFormData({ ...formData, is_featured: e.target.checked })}
-                    className="rounded border-gray-300 text-[var(--brand)] focus:ring-[var(--brand)]"
+                    className="rounded border-[var(--color-border-strong)] text-[var(--brand)] focus:ring-[var(--brand)]"
                   />
                   <span className="text-sm font-medium">Featured</span>
                 </label>

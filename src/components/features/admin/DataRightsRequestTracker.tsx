@@ -307,7 +307,7 @@ export function DataRightsRequestTracker() {
           <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-text-muted">
             Admin operations
           </p>
-          <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight text-text-primary sm:text-4xl">
+          <h1 className="mt-2 font-display text-[2rem] font-normal leading-[1.05] tracking-[-0.02em] text-text-primary sm:text-[2.6rem]">
             Data Rights
           </h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-text-secondary">

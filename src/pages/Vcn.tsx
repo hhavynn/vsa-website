@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { EditorialHero, EditorialHeroScript } from '../components/common/EditorialHero';
+import { useProgramHeroMedia } from '../components/features/gallery/ProgramPhotoStack';
+import type { SiteEventType } from '../types/database';
 import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { RelatedLinks } from '../components/common/RelatedLinks';
 import { programRelatedLinks } from '../lib/relatedLinks';
@@ -31,8 +33,11 @@ const faqs = [
   { q: 'Can community members or non-VSA students attend?', a: 'Yes. VCN is open to the campus community and beyond. It is a celebration of Vietnamese culture that welcomes all guests.' },
 ];
 
+const VCN_EVENT_TYPES: SiteEventType[] = ['vcn'];
+
 export function VCN() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const heroMedia = useProgramHeroMedia(VCN_EVENT_TYPES, "Vietnamese Culture Night photo albums");
 
   return (
     <>
@@ -40,10 +45,12 @@ export function VCN() {
 
       <div className="program-app">
         <EditorialHero
+          tone="stage"
           eyebrow="Program Booklet"
           title={<>Vietnamese Culture <EditorialHeroScript>Night</EditorialHeroScript></>}
           meta="VSA at UCSD’s annual culture show, built by students through acting, dance, and behind-the-scenes production."
           watermark="vcn"
+          media={heroMedia}
           actions={
             <>
               <Link to="/vcn/current" className="vsa-btn-primary font-sans text-sm font-medium">

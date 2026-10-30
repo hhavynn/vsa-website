@@ -6,6 +6,7 @@ import { Input } from '../components/ui/Input';
 import { AnimatedCounter } from '../components/ui/AnimatedCounter';
 import { BottomSheet } from '../components/ui/BottomSheet';
 import { Avatar } from '../components/features/avatar/Avatar';
+import { OptimizedImage } from '../components/common/OptimizedImage';
 import { PhotoRequestSection } from '../components/features/avatar/PhotoRequestSection';
 import { LeaderboardSkeleton } from '../components/common/PageSkeletons';
 import { usePagination } from '../hooks/usePagination';
@@ -335,15 +336,15 @@ function PublicMemberProfileModal({
       <div className="mb-4 flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-4">
             <div className="relative shrink-0">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt={displayName}
-                  className="h-20 w-20 rounded-full border-4 border-white object-cover shadow-md dark:border-zinc-800"
-                />
-              ) : (
-                <InitialsAvatar name={displayName} size={80} />
-              )}
+              <OptimizedImage
+                src={avatarUrl}
+                alt={displayName}
+                width={80}
+                height={80}
+                priority
+                className="h-20 w-20 rounded-full border-4 border-white object-cover shadow-md dark:border-[var(--color-surface)]"
+                fallback={<InitialsAvatar name={displayName} size={80} />}
+              />
             </div>
             <div className="min-w-0">
               <h2 className="break-words font-serif text-2xl font-bold leading-tight text-[var(--text)]">{displayName}</h2>
@@ -651,7 +652,7 @@ export function Leaderboard() {
       <PageTitle title="Leaderboard" />
       {isDegradedMode && <DegradedModeBanner sourceName="leaderboard" />}
 
-      <div className="vsa-page-hero">
+      <div className="vsa-page-hero vsa-page-hero--sky">
         <div className="vsa-container relative z-10">
           <div className="scrapbook-paper relative overflow-hidden p-6 sm:p-10">
             <span className="scrapbook-pin" aria-hidden />
@@ -892,7 +893,6 @@ export function Leaderboard() {
                       pageStartLabel={pageStartLabel}
                       pageEndLabel={pageEndLabel}
                       totalCount={filteredEntries.length}
-                      theme="zinc"
                     />
                   </div>
                 </div>
@@ -1041,16 +1041,14 @@ function PodiumIndividual({
               >
                 {rankLabel}
               </div>
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt=""
-                  loading="lazy"
-                  className="h-11 w-11 shrink-0 rounded-full border-2 border-white object-cover dark:border-zinc-800"
-                />
-              ) : (
-                <InitialsAvatar name={name} size={44} />
-              )}
+              <OptimizedImage
+                src={avatarUrl}
+                alt=""
+                width={44}
+                height={44}
+                className="h-11 w-11 shrink-0 rounded-full border-2 border-white object-cover dark:border-[var(--color-surface)]"
+                fallback={<InitialsAvatar name={name} size={44} />}
+              />
               <div className="min-w-0 flex-1">
                 <ProfileOpener name={name} onOpen={() => onSelectMember(entry)} className="max-w-full text-left">
                   <span className="line-clamp-2 block break-words font-serif text-base font-bold leading-tight" style={{ color: 'var(--text)' }}>
@@ -1131,17 +1129,15 @@ function PodiumIndividual({
                 </div>
 
                 {/* Avatar */}
-                <div className="mx-auto mb-4 h-24 w-24 overflow-hidden rounded-full border-4 border-white shadow-md dark:border-zinc-800">
-                  {memberAvatars.get(card.entry.id) ? (
-                    <img
-                      src={memberAvatars.get(card.entry.id)}
-                      alt={`${card.entry.first_name} ${card.entry.last_name}`}
-                      loading="lazy"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <InitialsAvatar name={`${card.entry.first_name} ${card.entry.last_name}`} size={96} />
-                  )}
+                <div className="mx-auto mb-4 h-24 w-24 overflow-hidden rounded-full border-4 border-white shadow-md dark:border-[var(--color-surface)]">
+                  <OptimizedImage
+                    src={memberAvatars.get(card.entry.id)}
+                    alt={`${card.entry.first_name} ${card.entry.last_name}`}
+                    width={96}
+                    height={96}
+                    className="h-full w-full object-cover"
+                    fallback={<InitialsAvatar name={`${card.entry.first_name} ${card.entry.last_name}`} size={96} />}
+                  />
                 </div>
 
                 {/* Name */}

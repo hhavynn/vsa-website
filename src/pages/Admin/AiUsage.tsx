@@ -27,8 +27,8 @@ export default function AdminAiUsage() {
   return (
     <div className="flex-1">
       <PageTitle title="Ask VSA Usage" />
-      <div className="border-b border-[var(--color-border)] bg-surface px-4 py-6 sm:px-8">
-        <h1 className="font-serif text-3xl font-bold text-text-primary">Ask VSA Usage</h1>
+      <div className="vsa-admin-field vsa-ribbon-bottom border-[var(--color-border)] border-b px-5 py-6 sm:px-8 sm:py-7">
+        <h1 className="font-display text-[2rem] font-normal leading-[1.05] tracking-[-0.02em] text-text-primary sm:text-[2.6rem]">Ask VSA Usage</h1>
         <p className="mt-2 max-w-2xl text-sm text-text-secondary">
           Privacy-safe daily request counts from the existing Ask VSA usage ledger. Only administrators can request this report.
           No messages, session identifiers, IP hashes or individual activity are returned.
