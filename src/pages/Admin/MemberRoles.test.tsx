@@ -71,6 +71,7 @@ it('requires explicit member and exact source selection before showing a safe ed
   expect(screen.getByText(/0 roles published by this tool/)).toBeInTheDocument();
   const link = screen.getByRole('link', { name: 'Open exact Cabinet record for final review' });
   expect(link).toHaveAttribute('href', '/admin/cabinet?member=source-a');
+  expect(link).toHaveAttribute('target', '_blank');
 });
 
 it('does not use an Intern as Board, and resets stale selections when switching source roles', () => {
