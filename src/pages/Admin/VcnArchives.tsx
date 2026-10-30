@@ -7,6 +7,7 @@ import { PageError } from '../../components/common/PageError';
 import { useAllVcnArchives } from '../../hooks/useVcnArchives';
 import { VCNArchive } from '../../types';
 import { VCNArchiveFormData, vcnArchivesRepository } from '../../data/repos/vcnArchives';
+import { VcnRoleRosterReview } from '../../components/features/admin/VcnRoleRosterReview';
 
 type VCNArchiveFormState = {
   year: string;
@@ -217,6 +218,8 @@ export default function AdminVcnArchives() {
           New Entry
         </button>
       </div>
+
+      <VcnRoleRosterReview editionYear={selectedArchive?.year ?? null} />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]" style={{ padding: '20px 28px' }}>
         <div className="rounded-md border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
