@@ -133,13 +133,12 @@ export interface InternRowFacts {
 
 export const hasMissingProfileInfo = (draft: InternCohortDraft) => !draft.role_or_track?.trim() || !draft.caption?.trim();
 
-export const INTERN_FILTER_KEYS = ['all', 'needs_review', 'unlinked', 'missing_mentor', 'missing_info'] as const;
+export const INTERN_FILTER_KEYS = ['all', 'needs_review', 'unlinked', 'missing_info'] as const;
 
 export const INTERN_FILTERS: ReadonlyArray<QuickFilter<InternRowFacts>> = [
   allFilter(),
   { key: 'needs_review', label: 'Needs Review', predicate: (row) => (!row.draft.member_id || row.duplicate) && !row.reviewed },
   { key: 'unlinked', label: 'Unlinked', predicate: (row) => !row.draft.member_id },
-  { key: 'missing_mentor', label: 'Missing mentor', predicate: (row) => !row.draft.mentor_cabinet_member_id },
   { key: 'missing_info', label: 'Missing profile info', hint: 'No track or no caption yet.', predicate: (row) => hasMissingProfileInfo(row.draft) },
 ];
 

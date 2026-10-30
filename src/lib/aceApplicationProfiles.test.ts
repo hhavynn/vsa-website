@@ -10,6 +10,7 @@ import {
   matchProfilesToDrafts,
   matchProfilesToNodes,
   namesPerson,
+  pairWarningIssues,
   parseApplicationProfiles,
   parseCapacity,
   parseYear,
@@ -223,6 +224,17 @@ describe('parseApplicationProfiles', () => {
     expect(result.profiles[0].year).toEqual({ text: '2nd Year Transfer', value: 2, transfer: true });
   });
 
+  it('keeps the latest submission per email across roles, then drops a row naming both roles', () => {
+    const switched = parse(big('Ben Ho', '', 'bho'), little('Ben Ho', '', 'bho'));
+    expect(switched.repeatsReplaced).toBe(1);
+    expect(switched.profiles.map((p) => p.role)).toEqual(['little']);
+
+    const both = parse(little('Ben Ho', '', 'bho'), { ...little('Ben Ho', '', 'bho'), 'Are You Applying to be an Anh/Chi (Big) or Em (Little)? ': 'Big or Little' });
+    expect(both.repeatsReplaced).toBe(1);
+    expect(both.profiles).toHaveLength(0);
+    expect(both.skipped).toBe(1);
+  });
+
   it('skips rows with no name or role, and rejects a paste that is not the application', () => {
     const result = parse(little('', '', 'x'), { ...little('Cy Do', '', 'cdo'), 'Are You Applying to be an Anh/Chi (Big) or Em (Little)? ': '' });
     expect(result.profiles).toHaveLength(0);
@@ -378,5 +390,23 @@ describe('suggestBigs', () => {
     expect(suggestions.map((s) => s.nodeId)).toEqual(['ava', 'eve']);
     expect(suggestions[0].score).toBeGreaterThan(suggestions[1].score);
     expect(suggestions[0].reasons).toEqual(expect.arrayContaining(['Same morning/night answer']));
+  });
+});
+
+describe('pairWarningIssues', () => {
+  it('counts rows per warning type as non-blocking preflight warnings, with no names or answers', () => {
+    const issues = pairWarningIssues([
+      [
+        { code: 'do_not_pair', message: 'Ava Lin asked not to be paired with Ben Ho' },
+        { code: 'do_not_pair', message: 'Ben Ho asked not to be paired with Ava Lin' },
+      ],
+      [{ code: 'capacity', message: 'Ava Lin has 3 Littles' }],
+      [],
+    ]);
+    expect(issues.map((i) => [i.id, i.level, i.count, i.title])).toEqual([
+      ['ace-application:do_not_pair', 'warning', 1, '1 pairing names someone the other person asked not to be paired with'],
+      ['ace-application:capacity', 'warning', 1, '1 Little goes to a Big over their planned number'],
+    ]);
+    expect(JSON.stringify(issues)).not.toMatch(/Ava|Ben/);
   });
 });

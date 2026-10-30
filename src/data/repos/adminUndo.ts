@@ -1,7 +1,7 @@
 // Practical undo for recent, simple admin edits where the previous value is
-// known: a House, an ACE Big, an ACE member link, an intern mentor. It is a
-// compare-and-set, not a database rollback: the change is only reversed while
-// its recorded result is still current and the record is still editable.
+// known: a House, an ACE Big, an ACE member link. It is a compare-and-set, not
+// a database rollback: the change is only reversed while its recorded result
+// is still current and the record is still editable.
 //
 // Publication, reveal, year setup, deletions, and bulk edits never come here;
 // isUndoable() (lib/adminActivity.ts) refuses them, and this module checks
@@ -45,8 +45,8 @@ async function readSingle<T>(request: PromiseLike<{ data: T | null; error: { mes
  * matches while the column still holds the value the change recorded, and undo
  * fails unless exactly one row changed. Another admin editing between the
  * check and this write therefore makes undo fail instead of overwriting them.
- * Draft-status rules (a locked House batch, ACE cycle, or intern cohort rejects
- * draft edits) are enforced by the guard triggers on those tables.
+ * Draft-status rules (a locked House batch or ACE cycle rejects draft edits)
+ * are enforced by the guard triggers on those tables.
  */
 export async function applyUndo(spec: UndoSpec, restore: string | null): Promise<void> {
   const match = <Q extends { eq: (c: string, v: string) => Q; is: (c: string, v: null) => Q }>(query: Q, column: string): Q =>
@@ -80,19 +80,6 @@ export async function applyUndo(spec: UndoSpec, restore: string | null): Promise
       const { data, error } = await match(
         supabase.from('ace_family_members').update({ member_id: restore }).eq('id', spec.target.nodeId),
         'member_id',
-      ).select('id');
-      if (error) throw new Error(error.message);
-      updated = data?.length ?? 0;
-      break;
-    }
-    case 'intern_mentor': {
-      const { data, error } = await match(
-        supabase
-          .from('intern_cohort_drafts')
-          .update({ mentor_cabinet_member_id: restore })
-          .eq('id', spec.target.draftId)
-          .eq('cycle_id', spec.target.cycleId),
-        'mentor_cabinet_member_id',
       ).select('id');
       if (error) throw new Error(error.message);
       updated = data?.length ?? 0;
@@ -132,13 +119,6 @@ const defaultDeps: UndoDeps = {
       case 'ace_node_link': {
         const row = await readSingle<{ member_id: string | null }>(supabase.from('ace_family_members').select('member_id').eq('id', spec.target.nodeId).maybeSingle());
         return { found: !!row, value: row?.member_id ?? null, editable: true };
-      }
-      case 'intern_mentor': {
-        const row = await readSingle<{ mentor_cabinet_member_id: string | null }>(
-          supabase.from('intern_cohort_drafts').select('mentor_cabinet_member_id').eq('id', spec.target.draftId).eq('cycle_id', spec.target.cycleId).maybeSingle(),
-        );
-        const cycle = await readSingle<{ status: string }>(supabase.from('intern_cohort_cycles').select('status').eq('id', spec.target.cycleId).maybeSingle());
-        return { found: !!row && !!cycle, value: row?.mentor_cabinet_member_id ?? null, editable: cycle?.status === 'draft' };
       }
     }
   },

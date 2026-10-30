@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { useQueryClient } from 'react-query';
 import { aceAssignmentsRepository, AceAssignmentDraftPatch } from '../../../data/repos/aceAssignments';
 import { AceParticipationReview } from './AceParticipationReview';
+import { AceEligibilityPanel } from './AceEligibilityPanel';
 import { logAdminActivity } from '../../../data/repos/adminActivity';
 import { toUserMessage } from '../../../data/errors';
 import {
@@ -15,6 +16,7 @@ import {
 } from '../../../hooks/useAceAssignments';
 import { ACE_MEMBER_LINKS_QUERY_KEY } from '../../../hooks/useAceFamilies';
 import { useAceApplicationProfiles } from '../../../hooks/useAceApplicationProfiles';
+import { useAceEligibility } from '../../../hooks/useAceEligibility';
 import { useMemberDirectory } from '../../../hooks/useMemberDirectory';
 import { useOperatingYear } from '../../../hooks/useOperatingYear';
 import { useReviewMarks } from '../../../hooks/useReviewMarks';
@@ -26,6 +28,7 @@ import {
 } from '../../../lib/adminActivity';
 import { planAceLinkExactMatches, planMarkReviewed, pruneSelection, selectedRows, setSelection, toggleSelected } from '../../../lib/adminBulk';
 import { findAceLittleDuplicates } from '../../../lib/adminConflicts';
+import { aceEligibilityIssues } from '../../../lib/adminPreflight';
 import { applyQuickFilter, countByFilter } from '../../../lib/adminFilters';
 import { NextStep, nextStepFor } from '../../../lib/adminNextSteps';
 import { aceProgress } from '../../../lib/adminProgress';
@@ -124,6 +127,20 @@ export function AceAssignmentsWorkspace() {
     () => (cycle && ready ? computePreflight(drafts, nodes, nameIndex, cycle.status) : null),
     [cycle, ready, drafts, nodes, nameIndex],
   );
+  // Pre-sort only: once published, #791's participation review takes over.
+  const sorting = !!cycle && (cycle.status === 'draft' || cycle.status === 'locked');
+  const eligibility = useAceEligibility(cycle, drafts, nodes, sorting && ready);
+  const { policy: eligibilityPolicy, result: eligibilityResult, error: eligibilityError } = eligibility;
+  const eligibilityWarnings = useMemo(
+    () =>
+      sorting && ready
+        ? aceEligibilityIssues({ policy: eligibilityPolicy, result: eligibilityResult, error: eligibilityError })
+        : [],
+    [sorting, ready, eligibilityPolicy, eligibilityResult, eligibilityError],
+  );
+  const shortCount = eligibilityResult
+    ? eligibilityResult.counts.little.short + eligibilityResult.counts.big.short
+    : 0;
   const issuesByDraft = useMemo(() => {
     const map = new Map<string, NonNullable<typeof preflight>['issues']>();
     for (const issue of preflight?.issues ?? []) {
@@ -509,10 +526,13 @@ export function AceAssignmentsWorkspace() {
         </div>
       )}
 
+      {sorting && ready && <AceEligibilityPanel cycle={cycle} eligibility={eligibility} />}
+
       {preflight && cycle.status !== 'published' && cycle.status !== 'archived' && (
         <div className="space-y-3">
           <AceAssignmentPreflightPanel
             preflight={preflight}
+            extraIssues={[...eligibilityWarnings, ...applications.warningIssues]}
             heading={cycle.status === 'locked' ? 'Preflight before publishing' : 'Preflight before locking'}
             readyLabel={cycle.status === 'locked' ? 'Ready to Publish' : 'Ready to Lock'}
             onFilter={setFilter}
@@ -559,6 +579,12 @@ export function AceAssignmentsWorkspace() {
               <p className="mt-1 text-[var(--color-text2)]">
                 Each Little joins their Big's fam with the Big as parent. Fams that are live show them immediately.
               </p>
+              {shortCount > 0 && (
+                <p className="mt-1 font-semibold text-amber-700 dark:text-amber-400">
+                  {shortCount} {shortCount === 1 ? 'person is' : 'people are'} below the saved attendance minimums (see the
+                  preflight warnings). Publishing anyway is your call.
+                </p>
+              )}
               <ul className="mt-2 max-h-40 space-y-0.5 overflow-y-auto text-[var(--color-text2)]" aria-label="What will be added">
                 {publishPreview.nodes.slice(0, 40).map((node) => (
                   <li key={node.draftId}>

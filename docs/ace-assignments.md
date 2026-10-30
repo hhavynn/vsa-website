@@ -21,7 +21,79 @@ assigned twice, a draft that already created a node, a Little already on the tre
 under that Big.
 
 **Warnings only:** ambiguous member matches, obvious matches not linked yet,
-Littles with no member record, a member who already appears elsewhere on the tree.
+Littles with no member record, a member who already appears elsewhere on the tree,
+and everything from the [eligibility check](#eligibility) (who is short, who
+cannot be checked yet, no saved minimums).
+
+## Eligibility
+
+While the cycle is `draft` or `locked`, the **Eligibility check** panel shows
+whether each Little and each Big meets the VSA attendance minimums: a Little
+must have attended enough qualifying events to be picked up, and a Big enough to
+pick one up. After publish, the older published-cycle review (#791) takes over.
+
+### The saved policy
+
+Per cycle, the ACE Chair saves:
+
+| Field | Stored in | Notes |
+|---|---|---|
+| Little minimum | `ace_assignment_cycles.little_min_events` | 1–20; null until saved |
+| Big minimum | `ace_assignment_cycles.big_min_events` | 1–20; null until saved |
+| Qualifying events | `ace_assignment_cycle_events` (`cycle_id`, `event_id`) | up to 100; one row per event |
+
+- The form pre-fills **4** (Littles) and **3** (Bigs) for a new cycle. Nothing is
+  checked until the Chair clicks Save; the database has no default.
+- The event picker lists the cycle year's events from the attendance status
+  check ([attendance-readiness.md](attendance-readiness.md)). Only completed,
+  dated, published events are offered. **Select all completed events this
+  year** fills the list in one click.
+- The database enforces the same rule: an event must be published, dated, in
+  the past, and in a term of the cycle's academic year.
+- The policy is editable only while the cycle is `draft`. Locking freezes it,
+  like the drafts; **Unlock to edit** to change it. Published and archived
+  cycles keep it frozen. Deleting an event still removes it from a frozen
+  policy.
+- Saving goes through `save_ace_eligibility_policy`, which replaces both
+  minimums and the event set in one transaction.
+
+### Statuses
+
+| Status | Meaning |
+|---|---|
+| Meets | Attended at least the minimum, counting only verified events. |
+| Short | Below the minimum. Shows attended vs required and how many remain. |
+| Unknown | A selected event's import is not verified yet (Houses → Attendance status), and those events could still close the gap. |
+| Needs identity review | A Little with no linked member, or a Big whose ACE node has no linked member (or who is no longer on the tree). Never shown as Short. |
+
+- Littles use `little_member_id`. Littles with no Big yet are still checked.
+- Bigs resolve `big_ace_member_id` → `ace_family_members.member_id` and are
+  counted once, however many Littles they take.
+- An event counts once its import is verified (the same rule as #791,
+  `isAceEventAttendanceVerified`). Credits at unverified events never count
+  toward meeting a minimum. Someone who already meets it on verified events is
+  Meets. Someone who could not reach it even if every unverified event counted
+  is Short.
+- A saved event that stops qualifying (unpublished, moved to the future, or no
+  longer in the year) is listed and ignored, and is removed on the next save.
+- The panel shows counts at the top and filters by status, role and name.
+
+### Warnings, not blockers
+
+Short people, Unknown people, identity reviews, a missing policy, saved events
+that stopped counting, and a minimum larger than the number of counted events
+(nobody could meet it) appear in
+the preflight before Lock and before Publish as **warnings**, and the publish
+confirmation repeats how many people are short. They never disable Lock or
+Publish: mutual requests and approved exceptions exist, and the ACE Chair keeps
+the final say.
+
+### Privacy
+
+Admin-only and read-only apart from the policy. Eligibility is computed in the
+admin's browser from `member_event_attendance` and is never stored, published,
+exposed through a `published_*` view or turned into points. No emails are read,
+shown or stored.
 
 ## What Publish writes
 
@@ -92,8 +164,27 @@ not apply it to production from a PR.
 
 **Status:** applied to production on 2026-10-01 (recorded as version `20261001213356`); the filename matches the recorded version.
 
+Migration `20261030184936_ace_assignment_eligibility_policy.sql` adds the
+eligibility policy: the two minimum columns, `ace_assignment_cycle_events`
+(admin-only RLS via `is_admin_user`, no `anon` access, no UPDATE grant), the
+freeze triggers and `save_ace_eligibility_policy` (SECURITY INVOKER). It is
+additive and repeatable.
+
+**Status:** not applied to production. Apply it manually (one file,
+`apply_migration`, per `supabase/migrations/MIGRATION_CHECKLIST.md`) **before**
+deploying the frontend. Until then the panel says the check is unavailable and
+the preflight shows one warning; nothing else changes.
+
 Verify on a local or staging database (rolled back, prints `PASS:` per check):
 
 ```bash
 psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f scripts/verify-ace-assignments.sql
+```
+
+Or offline, on a disposable PostgreSQL cluster that applies the real ACE
+migrations first (needs `initdb`, `pg_ctl` and `psql` on `PATH`; run as a
+non-root user):
+
+```bash
+scripts/test-ace-assignments.sh
 ```

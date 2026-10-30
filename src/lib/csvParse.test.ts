@@ -1,4 +1,5 @@
 import { parseCsvRecords, parseCsvTable } from './csvParse';
+import { parseDelimitedPaste } from './delimitedPaste';
 
 describe('parseCsvRecords', () => {
   it('keeps commas inside quoted cells', () => {
@@ -94,5 +95,32 @@ describe('parseCsvTable row numbers', () => {
     const table = parseCsvTable('Name,Note\nAn,"two\nlines"\n\nBao,x\n');
     expect(table.rows.map((row) => row.Name)).toEqual(['An', 'Bao']);
     expect(table.rowNumbers).toEqual([2, 4]);
+  });
+});
+
+describe('parseCsvRecords with a tab delimiter', () => {
+  it('splits on tabs only and keeps quoted line breaks', () => {
+    expect(parseCsvRecords('a\tb, c\n1\t"two\nlines"', '\t').records).toEqual([['a', 'b, c'], ['1', 'two\nlines']]);
+  });
+});
+
+describe('parseDelimitedPaste', () => {
+  it('detects TSV from the first non-blank line and trims cells', () => {
+    expect(parseDelimitedPaste('\n name \t answer\nAmy\t" one, two\n""three"" "')).toEqual([
+      ['name', 'answer'],
+      ['Amy', 'one, two\n"three"'],
+    ]);
+  });
+
+  it('defaults to CSV', () => {
+    expect(parseDelimitedPaste('a,b\r\n1,"x\ty"')).toEqual([['a', 'b'], ['1', 'x\ty']]);
+  });
+
+  it('drops blank lines but keeps rows of empty cells', () => {
+    expect(parseDelimitedPaste('a,b\n\n   \n , \n1,2\n')).toEqual([['a', 'b'], ['', ''], ['1', '2']]);
+  });
+
+  it('returns nothing for empty input', () => {
+    expect(parseDelimitedPaste('  \n')).toEqual([]);
   });
 });

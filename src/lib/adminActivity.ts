@@ -59,6 +59,7 @@ export const ACTIVITY_ACTIONS = {
   aceCycleLocked: 'ace.cycle_locked',
   aceCycleUnlocked: 'ace.cycle_unlocked',
   aceCyclePublished: 'ace.cycle_published',
+  aceEligibilitySaved: 'ace.eligibility_saved',
   houseAssignmentChanged: 'house.assignment_changed',
   houseBulkChanged: 'house.bulk_changed',
   houseImportAdded: 'house.import_added',
@@ -69,7 +70,7 @@ export const ACTIVITY_ACTIONS = {
   internAdded: 'intern.added',
   internCycleStarted: 'intern.cycle_started',
   internRemoved: 'intern.removed',
-  internMentorChanged: 'intern.mentor_changed',
+  internShadowChanged: 'intern.shadow_changed',
   internBulkChanged: 'intern.bulk_changed',
   internCohortLocked: 'intern.cohort_locked',
   internCohortPublished: 'intern.cohort_published',
@@ -203,8 +204,8 @@ export const activitySummary = {
   internAdded: (count: number, yearStart: number) =>
     clampSummary(`Added ${count} ${count === 1 ? 'intern' : 'interns'} to the ${formatYearSpan(yearStart)} cohort`),
   internRemoved: (name: string) => clampSummary(`Removed intern ${label(name)} from the cohort`),
-  internMentor: (intern: string, from: string | null, to: string | null) =>
-    clampSummary(`Changed ${label(intern, 'an intern')}'s mentor: ${label(from)} → ${label(to)}`),
+  internShadow: (intern: string, from: readonly string[], to: readonly string[]) =>
+    clampSummary(`Changed ${label(intern, 'an intern')}'s shadow positions: ${label(from.join(', '))} → ${label(to.join(', '))}`),
   cabinetAssigned: (role: string, from: string | null, to: string | null) =>
     clampSummary(`${label(role, 'Position')}: ${label(from, 'Unfilled')} → ${label(to, 'Unfilled')}`),
   bulk: (verb: string, count: number, noun: string) => clampSummary(`${verb} ${count} ${count === 1 ? noun : `${noun}s`}`),
@@ -218,7 +219,7 @@ export const activitySummary = {
 
 // ─── Undo ────────────────────────────────────────────────────────────────────
 
-export type UndoKind = 'house_draft_house' | 'ace_draft_big' | 'ace_node_link' | 'intern_mentor';
+export type UndoKind = 'house_draft_house' | 'ace_draft_big' | 'ace_node_link';
 
 export interface UndoSpec {
   kind: UndoKind;
@@ -239,7 +240,6 @@ export const UNDOABLE_ACTIONS: Readonly<Record<string, UndoKind>> = {
   [ACTIVITY_ACTIONS.houseAssignmentChanged]: 'house_draft_house',
   [ACTIVITY_ACTIONS.aceAssignmentChanged]: 'ace_draft_big',
   [ACTIVITY_ACTIONS.aceLinkChanged]: 'ace_node_link',
-  [ACTIVITY_ACTIONS.internMentorChanged]: 'intern_mentor',
 };
 
 export const UNDO_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
@@ -248,7 +248,6 @@ const UNDO_TARGET_KEYS: Record<UndoKind, readonly string[]> = {
   house_draft_house: ['batchId', 'draftId'],
   ace_draft_big: ['draftId'],
   ace_node_link: ['nodeId'],
-  intern_mentor: ['cycleId', 'draftId'],
 };
 
 export function buildUndoMetadata(spec: UndoSpec): ActivityMetadata {

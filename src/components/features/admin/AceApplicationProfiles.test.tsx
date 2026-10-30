@@ -102,7 +102,7 @@ const WRITE_METHODS = new Set(['insert', 'update', 'upsert', 'delete']);
 const writes = () =>
   supabaseMock
     .queries()
-    .filter((query) => query.table.startsWith('rpc:') || query.calls.some((call) => WRITE_METHODS.has(call.method)));
+    .filter((query) => query.calls.some((call) => WRITE_METHODS.has(call.method)));
 
 function expectNoPrivateValues(value: unknown) {
   const text = JSON.stringify(value);
@@ -141,6 +141,9 @@ describe('application answers while sorting', () => {
 
     // Ava asked not to be paired with Ben, and Ben is assigned to her.
     expect(screen.getByText('1 check to review')).toBeInTheDocument();
+    // The preflight counts it as a warning, without names, and nothing new blocks Lock.
+    expect(screen.getByText('1 pairing names someone the other person asked not to be paired with')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Lock assignments' })).toBeEnabled();
     expect(screen.getByText('2nd Year Transfer')).toBeInTheDocument();
     // The Big picker shows Ava's load against her planned capacity.
     expect(screen.getByText('0 on tree · 1 of 1 planned new')).toBeInTheDocument();
@@ -181,7 +184,8 @@ describe('application answers while sorting', () => {
     for (const query of writes()) expectNoPrivateValues(query.calls);
     expectNoPrivateValues((logAdminActivity as jest.Mock).mock.calls);
     expectNoPrivateValues(setItem.mock.calls);
-    // The only read that sees application data is the existing member email lookup.
+    // No RPC was called with answer data, and the only read that sees
+    // application data is the existing member email lookup.
     const reads = supabaseMock.queries().filter((query) => query.table !== 'members');
     expectNoPrivateValues(reads);
     expect(supabaseMock.queriesFor('members').flatMap((q) => q.calls).find((c) => c.method === 'in')?.args).toEqual([

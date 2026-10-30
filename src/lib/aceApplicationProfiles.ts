@@ -12,6 +12,7 @@
 import type { AceAssignmentDraft } from '../types';
 import type { AceNodeRef, BigLoad } from './aceAssignments';
 import { dropMiddleInitials, ucsdEmail } from './aceAssignments';
+import type { UnifiedIssue } from './adminPreflight';
 import { parseDelimitedPaste } from './delimitedPaste';
 import { normalizeMemberName } from './memberLinkMatching';
 
@@ -288,18 +289,22 @@ function buildNames(rawName: string, preferred: string) {
   return { fullName: full, displayName, nameKeys: Array.from(keys), firstNames };
 }
 
+/** Same rule as the draft import: an answer naming both roles is unknown. */
 function roleFromAnswer(answer: string): ApplicantRole | null {
   const value = answer.toLowerCase();
-  if (/little|\bem\b/.test(value)) return 'little';
-  if (/big|anh|chi/.test(value)) return 'big';
-  return null;
+  const little = /little|\bem\b/.test(value);
+  const big = /big|anh|chi/.test(value);
+  if (little === big) return null;
+  return little ? 'little' : 'big';
 }
 
 // ─── Parse ───────────────────────────────────────────────────────────────────
 
 /**
  * Parses the pasted ACE application responses. Only whitelisted columns are
- * read. A repeat submission from the same UCSD email keeps the latest.
+ * read. A repeat submission from the same UCSD email keeps the latest, across
+ * roles, before rows without a readable Big/Little answer are dropped (the
+ * same order the draft import uses).
  */
 export function parseApplicationProfiles(text: string): ParsedApplicationProfiles {
   const result: ParsedApplicationProfiles = { profiles: [], bigCount: 0, littleCount: 0, repeatsReplaced: 0, skipped: 0, warnings: [] };
@@ -312,15 +317,37 @@ export function parseApplicationProfiles(text: string): ParsedApplicationProfile
     return result;
   }
 
-  const parsed: ApplicationProfile[] = [];
-  records.slice(1).forEach((cells, offset) => {
-    const plain = (field: SingleField) => {
-      const column = pick(columns.single.get(field), cells, null);
-      return column ? squash(cells[column.index]) : '';
-    };
-    const rawName = plain('name').replace(/\s+/g, ' ');
-    const role = roleFromAnswer(plain('role'));
-    if (!rawName || !role) {
+  const plain = (cells: readonly string[], field: SingleField) => {
+    const column = pick(columns.single.get(field), cells, null);
+    return column ? squash(cells[column.index]) : '';
+  };
+  const emailOf = (cells: readonly string[]) => {
+    const value = plain(cells, 'email').replace(/\s+/g, '');
+    return value ? ucsdEmail(value).toLowerCase() : null;
+  };
+
+  const named = records.slice(1).flatMap((cells, offset) => {
+    if (plain(cells, 'name')) return [{ cells, line: offset + 2, email: emailOf(cells) }];
+    result.skipped += 1;
+    return [];
+  });
+  // Responses are in submission order, so the last one per email is the latest.
+  const seen = new Set<string>();
+  const kept: typeof named = [];
+  for (let i = named.length - 1; i >= 0; i -= 1) {
+    const { email } = named[i];
+    if (email && seen.has(email)) {
+      result.repeatsReplaced += 1;
+      continue;
+    }
+    if (email) seen.add(email);
+    kept.unshift(named[i]);
+  }
+
+  kept.forEach(({ cells, line, email }) => {
+    const rawName = plain(cells, 'name').replace(/\s+/g, ' ');
+    const role = roleFromAnswer(plain(cells, 'role'));
+    if (!role) {
       result.skipped += 1;
       return;
     }
@@ -335,13 +362,12 @@ export function parseApplicationProfiles(text: string): ParsedApplicationProfile
       });
 
     const names = buildNames(rawName, (get('preferred') ?? '').replace(/\s+/g, ' '));
-    const email = get('email');
     const capacityText = role === 'big' ? get('capacity') : null;
-    parsed.push({
-      id: `application-${offset + 2}`,
+    result.profiles.push({
+      id: `application-${line}`,
       role,
       ...names,
-      email: email ? ucsdEmail(email.replace(/\s+/g, '')).toLowerCase() : null,
+      email,
       year: parseYear(get('year')),
       college: get('college'),
       pronouns: get('pronouns'),
@@ -374,17 +400,6 @@ export function parseApplicationProfiles(text: string): ParsedApplicationProfile
     });
   });
 
-  // Responses are in submission order, so the last one per email is the latest.
-  const seen = new Set<string>();
-  for (let i = parsed.length - 1; i >= 0; i -= 1) {
-    const { email } = parsed[i];
-    if (email && seen.has(email)) {
-      result.repeatsReplaced += 1;
-      continue;
-    }
-    if (email) seen.add(email);
-    result.profiles.unshift(parsed[i]);
-  }
   result.bigCount = result.profiles.filter((p) => p.role === 'big').length;
   result.littleCount = result.profiles.length - result.bigCount;
   if (result.skipped > 0) {
@@ -721,6 +736,44 @@ export function checkPair(big: PairSide, little: PairSide, load: BigLoad | null 
   const capacity = capacityWarning(big, load);
   if (capacity) warnings.push(capacity);
   return warnings;
+}
+
+const ISSUE_COPY: Record<PairWarningCode, { one: string; many: string; detail: string }> = {
+  do_not_pair: {
+    one: 'pairing names someone the other person asked not to be paired with',
+    many: 'pairings name someone the other person asked not to be paired with',
+    detail: 'From the pasted application answers. Open the row’s answers to read it.',
+  },
+  gender: { one: 'pairing misses a gender preference', many: 'pairings miss a gender preference', detail: 'From the pasted application answers.' },
+  year: { one: 'pairing breaks a year preference', many: 'pairings break a year preference', detail: 'From the pasted application answers.' },
+  substance: {
+    one: 'pairing has a substance-comfort mismatch',
+    many: 'pairings have a substance-comfort mismatch',
+    detail: 'From the pasted application answers.',
+  },
+  capacity: {
+    one: 'Little goes to a Big over their planned number',
+    many: 'Littles go to a Big over their planned number',
+    detail: 'From the pasted application answers.',
+  },
+};
+
+/**
+ * Advisory preflight rows for the pair warnings, as counts only: no names or
+ * answers, so nothing sensitive reaches the shared preflight panel. Always
+ * warnings, so they never block Lock or Publish.
+ */
+export function pairWarningIssues(warningsByDraft: ReadonlyArray<readonly PairWarning[]>): UnifiedIssue[] {
+  const counts = new Map<PairWarningCode, number>();
+  for (const warnings of warningsByDraft) {
+    for (const code of new Set(warnings.map((w) => w.code))) counts.set(code, (counts.get(code) ?? 0) + 1);
+  }
+  return (Object.keys(ISSUE_COPY) as PairWarningCode[]).flatMap((code) => {
+    const count = counts.get(code) ?? 0;
+    if (count === 0) return [];
+    const copy = ISSUE_COPY[code];
+    return [{ id: `ace-application:${code}`, level: 'warning' as const, title: `${count} ${count === 1 ? copy.one : copy.many}`, detail: copy.detail, count }];
+  });
 }
 
 // ─── Suggestions ─────────────────────────────────────────────────────────────

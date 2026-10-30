@@ -19,11 +19,12 @@ jest.mock('../../../lib/supabase', () => ({
   },
 }));
 
-const cycle = (status: string) => ({
+const cycle = (status: string, over: Record<string, unknown> = {}) => ({
   id: 'cycle-1',
   academic_year_start: 2026,
   academic_year_end: 2027,
   status,
+  ...over,
   created_by: null,
   created_at: '',
   updated_at: '',
@@ -43,11 +44,11 @@ const draft = (id: string, name: string, over: Record<string, unknown> = {}) => 
   ...over,
 });
 
-const aceNode = (id: string, name: string, familyId: string, familyName: string) => ({
+const aceNode = (id: string, name: string, familyId: string, familyName: string, memberId: string | null = null) => ({
   id,
   name,
   family_id: familyId,
-  member_id: null,
+  member_id: memberId,
   parent_member_id: null,
   role_label: 'Little',
   ace_families: { name: familyName },
@@ -61,9 +62,14 @@ const member = (id: string, first: string, last: string) => ({
   year: 'Third Year',
 });
 
-function seed(status: string, drafts: ReturnType<typeof draft>[]) {
+function seed(status: string, drafts: ReturnType<typeof draft>[], cycleOver: Record<string, unknown> = {}) {
   supabaseMock.reset();
-  supabaseMock.setDefault('ace_assignment_cycles', { data: [cycle(status)], error: null });
+  supabaseMock.setDefault('ace_assignment_cycles', { data: [cycle(status, cycleOver)], error: null });
+  supabaseMock.setDefault('ace_assignment_cycle_events', { data: [], error: null });
+  supabaseMock.setDefault('rpc:admin_event_attendance_readiness', {
+    data: { events: [], total_events: 0, truncated: false, checked_at: '2026-10-30T12:00:00Z' },
+    error: null,
+  });
   supabaseMock.setDefault('ace_assignment_drafts', { data: drafts, error: null });
   supabaseMock.setDefault('ace_family_members', {
     data: [aceNode('big-april', 'April Pham', 'fam-sweatpants', 'Sweatpants'), aceNode('big-emily', 'Emily Nguyen', 'fam-nsf', 'NSF')],
@@ -239,6 +245,85 @@ describe('locked cycle', () => {
     fireEvent.click(confirm);
     await waitFor(() => expect(supabaseMock.queriesFor('rpc:publish_ace_assignment_cycle')).toHaveLength(1));
     expect(supabaseMock.queriesFor('rpc:publish_ace_assignment_cycle')[0].calls[0].args[0]).toEqual({ p_cycle_id: 'cycle-1' });
+  });
+});
+
+describe('pre-sort attendance eligibility', () => {
+  const readinessEvent = (id: string) => ({
+    id,
+    name: `Sample event ${id}`,
+    date: '2026-10-10T19:00:00Z',
+    event_type: 'gbm',
+    points: 1,
+    is_published: true,
+    academic_term_id: 'fall',
+    term_label: 'Fall 2026',
+    credits: 1,
+    scoring_credits: 1,
+    last_credit_at: null,
+    jobs: 0,
+    latest_job: null,
+    open_review_rows: 0,
+    reconciled_at: '2026-10-20T00:00:00Z',
+    reconciliation_pending_rows: 0,
+    attestation: null,
+    house_credits: [],
+  });
+
+  function seedPolicy(status: string) {
+    seed(
+      status,
+      [
+        draft('d1', 'Amy Tran', { little_member_id: 'm-amy', big_ace_member_id: 'big-april' }),
+        draft('d2', 'Kevin Le', { little_member_id: 'm-kevin', big_ace_member_id: 'big-april' }),
+      ],
+      { little_min_events: 4, big_min_events: 3 },
+    );
+    supabaseMock.setDefault('ace_family_members', {
+      data: [aceNode('big-april', 'April Pham', 'fam-sweatpants', 'Sweatpants', 'm-april')],
+      error: null,
+    });
+    supabaseMock.setDefault('ace_assignment_cycle_events', {
+      data: ['e1', 'e2', 'e3', 'e4'].map((event_id) => ({ event_id })),
+      error: null,
+    });
+    supabaseMock.setDefault('rpc:admin_event_attendance_readiness', {
+      data: { events: ['e1', 'e2', 'e3', 'e4'].map(readinessEvent), total_events: 4, truncated: false, checked_at: '2026-10-30T12:00:00Z' },
+      error: null,
+    });
+    const rows = (member: string, events: string[]) => events.map((event_id) => ({ member_id: member, event_id }));
+    supabaseMock.setDefault('member_event_attendance', {
+      data: [...rows('m-amy', ['e1', 'e2']), ...rows('m-april', ['e1', 'e2', 'e3']), ...rows('m-kevin', ['e1', 'e2', 'e3', 'e4'])],
+      error: null,
+    });
+  }
+
+  it('names who is short as a warning, and Lock stays available', async () => {
+    seedPolicy('draft');
+    renderWorkspace();
+    expect(await screen.findByText('1 Little below the 4-event minimum')).toBeInTheDocument();
+    expect(screen.getByText('Amy Tran (2 of 4)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Lock assignments' })).toBeEnabled();
+    expect(screen.queryByText(/Big below the 3-event minimum/)).not.toBeInTheDocument();
+    expect(supabaseMock.queriesFor('member_event_attendance').every((q) => q.calls.every((c) => ['select', 'in', 'order', 'range'].includes(c.method)))).toBe(true);
+  });
+
+  it('does not block Publish, and the confirmation says who is short', async () => {
+    seedPolicy('locked');
+    renderWorkspace();
+    await screen.findByText('1 Little below the 4-event minimum');
+    const publish = screen.getByRole('button', { name: 'Publish to ACE tree…' });
+    expect(publish).toBeEnabled();
+    fireEvent.click(publish);
+    expect(screen.getByText(/1 person is below the saved attendance minimums/)).toBeInTheDocument();
+  });
+
+  it('warns, without blocking, when no minimums are saved yet', async () => {
+    seed('draft', [draft('d1', 'Amy Tran', { little_member_id: 'm-amy', big_ace_member_id: 'big-april' })]);
+    renderWorkspace();
+    expect(await screen.findByText('Attendance minimums are not saved for this cycle')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Lock assignments' })).toBeEnabled();
+    expect(supabaseMock.queriesFor('member_event_attendance')).toHaveLength(0);
   });
 });
 

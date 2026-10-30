@@ -8,6 +8,7 @@ import {
   PairWarning,
   ParsedApplicationProfiles,
   checkPair,
+  pairWarningIssues,
   matchProfilesToDrafts,
   matchProfilesToNodes,
   parseApplicationProfiles,
@@ -122,7 +123,10 @@ export function useAceApplicationProfiles(
     [loaded, littleByDraft, bigByNode, nodeNameById, loadFor],
   );
 
+  // Counts only, for the shared preflight panel; always warnings.
+  const warningIssues = useMemo(() => (loaded ? pairWarningIssues(drafts.map((draft) => rowFor(draft)?.warnings ?? [])) : []), [loaded, drafts, rowFor]);
+
   const capacityFor = useCallback((bigId: string) => bigByNode.get(bigId)?.capacity ?? null, [bigByNode]);
 
-  return { loaded: !!loaded, summary, load, clear, rowFor, capacityFor: loaded ? capacityFor : undefined };
+  return { loaded: !!loaded, summary, load, clear, rowFor, warningIssues, capacityFor: loaded ? capacityFor : undefined };
 }

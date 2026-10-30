@@ -335,6 +335,30 @@ describe('parseAssignmentImport with ACE Google Form pastes', () => {
     expect(parsed.repeatsReplaced).toBe(1);
   });
 
+  it('lets a later Big application supersede an earlier Little one from the same email', () => {
+    const parsed = parseAssignmentImport(
+      tsv([
+        ['Name (First, Middle Initial, Last)', 'UCSD Email', 'Are You Applying to be an Anh/Chi (Big) or Em (Little)? '],
+        ['Lee Sample', 'lsa010@ucsd.edu', 'Em (Little)'],
+        ['Lee Sample', 'lsa010@ucsd.edu', 'Anh/Chi (Big)'],
+      ]),
+    );
+    expect(parsed.rows).toEqual([]);
+    expect(parsed).toMatchObject({ bigsSkipped: 1, repeatsReplaced: 1 });
+  });
+
+  it('keeps an answer that names both roles for review instead of guessing', () => {
+    const parsed = parseAssignmentImport(
+      tsv([
+        ['Name (First, Middle Initial, Last)', 'Are you mutually requesting a Big or a Little?'],
+        ['Max Sample', 'Im a little, requesting a big'],
+      ]),
+    );
+    expect(parsed.rows.map((row) => row.name)).toEqual(['Max Sample']);
+    expect(parsed.bigsSkipped).toBe(0);
+    expect(parsed.warnings).toContain('1 row does not say Big or Little, so it was kept as Littles.');
+  });
+
   it('prefers UCSD Email over the sign-in Email Address', () => {
     const parsed = parseAssignmentImport('Email Address\tUCSD Email\tName\npersonal@example.com\t\tIvy Sample\npersonal2@example.com\tjsa009@ucsd.edu\tJo Sample');
     expect(parsed.rows.map((row) => row.email)).toEqual(['personal@example.com', 'jsa009@ucsd.edu']);
