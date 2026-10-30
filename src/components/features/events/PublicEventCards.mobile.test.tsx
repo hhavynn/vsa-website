@@ -42,7 +42,7 @@ describe('public Events phone logistics-first layout (#245)', () => {
     expect(featured).toHaveClass('flex-col');
     expect(featured).not.toHaveClass('flex-col-reverse');
     expect(featured).toHaveClass('lg:grid');
-    expect(screen.getByText(event.name)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: event.name })).toBeInTheDocument();
     expect(screen.getByText('Price Center')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Add to Google Calendar' })).toBeInTheDocument();
     expect(screen.getByTestId('featured-event-flyer')).toBeInTheDocument();
@@ -56,7 +56,7 @@ describe('public Events phone logistics-first layout (#245)', () => {
     expect(screen.getByTestId('upcoming-event-info')).toHaveClass('order-2', 'sm:order-3');
     expect(screen.getByTestId('upcoming-event-actions')).toHaveClass('order-3', 'sm:order-4');
     expect(screen.getByTestId('upcoming-event-flyer')).toHaveClass('order-4', 'sm:order-2');
-    expect(screen.getByText(event.name)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: event.name })).toBeInTheDocument();
     expect(screen.getByText('Price Center')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Add to Google Calendar' })).toBeInTheDocument();
   });
