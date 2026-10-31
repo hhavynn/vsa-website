@@ -115,7 +115,7 @@ export function buildBranchPreview({ cycle, drafts, nodes, families }: BranchPre
     );
     const byBig = Array.from(groups, ([bigId, children]) => ({
       bigId, bigName: byId.get(bigId)?.name ?? 'Unlinked Big',
-      existing: refs.filter((n) => n.parentId === bigId && n.isPublished === true).length,
+      existing: publicRefs.filter((n) => n.parentId === bigId).length,
       incoming: children.length,
     })).sort((a, b) => a.bigName.localeCompare(b.bigName) || a.bigId.localeCompare(b.bigId));
 
