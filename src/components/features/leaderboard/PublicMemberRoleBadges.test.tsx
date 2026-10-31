@@ -8,6 +8,7 @@ const role = (kind: PublicMemberRole['kind'], label: string): PublicMemberRole =
   label,
   academicYearStart: 2026,
   sourceType: 'cabinet_members',
+  relatedKey: null,
 });
 
 describe('shared public member role badges (#627)', () => {

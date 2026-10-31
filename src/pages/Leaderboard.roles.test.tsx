@@ -63,7 +63,7 @@ jest.mock('../components/ui/AnimatedCounter', () => ({
 }));
 
 const role = (memberId: string, kind: PublicMemberRole['kind'], label: string): PublicMemberRole => ({
-  memberId, kind, label, academicYearStart: 2026, sourceType: 'cabinet_members',
+  memberId, kind, label, academicYearStart: 2026, sourceType: 'cabinet_members', relatedKey: null,
 });
 
 function mount() {

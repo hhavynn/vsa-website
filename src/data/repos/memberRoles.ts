@@ -1,59 +1,36 @@
 import { supabase } from '../../lib/supabase';
 import { withErrorHandling } from '../errors';
-import {
-  shapePublishedCabinetRoles,
-  type PublicMemberRole,
-  type PublishedCabinetRoleRow,
-} from '../../lib/memberRoles';
+import { shapePublicMemberRoles } from '../../lib/memberRoles';
+import type { PublicMemberRole, PublicMemberRoleRow } from '../../lib/memberRoles';
 
 /**
- * Read-only, bounded lookup for already-public roster entries. The source is
- * the same cabinet_members collection rendered at /cabinet, not an admin draft.
- * Selection is explicitly allowlisted: no names, bios, emails, photos or notes.
- *
- * A missing/ambiguous year returns no labels; a denied read throws so the
- * leaderboard can explain missing badges without hiding the point rankings.
+ * One bounded, public-safe read by canonical member ID and selected year.
+ * The new RPC migration MUST be applied by the owner before this cutover
+ * ships; missing/denied RPCs throw rather than inventing roles.
  */
 export async function getPublicMemberRoles(
-  academicYearStart: number,
-  memberIds: readonly string[],
+  academicYearStart: number, memberIds: readonly string[],
 ): Promise<Map<string, PublicMemberRole[]>> {
   const ids = Array.from(new Set(memberIds.filter(Boolean))).sort();
   if (ids.length === 0) return new Map();
-  // The public pager supports 25, 50, 100 and Show All. Large visible
-  // selections must be chunked, never silently lose everyone's badges.
   if (ids.length > 2000) throw new Error('Role lookup exceeds a safe visible-member limit.');
 
   return withErrorHandling(async () => {
-    const { data: years, error: yearError } = await supabase
-      .from('cabinet_years')
-      .select('id')
-      .eq('start_year', academicYearStart)
-      .limit(2);
-
-    if (yearError) throw yearError;
-    if (!years?.length) return new Map<string, PublicMemberRole[]>();
-    if (years.length !== 1) throw new Error('Ambiguous Cabinet year. Role badges cannot be verified.');
-
-    const matches: PublishedCabinetRoleRow[] = [];
-    // One year lookup; <=50 IDs per PostgREST request, never an N+1 role
-    // request per person. Page 100 / Show All require several safe batches.
-    for (let from = 0; from < ids.length; from += 50) {
-      const batch = ids.slice(from, from + 50);
-      const { data, error } = await supabase
-        .from('cabinet_members')
-        .select('id, member_id, role, category')
-        .eq('cabinet_year_id', years[0].id)
-        .in('member_id', batch)
-        .limit(501);
+    const rows: PublicMemberRoleRow[] = [];
+    for (let from = 0; from < ids.length; from += 200) {
+      const { data, error } = await supabase.rpc('public_member_roles', {
+        p_year: academicYearStart, p_member_ids: ids.slice(from, from + 200),
+      });
       if (error) throw error;
-      if ((data ?? []).length >= 501) throw new Error('Public Cabinet role result exceeds safe bound.');
-      matches.push(...((data ?? []) as PublishedCabinetRoleRow[]));
+      if (!Array.isArray(data)) throw new Error('Public role projection returned invalid data.');
+      if (data.length > ids.slice(from, from + 200).length * 25) {
+        throw new Error('Public role projection exceeded the safe response budget.');
+      }
+      rows.push(...(data as PublicMemberRoleRow[]));
     }
-    return shapePublishedCabinetRoles(matches, ids, academicYearStart);
+    return shapePublicMemberRoles(rows, ids, academicYearStart);
   }, 'Failed to fetch published member roles');
 }
-
 
 /** The published Cabinet roster is the only approved year-specific Board source.
  * A roster read failure or missing Board publication MUST NOT classify every
