@@ -28,16 +28,23 @@ export async function getCompleteHouseBatchCoverage(batchId: string): Promise<Co
   }, 'Failed to read complete House assignment coverage');
 }
 
-/** Released/archived House batches remain reviewable even after later revisions. */
+/** Published-at, not status, is the release identity; archive stays reviewable. */
 export async function getRevealedHouseBatches(year: number): Promise<HouseAssignmentBatch[]> {
   return withErrorHandling(async () => {
-    const { data, error } = await supabase
-      .from('house_assignment_batches')
-      .select('*')
-      .eq('academic_year_start', year)
-      .not('published_at', 'is', null)
-      .order('published_at', { ascending: false });
-    if (error) throw error;
-    return (data ?? []) as HouseAssignmentBatch[];
+    const all: HouseAssignmentBatch[] = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from('house_assignment_batches')
+        .select('*')
+        .eq('academic_year_start', year)
+        .not('published_at', 'is', null)
+        .order('published_at', { ascending: false })
+        .order('id', { ascending: true })
+        .range(from, from + PAGE_SIZE - 1);
+      if (error) throw error;
+      const page = (data ?? []) as HouseAssignmentBatch[];
+      all.push(...page);
+      if (page.length < PAGE_SIZE) return all;
+    }
   }, 'Failed to load revealed House assignment batches');
 }
