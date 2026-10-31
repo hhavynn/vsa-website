@@ -87,3 +87,7 @@ owner review before calling #692 fully closed.
 This branch has **not applied** a migration to production or run live
 RLS verification. #693 owns official GBM snapshots, release approvals and
 embargo-safe export; this PR must not create or auto-publish those snapshots.
+
+### Score-free House badge exact Reveal gate (#802)
+
+The forward RPC migration `20261031093000_public_member_house_badge_matches_view.sql` removes the legacy lookup's year-wide `status='published'` check and raw `house_memberships` join. `public_member_house_badge` now reads **only** the Reveal-gated `public_house_memberships` view, so archived revealed rows stay visible, future announced starts are selectable, and a later batch is not disclosed merely because Fall was revealed. The RPC returns six identity-only JSON keys, plus no points, attendance, notes or private roster. Existing public House score view grants stay revoked. Owner must approve and apply this migration before enabling the #815 modal link enhancement.
