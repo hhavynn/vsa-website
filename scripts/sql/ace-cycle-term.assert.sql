@@ -31,7 +31,9 @@ begin
   end;
   begin
     insert into public.ace_assignment_cycles (id, academic_year_start, academic_year_end)
-    values ('40000000-0000-0000-0000-000000000003', 2026, 2027);
+    -- #669 fixtures already published one legacy NULL-term cycle for 2026–27.
+    -- Check the new Lock guard in a different year, preserving uniqueness.
+    values ('40000000-0000-0000-0000-000000000003', 2028, 2029);
     update public.ace_assignment_cycles set status='locked'
       where id='40000000-0000-0000-0000-000000000003';
     raise exception 'FAIL legacy null-term cycle locked';
