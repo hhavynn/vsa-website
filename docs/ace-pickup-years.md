@@ -162,3 +162,28 @@ Year-mode family sheets show one left-hand `2023–24` rail label and horizontal
 The label rail stays inside the same transformed canvas as the tree, but cancels horizontal panning and inverse-scales the text to keep it readable at 50/100/200% zoom. Responsive rail width reserves space in pan limits and keyboard focus. Node accessible names include their **own approved pickup year**, not their Big's year. The selected-member card says `Picked up: Fall 2023 · 2023–24`, `Picked up: 2023–24 (term unknown)` or `Pickup year unverified`. No source, evidence status, reviewer, pending application or private year guess reaches the public rail.
 
 **Manual validation still required:** 320px iPhone and Android, 768px tablet, desktop, both themes, browser zoom and touch pinch/pan, reduced motion, keyboard navigation and VoiceOver/TalkBack. The #675 browser measurement/screenshot work stays separate. No database migration or publish action is part of the rail.
+
+## Historical pickup-year coverage preflight (#675, no database writes)
+
+The `coverage` command measures reconstructed source terms **separately** from approved years on the published, year-allowlisted view. It never matches a person by name, guesses from a Big or edits any node. Source categories are exact term, year-only, legacy, absent and malformed/needs-review. Published per-fam categories are approved year, approved term and unknown; archived (Graveyard) fams are included. A source term is **not** a verified public pickup date.
+
+```bash
+npm run ace:years -- coverage \
+  --live-families /restricted/published_ace_families.json \
+  --live-members /restricted/published_ace_family_members.json \
+  --repo-families data/ace-families \
+  --out-dir scripts/reports/ace-historical-years/coverage
+```
+
+The two live JSON inputs must be complete, separately authorized exports of the published views; each member MUST include both pickup_academic_year_start and pickup_term keys, even when NULL. Missing #669 columns, empty or partial files, malformed JSON or duplicate IDs **fail the command**. Files written: `coverage.json` and `coverage.md`, containing counts and public family slugs only. `--out-dir` must be gitignored or external; the command refuses tracked outputs. Inspect small-cell counts before copying any aggregate into the public repository. Do not commit the exported snapshots, review sheets, photos or any raw student information.
+
+Owner signoff checklist:
+
+- [ ] Confirm #669 migration is actually deployed to the target database, and RLS/anon projection reveals the two approved pickup columns but no evidence, private family rows or contact information. A green frontend build is not deployment proof.
+- [ ] Verify complete read pagination for BOTH published views, published-family/node counts, no hidden terminal page, no read errors reported as an empty family. Confirm Sunshine, Sweatpants and Graveyard families are included.
+- [ ] Record the counts of term-approved, year-only and Unknown members by public fam, plus totals. Re-run the report on a fresh snapshot after each approved correction batch. Historical reconstructed `added_term` values remain pending evidence until separately approved.
+- [ ] For the exact intended batch, run `scripts/sql/ace-year-only-hash.sql` *before* and *after* the owner-authorized #670 write, compare each family's `stored_nodes` and `shape_hash`; these hashes deliberately exclude both year fields and updated_at, and include member links, parent relationships, names, photos, role labels, order and publication state. **STOP on any difference.**
+- [ ] Check #669 term mapping (`FA21` and `SP22` share 2021–22; `FA23` vs `SP23` differ), RLS verifier, publisher cycle year stamping (#674) and complete read/changed count reconciliation. Require explicit reviewer approval; no invented year for legacy nodes.
+- [ ] Manual phone/tablet/desktop year-rail, focus, pan/zoom, deep link, light/dark and screen-reader evidence waits for #671 and #672. No screenshot or device signoff is implied by this CLI.
+
+The existing 2026-10-27 counts in `docs/ace-historical-pickup-years-results.md` are historical **review candidates**, not this newly measured approved-year state. Publish only independently reviewed count-only updates there, and keep private evidence outside git.

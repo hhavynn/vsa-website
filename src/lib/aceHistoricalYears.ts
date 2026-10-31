@@ -18,6 +18,8 @@
 // as CONFLICTING_EVIDENCE with every candidate kept for a reviewer.
 import { z } from 'zod';
 import { foldName, personNameFromFull } from './personName';
+import { validateJson } from './aceFamilyImport';
+import { parsePickupValue, pickupYearOf } from './acePickupYear';
 
 // ── Terms and academic years ────────────────────────────────────────────────
 
@@ -1082,4 +1084,128 @@ export function summarize(result: ReconciliationResult, evidence: EvidenceBundle
     }),
     unmatched_by_reason: unmatchedByReason,
   };
+}
+
+
+// ── Read-only coverage diagnostic (#675, independent of chronological UI) ───
+
+export interface PickupYearCoverageCounts {
+  /** Canonical term like FA23. */
+  exact: number;
+  /** Academic year stated without a term. */
+  year_only: number;
+  /** A literal legacy marker; never mapped to a date. */
+  legacy: number;
+  /** Source entry has no pickup value. */
+  absent: number;
+  /** Nonempty source value cannot be dated without a human. */
+  needs_review: number;
+}
+
+export interface PickupYearCoverage {
+  schema: 'ace-pickup-year-coverage/v1';
+  sources: Array<{ file: string; total: number } & PickupYearCoverageCounts>;
+  source_total: { files: number; members: number } & PickupYearCoverageCounts;
+  live_families: Array<{
+    fam_slug: string;
+    nodes: number;
+    approved_year: number;
+    approved_term: number;
+    unknown: number;
+  }>;
+  live_total: { families: number; nodes: number; approved_year: number; approved_term: number; unknown: number };
+}
+
+function emptyPickupCounts(): PickupYearCoverageCounts {
+  return { exact: 0, year_only: 0, legacy: 0, absent: 0, needs_review: 0 };
+}
+
+/**
+ * Source files are counted independently, never joined to live nodes by
+ * their names. Published family IDs are used only in memory to group counts;
+ * the output contains NO student names, IDs, photo/contact fields or evidence.
+ *
+ * All actual node rows must contain both #669 approved columns, including
+ * nulls, or a pre-migration snapshot would appear to be zero approved years.
+ */
+export function summarizeYearCoverage(
+  snapshot: LiveSnapshot,
+  repoFiles: readonly { file: string; json: unknown }[],
+): PickupYearCoverage {
+  if (snapshot.hasPickupColumns !== true || snapshot.nodes.some((row) =>
+    !Object.prototype.hasOwnProperty.call(row, 'pickup_term') ||
+    !Object.prototype.hasOwnProperty.call(row, 'pickup_academic_year_start'))) {
+    throw new Error('Coverage needs both #669 approved pickup columns on every live node.');
+  }
+  if (snapshot.families.length === 0 || snapshot.nodes.length === 0) {
+    throw new Error('Live snapshot is empty; coverage is unknown.');
+  }
+  if (repoFiles.length === 0) {
+    throw new Error('No reconstructed ACE family files; source coverage is unknown.');
+  }
+  const knownFamilies = new Set(snapshot.families.map((fam) => fam.id));
+  if (knownFamilies.size !== snapshot.families.length) {
+    throw new Error('Duplicate family IDs; coverage cannot be trusted.');
+  }
+
+  const source_total = { files: repoFiles.length, members: 0, ...emptyPickupCounts() };
+  const seenFiles = new Set<string>();
+  const sources = repoFiles.map(({ file, json }) => {
+    const name = file.split(/[\\/]/).pop() ?? '';
+    if (!/^[a-z0-9][a-z0-9_-]*\.json$/i.test(name) || seenFiles.has(name.toLowerCase())) {
+      throw new Error('Reconstructed source filenames must be distinct safe JSON basenames.');
+    }
+    seenFiles.add(name.toLowerCase());
+    const parsed = validateJson(json);
+    if (!parsed.ok) throw new Error('Reconstructed source file is malformed: ' + name);
+    const counts = emptyPickupCounts();
+    for (const member of parsed.json.members) {
+      const value = parsePickupValue(member.added_term ?? null);
+      if (value.kind === 'term') counts.exact++;
+      else if (value.kind === 'academic_year') counts.year_only++;
+      else if (value.kind === 'unknown' && value.reason === 'legacy') counts.legacy++;
+      else if (value.kind === 'unknown') counts.absent++;
+      else counts.needs_review++;
+    }
+    const total = parsed.json.members.length;
+    source_total.members += total;
+    (Object.keys(counts) as Array<keyof PickupYearCoverageCounts>).forEach((key) => {
+      source_total[key] += counts[key];
+    });
+    return { file: name, total, ...counts };
+  }).sort((a, b) => a.file.localeCompare(b.file));
+
+  const countByFamily = new Map(snapshot.families.map((fam) => [
+    fam.id, { fam_slug: fam.slug, nodes: 0, approved_year: 0, approved_term: 0, unknown: 0 },
+  ]));
+  const seenNodes = new Set<string>();
+  for (const node of snapshot.nodes) {
+    if (seenNodes.has(node.id)) throw new Error('Duplicate live node IDs; coverage cannot be trusted.');
+    seenNodes.add(node.id);
+    const family = countByFamily.get(node.family_id);
+    if (!family || !knownFamilies.has(node.family_id)) throw new Error('Live node references a missing family.');
+    family.nodes++;
+    const pickup = pickupYearOf(node);
+    if (pickup.status === 'verified') {
+      family.approved_year++;
+      if (pickup.term !== null) family.approved_term++;
+    } else {
+      family.unknown++;
+    }
+  }
+  const live_families = Array.from(countByFamily.values())
+    .sort((a, b) => a.fam_slug.localeCompare(b.fam_slug));
+  const live_total = {
+    families: live_families.length,
+    nodes: snapshot.nodes.length,
+    approved_year: live_families.reduce((sum, fam) => sum + fam.approved_year, 0),
+    approved_term: live_families.reduce((sum, fam) => sum + fam.approved_term, 0),
+    unknown: live_families.reduce((sum, fam) => sum + fam.unknown, 0),
+  };
+  if (source_total.members !== source_total.exact + source_total.year_only +
+      source_total.legacy + source_total.absent + source_total.needs_review ||
+      live_total.nodes !== live_total.approved_year + live_total.unknown) {
+    throw new Error('Coverage accounting failed; refusing a misleading partial report.');
+  }
+  return { schema: 'ace-pickup-year-coverage/v1', sources, source_total, live_families, live_total };
 }
