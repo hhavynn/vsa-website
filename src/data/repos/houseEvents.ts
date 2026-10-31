@@ -345,14 +345,15 @@ export class HouseEventsRepository {
     if (!Array.isArray(data)) throw new Error('Unexpected public House event response');
     const rows = data as PublicHouseEventRow[];
     const hostIds = new Set<string>();
+    // Older event rows may have only a primary House and no association row.
+    // Resolve that host through the published allowlist too, never trust
+    // house_profile_id by itself to prove a House is public.
+    const linkedHostIds = (item: PublicHouseEventRow) => {
+      const linked = (item.houses ?? []).map((link) => link.house_page_asset_id).filter(Boolean);
+      return linked.length > 0 ? linked : [item.house_profile_id].filter(Boolean);
+    };
     for (const item of rows) {
-      // Older event rows may have only a primary House and no association
-      // row. Resolve that host through the published allowlist too, never
-      // trust house_profile_id by itself to prove a House is public.
-      if (item.house_profile_id) hostIds.add(item.house_profile_id);
-      for (const link of item.houses ?? []) {
-        if (link.house_page_asset_id) hostIds.add(link.house_page_asset_id);
-      }
+      for (const id of linkedHostIds(item)) hostIds.add(id);
     }
     const published = new Map<string, PublicHouseEventHost>();
     if (hostIds.size > 0) {
@@ -367,8 +368,7 @@ export class HouseEventsRepository {
       }
     }
     return rows.map((item) => {
-      const linkedIds = [item.house_profile_id, ...(item.houses ?? []).map((link) => link.house_page_asset_id)];
-      const hosts = Array.from(new Set(linkedIds))
+      const hosts = Array.from(new Set(linkedHostIds(item)))
         .map((id) => published.get(id))
         .filter((house): house is PublicHouseEventHost => !!house && house.is_active)
         .sort((a, b) => Number(b.id === item.house_profile_id) - Number(a.id === item.house_profile_id));
