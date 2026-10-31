@@ -2,7 +2,7 @@
  * Admin -> ACE -> Assignments: private drafting, lock, preflight, publish.
  */
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '../../../context/ThemeContext';
@@ -214,7 +214,7 @@ describe('admin-only branch preview (#665)', () => {
       fireEvent.click(await screen.findByRole('button', { name: 'Preview family branches' }));
       const region = await screen.findByRole('region', { name: 'Private Fictional Fam family tree preview' });
       expect(region).toHaveClass('is-dark');
-      expect(region.querySelector('svg.ace-family-tree')).toBeInTheDocument();
+      expect(within(region).getByRole('group', { name: 'Family tree' })).toBeInTheDocument();
     } finally {
       document.documentElement.classList.remove('dark');
     }
