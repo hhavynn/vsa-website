@@ -2,6 +2,7 @@ import { applyQuickFilter, countByFilter } from './adminFilters';
 import {
   ACE_DRAFT_FILTERS,
   ACE_NODE_FILTERS,
+  AceNodeFacts,
   AceDraftFacts,
   HOUSE_ROW_FILTERS,
   HouseRowFacts,
@@ -55,13 +56,23 @@ describe('ACE draft filters', () => {
 });
 
 describe('ACE node filters', () => {
+  it('filters for unknown or conflicted pickup years only when the caller supplies checked flags', () => {
+    const rows = [
+      { node: { id: 'year-unknown', member_id: 'm1' }, yearFlags: ['missing_year'] },
+      { node: { id: 'year-verified', member_id: 'm2' }, yearFlags: [] },
+      { node: { id: 'evidence-not-loaded', member_id: 'm3' } },
+    ] as unknown as AceNodeFacts[];
+    expect(applyQuickFilter(rows, ACE_NODE_FILTERS, 'year_review').map(row => row.node.id))
+      .toEqual(['year-unknown']);
+  });
+
   it('splits unlinked nodes by whether a member could match', () => {
     const nodes = [
       { node: { id: 'a', member_id: 'm' } },
       { node: { id: 'b', member_id: null }, review: { status: 'recommended' } },
       { node: { id: 'c', member_id: null }, review: { status: 'none' } },
     ] as never[];
-    expect(countByFilter(nodes, ACE_NODE_FILTERS)).toEqual({ all: 3, unlinked: 2, possible_match: 1, no_match: 1 });
+    expect(countByFilter(nodes, ACE_NODE_FILTERS)).toEqual({ all: 3, unlinked: 2, possible_match: 1, no_match: 1, year_review: 0 });
   });
 });
 

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { AceFamily, AceFamilyMember } from '../types';
-import { aceFamiliesRepository } from '../data/repos/aceFamilies';
+import { aceFamiliesRepository, type AcePickupEvidenceRow } from '../data/repos/aceFamilies';
 import { AceMemberLinkRef } from '../lib/aceMemberLinks';
 
 export function usePublishedAceFamilies(academicYearStart?: number | null) {
@@ -96,4 +96,28 @@ export function useAceMemberLinks(enabled = true) {
   });
 
   return { links, ready };
+}
+
+/**
+ * Admin-only, family-scoped evidence. Never reuse a public ACE query key.
+ * Fail closed: callers must wait for ready rather than treating [] as proof.
+ */
+export function useAcePickupEvidence(familyId: string | null) {
+  const { data, isSuccess, isLoading, error, refetch } = useQuery<AcePickupEvidenceRow[]>({
+    queryKey: ['ace-pickup-evidence', 'admin', familyId],
+    queryFn: () => familyId
+      ? aceFamiliesRepository.listPickupEvidenceForFamily(familyId)
+      : Promise.resolve([]),
+    enabled: !!familyId,
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+  return {
+    evidence: data ?? [],
+    ready: !!familyId && isSuccess,
+    loading: !!familyId && isLoading,
+    error,
+    refetch,
+  };
 }

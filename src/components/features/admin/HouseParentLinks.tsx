@@ -82,7 +82,7 @@ export function HouseParentLinks({ selectedYear }: { selectedYear: number | null
     <section className="scrapbook-paper m-4 p-5 sm:m-6 lg:m-8 border-[var(--color-border)] bg-surface" aria-label="House Parent member links">
       <h2 className="font-serif text-xl font-bold text-text-primary">House Parents · member links</h2>
       <p className="mt-1 text-xs text-text-muted">
-        Links each {formatAcademicYear(selectedYear)} House Parent to their member record. The public House page shows the House Parent text and image set above; links stay private.
+        Checks each {formatAcademicYear(selectedYear)} House Parent against a canonical member record. A name and ID match is not an approval to publish a member-role badge. Public House Parent text and images are managed separately above.
       </p>
       {isLoading ? (
         <p className="mt-4 text-sm text-text-muted">Loading House Parents…</p>
@@ -101,9 +101,13 @@ export function HouseParentLinks({ selectedYear }: { selectedYear: number | null
             </div>
           ) : (
             <p role="status" className={`mt-3 text-xs font-semibold ${needsReview > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-text-secondary'}`}>
-              {needsReview > 0 ? `${needsReview} House Parent${needsReview === 1 ? '' : 's'} need${needsReview === 1 ? 's' : ''} review.` : 'Every House Parent link is verified.'}
+              {needsReview > 0 ? `${needsReview} House Parent${needsReview === 1 ? '' : 's'} need${needsReview === 1 ? 's' : ''} review.` : 'Every House Parent link matches the directory. Public-role approval is still separate.'}
             </p>
           )}
+          <p className="mt-2 text-xs text-text-secondary">
+            Matching a name to a canonical member ID checks consistency only. Links originally created by automatic
+            exact-name matching may still need human confirmation; this screen does not approve or publish roles.
+          </p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <label className="text-xs font-semibold text-text-secondary">
               Link status
@@ -111,7 +115,7 @@ export function HouseParentLinks({ selectedYear }: { selectedYear: number | null
                 <option value="all">All ({parents.length})</option>
                 <option value="unlinked">Unlinked ({unavailable ? '—' : counts.unlinked})</option>
                 <option value="ambiguous">Ambiguous ({unavailable ? '—' : counts.ambiguous})</option>
-                <option value="linked">Verified linked ({unavailable ? '—' : counts.linked})</option>
+                <option value="linked">Matches directory ({unavailable ? '—' : counts.linked})</option>
                 <option value="duplicate-stale">Duplicate / stale link ({unavailable ? '—' : counts['duplicate-stale']})</option>
               </select>
             </label>
@@ -132,7 +136,7 @@ export function HouseParentLinks({ selectedYear }: { selectedYear: number | null
                     {parent.houseLabel} · {parent.member_id ? 'Linked' : `Needs review${parent.review_note ? ` — ${parent.review_note}` : ''}`}
                   </p>
                   {!unavailable && <p className="mt-1 text-xs font-semibold text-text-secondary">
-                    {state === 'linked' ? 'Verified link' : state === 'ambiguous' ? 'Ambiguous identity' : state === 'duplicate-stale' ? 'Duplicate / stale link' : 'Unlinked'}
+                    {state === 'linked' ? 'Directory match · publication not approved here' : state === 'ambiguous' ? 'Ambiguous identity' : state === 'duplicate-stale' ? 'Duplicate / stale link' : 'Unlinked'}
                   </p>}
                   {!unavailable && reason && <p className="mt-1 max-w-lg text-xs text-text-muted">{reason}</p>}
                   {!unavailable && parent.member_id && linkedMembers.has(parent.member_id) && (

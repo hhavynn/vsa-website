@@ -164,6 +164,14 @@ describe('draft cycle', () => {
 });
 
 describe('admin-only branch preview (#665)', () => {
+  // The button renders disabled until the cycle, draft and node reads finish,
+  // and a click on a disabled button is silently dropped.
+  async function readyPreviewButton() {
+    const button = await screen.findByRole('button', { name: 'Preview family branches' });
+    await waitFor(() => expect(button).toBeEnabled(), { timeout: 5000 });
+    return button;
+  }
+
   beforeEach(() => {
     seed('draft', [
       draft('fictional-draft', 'Fictional Little', { big_ace_member_id: 'fictional-big' }),
@@ -181,10 +189,10 @@ describe('admin-only branch preview (#665)', () => {
 
   it('lazily loads families, displays unpublished draft nodes and keeps a read-only edit link', async () => {
     renderWorkspace();
-    const button = await screen.findByRole('button', { name: 'Preview family branches' });
+    const button = await readyPreviewButton();
     expect(supabaseMock.queriesFor('ace_families')).toHaveLength(0);
     fireEvent.click(button);
-    expect(await screen.findByRole('region', { name: 'Private Fictional Fam family tree preview' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Private Fictional Fam family tree preview' }, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.getAllByText('Fictional Little').length).toBeGreaterThan(0);
     expect(screen.getAllByText('DRAFT · NOT PUBLISHED').length).toBeGreaterThan(0);
     expect(screen.getByRole('link', { name: 'Review family records' }))
@@ -195,36 +203,36 @@ describe('admin-only branch preview (#665)', () => {
     expect(supabaseMock.queriesFor('rpc:publish_ace_assignment_cycle')).toHaveLength(0);
     fireEvent.click(screen.getByRole('checkbox', { name: 'Full published ancestry' }));
     expect(screen.getByRole('region', { name: 'Private Fictional Fam family tree preview' })).toBeInTheDocument();
-  });
+  }, 15000);
 
   it('fails closed when the private family list cannot be read', async () => {
     supabaseMock.setDefault('ace_families', {
       data: null, error: postgrestError('permission denied for ACE families', '42501'),
     });
     renderWorkspace();
-    fireEvent.click(await screen.findByRole('button', { name: 'Preview family branches' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Family data could not be loaded');
+    fireEvent.click(await readyPreviewButton());
+    expect(await screen.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent('Family data could not be loaded');
     expect(screen.queryByRole('region', { name: /Private.*family tree preview/ })).not.toBeInTheDocument();
-  });
+  }, 15000);
 
   it('applies the active dark mode to the same SVG renderer and preview wrapper', async () => {
     document.documentElement.classList.add('dark');
     try {
       renderWorkspace();
-      fireEvent.click(await screen.findByRole('button', { name: 'Preview family branches' }));
-      const region = await screen.findByRole('region', { name: 'Private Fictional Fam family tree preview' });
+      fireEvent.click(await readyPreviewButton());
+      const region = await screen.findByRole('region', { name: 'Private Fictional Fam family tree preview' }, { timeout: 5000 });
       expect(region).toHaveClass('is-dark');
       expect(within(region).getByRole('group', { name: 'Family tree' })).toBeInTheDocument();
     } finally {
       document.documentElement.classList.remove('dark');
     }
-  });
+  }, 15000);
 
   it('marks the working preview provisional until the cycle is locked', async () => {
     renderWorkspace();
-    fireEvent.click(await screen.findByRole('button', { name: 'Preview family branches' }));
-    expect(await screen.findByText(/Working draft; edits can still change this preview/)).toBeInTheDocument();
-  });
+    fireEvent.click(await readyPreviewButton());
+    expect(await screen.findByText(/Working draft; edits can still change this preview/, {}, { timeout: 5000 })).toBeInTheDocument();
+  }, 15000);
 });
 
 describe('filters, bulk actions and activity', () => {
