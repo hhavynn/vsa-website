@@ -26,6 +26,7 @@ import { hasRevealedHouseMemberships } from '../data/repos/houseMemberships';
 
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
+import { ContentUnavailableState } from '../components/common/ContentUnavailableState';
 import { ProfileSpotlightCard } from '../components/ui/ProfileSpotlightCard';
 import { RelatedLinks } from '../components/common/RelatedLinks';
 import { houseRelatedLinks } from '../lib/relatedLinks';
@@ -544,6 +545,13 @@ export function House() {
             <div className="program-eyebrow">
               {isArchive ? `${activeYearLabel} Houses` : 'The Four Houses'}
             </div>
+            {displayedHouses.length === 0 && !!houseAssetsError && (
+              <ContentUnavailableState
+                className="mb-5"
+                title={`${activeYearLabel} House details are temporarily unavailable`}
+                message={isArchive ? 'Please check back soon.' : 'This does not mean Houses have not been announced. Please check back soon.'}
+              />
+            )}
             {displayedHouses.length === 0 && !isArchive && houseAssetsSettled && (
               <div className="scrapbook-empty mb-5 p-6 text-center">
                 {showSummerTransition ? (
@@ -575,7 +583,7 @@ export function House() {
                 </Link>
               </div>
             )}
-            {displayedHouses.length === 0 && isArchive && (
+            {displayedHouses.length === 0 && isArchive && !houseAssetsError && (
               <div className="scrapbook-empty mb-5 p-6 text-center">
                 <p className="font-serif text-2xl leading-tight" style={{ color: 'var(--color-text)' }}>
                   No confirmed Houses yet

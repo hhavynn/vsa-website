@@ -8,7 +8,7 @@ On the exact branch SHA under review run:
 
     CI=true npm test -- --watchAll=false --testPathPattern='FamSheet.quality|FamSheet|FamilyTree|aceTreeLayout|FamTabs'
 
-The FamSheet.quality.test.tsx suite exercises actual React DOM/SVG rather than mocking layoutTree: HTML year-label centers align with SVG guides; a deep-linked node stays selected across zoom/pan; a cyclic family remains navigable; and jest-axe evaluates rendered year and all-unknown layouts.
+The FamSheet.quality.test.tsx suite exercises actual React DOM/SVG rather than mocking layoutTree: HTML year-label centers align with SVG guides; a deep-linked node stays selected across zoom/pan; a cyclic family remains navigable; 153 synthetic members across three published branches retain all 150 edges and a 51-person selectable lineage; missing parents never create phantom genealogy; and jest-axe evaluates rendered year and all-unknown layouts.
 
 **Limit:** jsdom cannot determine actual bounding-box overlap, touch behavior, pinch coordinates, browser text sizing, VoiceOver, or TalkBack. These tests do not replace device evidence.
 

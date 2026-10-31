@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { ApplicationCTA, publicApplicationAtTime } from './ApplicationCTA';
+import { ApplicationCTA, publicApplicationAtTime, publicWindowCue } from './ApplicationCTA';
+import type { PublicApplicationLink } from '../../types';
 import { supabaseMock } from '../../test-utils/supabaseMock';
 
 jest.mock('../../lib/supabase', () => ({
@@ -127,6 +128,56 @@ describe('ApplicationCTA message precedence', () => {
     expect(await screen.findByRole('link', { name: /Apply for a House/i })).toHaveAttribute('href', 'https://open-form.invalid/house');
     expect(screen.queryByRole('complementary', { name: /Other open VSA opportunities/i })).not.toBeInTheDocument();
   });
+
+describe('public application-window status cues (#276)', () => {
+  beforeEach(() => supabaseMock.reset());
+
+  it('distinguishes a configured seven-day opening from a later schedule using Pacific calendar days', () => {
+    const now = new Date('2026-10-31T18:00:00Z');
+    const soon = linkRow({ status: 'not_open', open_at: '2026-11-07T20:00:00Z' }) as PublicApplicationLink;
+    const later = linkRow({ status: 'not_open', open_at: '2026-11-08T20:00:00Z' }) as PublicApplicationLink;
+    expect(publicWindowCue(soon, 'house_fall', now)).toBe('Opening soon');
+    expect(publicWindowCue(later, 'house_fall', now)).toBe('Scheduled for later');
+    expect(publicWindowCue({ ...soon, is_enabled: false }, 'house_fall', now)).toBeNull();
+    expect(publicWindowCue({ ...soon, open_at: 'invalid' }, 'house_fall', now)).toBeNull();
+    expect(publicWindowCue({ ...soon, open_at: '2026-10-30T20:00:00Z' }, 'house_fall', now)).toBeNull();
+  });
+
+  it('labels annual closed application windows differently from repeatable House and VCN rounds', () => {
+    const now = new Date('2026-11-18T18:00:00Z');
+    const closed = linkRow({ status: 'closed' }) as PublicApplicationLink;
+    expect(publicWindowCue(closed, 'ace_application', now)).toBe('Closed for this year');
+    expect(publicWindowCue(closed, 'intern_application', now)).toBe('Closed for this year');
+    expect(publicWindowCue(closed, 'cabinet_application', now)).toBe('Closed for this year');
+    expect(publicWindowCue(closed, 'house_fall', now)).toBe('Closed for this round');
+    expect(publicWindowCue(closed, 'vcn_props_team_interest', now)).toBe('Closed for this round');
+    expect(publicWindowCue({ ...closed, status: 'disabled' }, 'cabinet_application', now)).toBeNull();
+    expect(publicWindowCue(null, 'ace_application', now)).toBeNull();
+  });
+
+  it('shows the opening-soon cue without revealing a future form URL or replacing approved copy', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-31T18:00:00Z'));
+    supabaseMock.setDefault('public_application_links', { data: [linkRow({
+      status: 'not_open', open_at: '2026-11-05T18:00:00Z',
+      before_open_message: 'Application details will be announced through VSA.',
+      target_url: 'https://future-form.invalid/private',
+    })], error: null });
+    const { container } = renderCTA();
+    expect(await screen.findByText('Opening soon')).toBeInTheDocument();
+    expect(screen.getByText('Application details will be announced through VSA.')).toBeInTheDocument();
+    expect(container.innerHTML).not.toContain('future-form.invalid');
+    expect(screen.queryByRole('link', { name: /Apply for a House/ })).not.toBeInTheDocument();
+  });
+
+  it('shows closed-for-round wording without exposing the expired link', async () => {
+    supabaseMock.setDefault('public_application_links', { data: [linkRow({
+      status: 'closed', target_url: 'https://expired-form.invalid/private',
+    })], error: null });
+    const { container } = renderCTA();
+    expect(await screen.findByText('Closed for this round')).toBeInTheDocument();
+    expect(container.innerHTML).not.toContain('expired-form.invalid');
+  });
+});
 
 describe('public closed-window next steps and cached form safety (#276)', () => {
   beforeEach(() => supabaseMock.reset());

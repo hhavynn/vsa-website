@@ -1,5 +1,5 @@
 import { aceFamiliesRepository } from './aceFamilies';
-import { supabaseMock } from '../../test-utils/supabaseMock';
+import { postgrestError, supabaseMock } from '../../test-utils/supabaseMock';
 
 jest.mock('../../lib/supabase', () => ({
   get supabase() {
@@ -91,6 +91,40 @@ describe('complete admin ACE node references (#291)', () => {
     expect(supabaseMock.queriesFor('published_ace_family_members')).toHaveLength(0);
   });
 
+  it('reads approved pickup fields and unpublished nodes only into admin references (#665)', async () => {
+    supabaseMock.queueResult('ace_family_members', { data: [
+      { ...row(0), is_published: true, pickup_academic_year_start: 2021, pickup_term: 'FA21' },
+      { ...row(1), is_published: false, pickup_academic_year_start: null, pickup_term: null },
+    ], error: null });
+    const refs = await aceFamiliesRepository.getAllNodeRefs();
+    expect(refs).toEqual([
+      expect.objectContaining({
+        id: 'fictional-node-0000', isPublished: true,
+        pickupAcademicYearStart: 2021, pickupTerm: 'FA21',
+        parentId: null, roleLabel: 'OG Founder',
+      }),
+      expect.objectContaining({
+        id: 'fictional-node-0001', isPublished: false,
+        pickupAcademicYearStart: null, pickupTerm: null,
+        parentId: 'fictional-node-0000',
+      }),
+    ]);
+    const [query] = supabaseMock.queriesFor('ace_family_members');
+    const selected = query.calls.find((call) => call.method === 'select')?.args[0];
+    expect(selected).toBe('id, name, family_id, member_id, parent_member_id, role_label, is_published, pickup_academic_year_start, pickup_term, ace_families(name)');
+    expect(supabaseMock.queriesFor('ace_member_pickup_evidence')).toHaveLength(0);
+    expect(supabaseMock.queriesFor('members')).toHaveLength(0);
+  });
+
+  it('does not infer publication or a year from legacy admin rows missing the new columns', async () => {
+    supabaseMock.queueResult('ace_family_members', { data: [row(0)], error: null });
+    const refs = await aceFamiliesRepository.getAllNodeRefs();
+    expect(refs).toHaveLength(1);
+    expect(refs[0].isPublished).toBe(false);
+    expect(refs[0].pickupAcademicYearStart).toBeUndefined();
+    expect(refs[0].pickupTerm).toBeUndefined();
+  });
+
   it('preserves the two existing PostgREST family-join shapes', async () => {
     supabaseMock.queueResult('ace_family_members', {
       data: [{ ...row(1), ace_families: [{ name: 'Array Family' }] }, {
@@ -120,5 +154,54 @@ describe('complete admin ACE node references (#291)', () => {
       message: 'Insufficient permissions', code: '42501',
     });
     expect(supabaseMock.queriesFor('ace_family_members')).toHaveLength(2);
+  });
+});
+
+describe('complete admin family directory for private ACE preview (#665)', () => {
+  it('loads beyond the PostgREST 1000-row default with deterministic pagination', async () => {
+    const page = Array.from({ length: 1000 }, (_, index) => ({
+      id: 'synthetic-family-' + String(index).padStart(4, '0'),
+      name: 'Fictional Family', display_order: 1, is_published: true,
+    }));
+    supabaseMock.queueResult('ace_families', { data: page, error: null });
+    supabaseMock.queueResult('ace_families', {
+      data: [{ id: 'synthetic-family-1000', name: 'Fictional Family', display_order: 1, is_published: false }],
+      error: null,
+    });
+    const families = await aceFamiliesRepository.getAdminFamilies();
+    expect(families).toHaveLength(1001);
+    expect(families[1000].id).toBe('synthetic-family-1000');
+    const queries = supabaseMock.queriesFor('ace_families');
+    expect(queries).toHaveLength(2);
+    expect(queries.map((query) => query.calls.find((call) => call.method === 'range')?.args))
+      .toEqual([[0, 999], [1000, 1999]]);
+    for (const query of queries) {
+      expect(query.calls.filter((call) => call.method === 'order')).toEqual([
+        { method: 'order', args: ['display_order', { ascending: true }] },
+        { method: 'order', args: ['name', { ascending: true }] },
+        { method: 'order', args: ['id', { ascending: true }] },
+      ]);
+    }
+  });
+
+  it('never returns a partial family list when a later page fails', async () => {
+    supabaseMock.queueResult('ace_families', {
+      data: Array.from({ length: 1000 }, (_, index) => ({ id: 'fake-' + index })), error: null,
+    });
+    supabaseMock.queueResult('ace_families', {
+      data: null, error: postgrestError('permission denied for the next page', '42501'),
+    });
+    await expect(aceFamiliesRepository.getAdminFamilies())
+      .rejects.toMatchObject({ name: 'DatabaseError', message: 'Insufficient permissions' });
+  });
+
+  it('keeps a truly empty family directory distinct from a failed read', async () => {
+    supabaseMock.queueResult('ace_families', { data: null, error: null });
+    await expect(aceFamiliesRepository.getAdminFamilies()).resolves.toEqual([]);
+    supabaseMock.queueResult('ace_families', {
+      data: null, error: postgrestError('permission denied', '42501'),
+    });
+    await expect(aceFamiliesRepository.getAdminFamilies())
+      .rejects.toMatchObject({ name: 'DatabaseError', message: 'Insufficient permissions' });
   });
 });

@@ -49,6 +49,7 @@ import { AceApplicationProfilesPanel } from './AceApplicationProfilesPanel';
 import { AceAssignmentImportPanel } from './AceAssignmentImportPanel';
 import { AceMutualRequestPanel } from './AceMutualRequestPanel';
 import { AceAssignmentPreflightPanel } from './AceAssignmentPreflightPanel';
+import { AceBranchPreviewPanel } from './AceBranchPreviewPanel';
 import { AceAssignmentRow } from './AceAssignmentRow';
 import {
   BulkActionBar,
@@ -529,6 +530,10 @@ export function AceAssignmentsWorkspace() {
       )}
 
       {sorting && ready && <AceEligibilityPanel cycle={cycle} eligibility={eligibility} />}
+
+      {sorting && (
+        <AceBranchPreviewPanel key={cycle.id} cycle={cycle} drafts={drafts} nodes={nodes} ready={ready} />
+      )}
 
       {preflight && cycle.status !== 'published' && cycle.status !== 'archived' && (
         <div className="space-y-3">
