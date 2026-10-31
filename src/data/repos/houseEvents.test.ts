@@ -198,6 +198,46 @@ describe('HouseEventsRepository — behaviour', () => {
       Object.keys(host).sort().join(',') === 'accent_color,display_name,house,house_key,id,is_active')).toBe(true);
   });
 
+  it('does not advertise a published event as belonging to a hidden primary House (#640)', async () => {
+    const row = {
+      id: 'published-event-hidden-house', house_profile_id: 'hidden-profile',
+      is_published: true, houses: [{ house_page_asset_id: 'hidden-profile' }],
+    };
+    for (const method of ['getPublicUpcomingForHouse', 'getPublicPastForHouse'] as const) {
+      supabaseMock.reset();
+      supabaseMock.queueResult('house_event_houses', {
+        data: [{ house_event_id: row.id }], error: null,
+      });
+      supabaseMock.queueResult('house_events', { data: [row], error: null });
+      supabaseMock.queueResult('published_house_page_assets', {
+        data: [], error: null,
+      });
+      await expect(houseEventsRepository[method]('hidden-profile', TODAY)).resolves.toEqual([]);
+    }
+    supabaseMock.reset();
+    supabaseMock.queueResult('house_events', { data: row, error: null });
+    supabaseMock.queueResult('published_house_page_assets', { data: [], error: null });
+    await expect(houseEventsRepository.getPublicEventForHouse(row.id, 'hidden-profile')).resolves.toBeNull();
+  });
+
+  it('retains a published primary House for a legacy event without an association row (#640)', async () => {
+    supabaseMock.queueResult('house_events', { data: {
+      id: 'legacy-event', house_profile_id: HOUSE_ID,
+      is_published: true, houses: [],
+    }, error: null });
+    supabaseMock.queueResult('published_house_page_assets', { data: [{
+      id: HOUSE_ID, house: 'fictional', house_key: 'fictional',
+      display_name: 'Fictional House', accent_color: null, is_active: true,
+    }], error: null });
+    const event = await houseEventsRepository.getPublicEventForHouse('legacy-event', HOUSE_ID);
+    expect(event).toMatchObject({
+      id: 'legacy-event', houses: [{ id: HOUSE_ID, display_name: 'Fictional House' }],
+    });
+    const ids = supabaseMock.queriesFor('published_house_page_assets')
+      .flatMap((query) => query.calls.filter((call) => call.method === 'in'));
+    expect(ids).toContainEqual({ method: 'in', args: ['id', [HOUSE_ID]] });
+  });
+
   it('never forwards unexpected private event or nested fields to public consumers (#640)', async () => {
     const eventRow = {
       id: 'synthetic-ev', house_profile_id: HOUSE_ID,
