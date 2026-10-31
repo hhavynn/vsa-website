@@ -130,7 +130,7 @@ export function AcePickupYearEditor({
       setRefreshGate(null);
       setError(null);
     }
-  }, [member.id, member.pickup_academic_year_start, member.pickup_term, evidence, refreshGate]);
+  }, [member, evidence, refreshGate]);
   const consistentEvidence = selectedEvidence
     ? next?.academicYearStart === selectedEvidence.candidate_academic_year_start
       && next?.term === selectedEvidence.candidate_term
