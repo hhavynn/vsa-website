@@ -41,7 +41,7 @@ import {
   useInfiniteEvents,
   usePublishedPastEventArchiveAvailability,
 } from '../hooks/useEvents';
-import { AcademicTerm, Event, HouseEvent, HousePageAsset } from '../types';
+import { AcademicTerm, Event, PublicHouseEvent, HousePageAsset } from '../types';
 import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
 import { useQuery } from 'react-query';
 
@@ -173,7 +173,7 @@ export function Events() {
   );
 
   // Published House events only (the repository filters drafts out).
-  const { data: upcomingHouseEvents = [], isError: houseEventsError, isLoading: houseEventsLoading } = useQuery<HouseEvent[]>({
+  const { data: upcomingHouseEvents = [], isError: houseEventsError, isLoading: houseEventsLoading } = useQuery<PublicHouseEvent[]>({
     queryKey: ['events-page', 'upcoming-house-events', todayDateOnly],
     queryFn: () => houseEventsRepository.getPublicUpcomingPreview(todayDateOnly, null, 24),
     staleTime: 5 * 60 * 1000,
