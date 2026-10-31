@@ -640,11 +640,15 @@ export default function AdminAceFamilies() {
   const visibleNodes = useMemo(() => applyQuickFilter(nodeFacts, availableNodeFilters, effectiveNodeFilter), [nodeFacts, availableNodeFilters, effectiveNodeFilter]);
   const openReviewNode = (nodeId: string) => {
     if (!selectedFamilyId) return;
-    setNodeFilter('all');
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set('family', selectedFamilyId);
-    nextParams.set('node', nodeId);
-    setSearchParams(nextParams);
+    // The filter and target must move in one URL update. Calling setNodeFilter
+    // first would be overwritten by the next stale searchParams snapshot.
+    setSearchParams(current => {
+      const nextParams = new URLSearchParams(current);
+      nextParams.delete('filter');
+      nextParams.set('family', selectedFamilyId);
+      nextParams.set('node', nodeId);
+      return nextParams;
+    }, { replace: true });
   };
   useEffect(() => {
     if (nodeParam && members.some((node) => node.id === nodeParam)) {
