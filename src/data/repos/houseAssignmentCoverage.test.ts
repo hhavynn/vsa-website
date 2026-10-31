@@ -35,7 +35,7 @@ it('rejects the entire archived-batch read when a later page errors', async () =
     data: Array.from({ length: 500 }, (_, index) => ({ id: 'fictional-' + index })), error: null,
   });
   supabaseMock.queueResult('house_assignment_batches', {
-    data: null, error: { message: 'synthetic page failure' },
+    data: null, error: { message: 'synthetic page failure', code: '42501', details: 'synthetic permission denial' },
   });
   await expect(getRevealedHouseBatches(2026))
     .rejects.toMatchObject({ message: 'synthetic page failure' });
