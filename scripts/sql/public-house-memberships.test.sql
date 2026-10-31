@@ -22,6 +22,13 @@ set client_min_messages = warning;
 \ir ../../supabase/migrations/20261001213414_create_house_assignment_batches.sql
 \ir ../../supabase/migrations/20261026230757_house_assignment_timestamp_placement.sql
 \ir ../../supabase/migrations/20261028060000_public_house_memberships.sql
+-- Full embargo migration is deliberately not loaded by this isolated fixture
+-- (it also replaces multiple score views). Stub its already-live badge RPC,
+-- then prove the #802 forward migration replaces that signature.
+create function public.public_member_house_badge(p_member_id uuid, p_year integer default null)
+returns jsonb language sql stable as $select null::jsonb$;
+\ir ../../supabase/migrations/20261031093000_public_member_house_badge_matches_view.sql
+\ir ../../supabase/migrations/20261031093000_public_member_house_badge_matches_view.sql
 set client_min_messages = notice;
 
 insert into academic_terms (academic_year_start, is_active) values (2026, true);
@@ -41,7 +48,26 @@ insert into house_memberships (member_id, house_profile_id, academic_year_start,
  ('22222222-0000-0000-0000-000000000003', '11111111-0000-0000-0000-000000000024', 2024, 2025, '2024-11-01', 'legacy_backfill', null, null);
 
 set role anon;
-do $$ begin
+do $
+begin
+ if public.public_member_house_badge('22222222-0000-0000-0000-000000000001', 2026) is not null
+   or public.public_member_house_badge('22222222-0000-0000-0000-000000000004', null) is not null then
+   raise exception 'FAIL: badge RPC disclosed a House before any batch was revealed';
+ end if;
+ if public.public_member_house_badge('22222222-0000-0000-0000-000000000003', 2024)
+      ->> 'display_name' <> 'Toad' then
+   raise exception 'FAIL: historical published House should remain visible by selected year';
+ end if;
+ if public.public_member_house_badge(null::uuid, 2026) is not null
+    or public.public_member_house_badge('22222222-0000-0000-0000-000000000001', 2101) is not null then
+   raise exception 'FAIL: null identity or invalid year must return null';
+ end if;
+ raise notice 'PASS: pre-Reveal badge is null even for guessed IDs, legacy year remains public, and invalid input is refused.';
+end $;
+reset role;
+
+set role anon;
+do $ begin
  if exists (select 1 from public.public_house_memberships where academic_year_start = 2026) then
   raise exception 'FAIL: 2026 memberships are public before the Reveal';
  end if;
@@ -62,6 +88,19 @@ do $$ begin
 end $$;
 reset role;
 
+-- Even though the rows are already written, neither a draft nor a locked
+-- unrevealed batch can be read through a guessed canonical member ID.
+set role anon;
+do $
+begin
+ if public.public_member_house_badge('22222222-0000-0000-0000-000000000001', 2026) is not null
+    or public.public_member_house_badge('22222222-0000-0000-0000-000000000004', 2026) is not null then
+   raise exception 'FAIL: locked batch disclosed a House through badge RPC';
+ end if;
+ raise notice 'PASS: badge RPC refuses locked unrevealed rows before any Reveal.';
+end $;
+reset role;
+
 -- Fall is revealed; Winter's Reveal failed partway (its rows exist, batch still locked).
 update house_assignment_batches set status = 'published' where id = '33333333-0000-0000-0000-00000000fa11';
 set role anon;
@@ -74,6 +113,35 @@ do $$ begin
  end if;
  raise notice 'PASS: each batch''s rows wait for that batch''s own Reveal; a hand-added row follows the year.';
 end $$;
+reset role;
+
+set role anon;
+do $
+declare
+  v_visible jsonb;
+begin
+  if public.public_member_house_badge('22222222-0000-0000-0000-000000000004', 2026) is not null
+    or public.public_member_house_badge('22222222-0000-0000-0000-000000000004', null) is not null then
+    raise exception 'FAIL: later locked Winter batch leaked because Fall was revealed';
+  end if;
+  v_visible := public.public_member_house_badge('22222222-0000-0000-0000-000000000001', 2026);
+  if v_visible->>'display_name' <> 'Twilight Sparkle'
+    or v_visible->>'academic_year_start' <> '2026' then
+    raise exception 'FAIL: published Fall House not visible immediately before its effective start';
+  end if;
+  if (v_visible ?| array['total_points','events_attended','review_note',
+                             'source_import_id','member_id']) then
+    raise exception 'FAIL: public badge included private scores, notes or identity IDs';
+  end if;
+  if (select count(*) from jsonb_object_keys(v_visible)) <> 6 then
+    raise exception 'FAIL: public badge response keys changed';
+  end if;
+  if public.public_member_house_badge('22222222-0000-0000-0000-000000000005', 2026)
+      ->> 'display_name' <> 'Twilight Sparkle' then
+    raise exception 'FAIL: revealed hand-added upcoming membership not visible';
+  end if;
+  raise notice 'PASS: badge reveals Fall only, blocks later partial Winter, shows upcoming and returns only six safe fields.';
+end $;
 reset role;
 
 -- Archiving the revealed Fall batch must not hide it; moving the active term
@@ -102,7 +170,49 @@ do $$ begin
 end $$;
 reset role;
 
-do $$ declare cols text; begin
+-- Transferred member: current active House should beat the older ended one.
+-- A member with no successor must have no current-year House.
+insert into public.house_memberships
+  (member_id,house_profile_id,academic_year_start,academic_year_end,
+   effective_start_date,effective_end_date,source,notes)
+values
+ ('22222222-0000-0000-0000-000000000006',
+  '11111111-0000-0000-0000-000000000001',2026,2027,
+  ((now() at time zone 'America/Los_Angeles')::date - 60),
+  ((now() at time zone 'America/Los_Angeles')::date - 10),'admin',null),
+ ('22222222-0000-0000-0000-000000000006',
+  '11111111-0000-0000-0000-000000000024',2026,2027,
+  ((now() at time zone 'America/Los_Angeles')::date - 10),
+  null,'admin',null),
+ ('22222222-0000-0000-0000-000000000007',
+  '11111111-0000-0000-0000-000000000001',2026,2027,
+  ((now() at time zone 'America/Los_Angeles')::date - 60),
+  ((now() at time zone 'America/Los_Angeles')::date - 10),'admin',null);
+set role anon;
+do $
+begin
+ if public.public_member_house_badge('22222222-0000-0000-0000-000000000001',2026)
+     ->> 'display_name' <> 'Twilight Sparkle' then
+   raise exception 'FAIL: archiving an already revealed Fall batch hid its public House';
+ end if;
+ if public.public_member_house_badge('22222222-0000-0000-0000-000000000004',2026) is not null then
+   raise exception 'FAIL: Winter batch is still not published';
+ end if;
+ if public.public_member_house_badge('22222222-0000-0000-0000-000000000006',2026)
+     ->> 'display_name' <> 'Toad' then
+   raise exception 'FAIL: member transfer did not select currently active House';
+ end if;
+ if public.public_member_house_badge('22222222-0000-0000-0000-000000000007',2026) is not null then
+   raise exception 'FAIL: ended current-year House without successor should not be shown';
+ end if;
+ if public.public_member_house_badge('22222222-0000-0000-0000-000000000003',2026) is not null then
+   raise exception 'FAIL: requested year ignored for legacy House';
+ end if;
+ raise notice 'PASS: archived Reveal, active transfer, ended without successor, and explicit year isolation match view.';
+end $;
+reset role;
+
+do $ declare cols text; begin
  select string_agg(column_name, ',' order by ordinal_position) into cols from information_schema.columns where table_name = 'public_house_memberships';
  if cols <> 'member_id,academic_year_start,academic_year_end,effective_start_date,effective_end_date,house_profile_id,house_key,display_name,accent_color' then
   raise exception 'FAIL: unexpected columns %', cols;
