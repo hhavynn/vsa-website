@@ -41,7 +41,7 @@ The production admin analytics page is expected to run on the production site or
 
 ## Service-role key in image-migration webhooks (2026-10-08)
 
-**Finding.** Both image-migration Database Webhooks in production embedded the project's legacy `service_role` JWT in plain text. Status: **partly resolved**. On 2026-10-30, `supabase/migrations/20261030235727_vault_backed_image_migration_triggers.sql` removed both webhooks and their credentials from the catalog. The exposed JWT stays valid until stage 2 revokes it, and the webhook secret has not been rotated. The step-by-step procedure and the stage 1 results are in [`image-migration-webhook-credential-rotation.md`](image-migration-webhook-credential-rotation.md).
+**Finding.** Both image-migration Database Webhooks in production embedded the project's legacy `service_role` JWT in plain text. Status: **partly resolved**. On 2026-10-30, `supabase/migrations/20261030235727_vault_backed_image_migration_triggers.sql` removed both webhooks and their credentials from the catalog. The webhook secret was rotated the same day. The exposed JWT stays valid until stage 2 revokes it. The step-by-step procedure and the stage 1 results are in [`image-migration-webhook-credential-rotation.md`](image-migration-webhook-credential-rotation.md).
 
 ### Evidence
 
@@ -136,7 +136,7 @@ This replaces Phase A's Dashboard edit: Phase A steps 2–3 (new secret) still a
 ## Open Items
 
 - **Open, from 2026-10-08:** the `service_role` JWT that both webhooks exposed is still valid. Run stage 2 (Phase B) of [`image-migration-webhook-credential-rotation.md`](image-migration-webhook-credential-rotation.md) before the end-of-2026 legacy-key cutoff.
-- **Open, from 2026-10-30:** the webhook secret was carried into Vault instead of being rotated, so stage 1 of the runbook is not complete. Rotate it (runbook "Stage 1 status").
+- **Closed 2026-10-30:** the exposed webhook secret was rotated in Vault and Edge Function secrets (runbook "Stage 1 status").
 - **Closed 2026-10-30:** both webhooks were replaced by tracked triggers (migration `20261030235727`).
 - **Closed 2026-10-30:** a live anon request with `Accept-Profile` confirmed the Data API exposes only `public` and `graphql_public`.
 - The live unauthenticated-call test against both `trigger-*` deployed functions has not been performed. Repository source shows the shared-secret check, but the issue criterion asks for live production requests.

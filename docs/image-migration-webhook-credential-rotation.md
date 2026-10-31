@@ -8,17 +8,17 @@
 
 Applied to production as `20261030235727` by Claude, at the owner's explicit request in the session. The Dashboard webhooks are gone and the tracked triggers are live.
 
-**Done differently from step 1.2: the webhook secret was not rotated.** The owner approved creating the two Vault secrets, not changing the Edge Function secret, so the existing value was copied server-side from the webhook definition into Vault, with no printing. That value was readable in `pg_trigger` until this migration ran, so treat it as exposed. To finish stage 1, generate a new value, then set it in both places back to back:
+**The webhook secret was rotated the same day, in two steps that differ from 1.2 to 1.4:**
 
-1. Update `image_migration_webhook_secret` in Vault (`vault.update_secret`).
-2. Update `IMAGE_MIGRATION_WEBHOOK_SECRET` in Edge Function secrets.
+1. The first swap reused the old value, copied server-side into Vault, so the triggers went live with no outage.
+2. A new value was then generated inside Postgres (`extensions.gen_random_bytes(32)`) with `vault.update_secret`. The Supabase CLI read it through a pipe into a `0600` temp file for `supabase secrets set --env-file`.
 
-Between the two, uploads get a 401. That is harmless, as step 1.4 explains.
+This way the value never appeared in SQL text, a process's arguments or any output. The old value is no longer valid. The new value exists only in Vault and Edge Function secrets, not in a password manager. To rotate again, repeat step 2.
 
 Results:
 
 - 1.6: only the two tracked triggers remain, with 0 credentials in trigger definitions or function bodies. `anon` and `authenticated` have no access to the function, the schema or Vault.
-- 1.7: both functions return 401 for a wrong secret and 200 for the Vault secret with a no-op payload, sent before the swap.
+- 1.7: both functions return 401 for a wrong secret and 200 for the Vault secret with a no-op payload, both before the swap and after the rotation.
 - Firing test: an admin-role write to one event and one House event queued exactly one request per table, with only the secret header. No-op writes queued nothing. The transaction was rolled back, so nothing was sent or saved.
 - **Not yet observed:** a real upload through the new trigger to a GitHub dispatch. No rows are on Storage URLs, and test events are not allowed. Check it on the next real upload (step 1.7).
 
