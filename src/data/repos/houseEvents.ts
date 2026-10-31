@@ -364,7 +364,25 @@ export class HouseEventsRepository {
         .map((link) => published.get(link.house_page_asset_id))
         .filter((house): house is PublicHouseEventHost => !!house && house.is_active)
         .sort((a, b) => Number(b.id === item.house_profile_id) - Number(a.id === item.house_profile_id));
-      return { ...item, houses: hosts };
+      // Do not spread an untrusted PostgREST row into a public DTO. A future
+      // SELECT expansion or unexpected embedded data must not carry private
+      // event/House fields into calendar, homepage or House UI consumers.
+      const {
+        id, house_profile_id, academic_year_start, academic_year_end, title,
+        slug, description, event_date, start_time, end_time, location,
+        image_url, image_thumbnail_url, gallery_url, recap_url, rsvp_url,
+        google_calendar_enabled, is_published, created_at, updated_at,
+      } = item;
+      if (is_published !== true) {
+        throw new Error('Unexpected unpublished House event in public response');
+      }
+      return {
+        id, house_profile_id, academic_year_start, academic_year_end, title,
+        slug, description, event_date, start_time, end_time, location,
+        image_url, image_thumbnail_url, gallery_url, recap_url, rsvp_url,
+        google_calendar_enabled, is_published, created_at, updated_at,
+        houses: hosts,
+      };
     });
   }
 
