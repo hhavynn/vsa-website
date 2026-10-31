@@ -21,6 +21,7 @@ Draft B: link members → Lock → Reveal  (both re-checked by the database)
 - Every payment change increases the roster's payment version. Any saved sort from an older version shows **"Payments changed since this sort — rerun required"** and the database refuses Lock and Reveal.
 - **Late payer before Reveal:** mark them Paid, rerun (they are placed at their original application time), review, save a new draft, lock it. Never insert someone by hand into a full House.
 - **After Reveal:** payment changes are allowed and recorded for leadership review. Nobody is removed or moved automatically and no House points change.
+  For any owner-approved late addition or transfer, follow [Post-Reveal House membership corrections](house-reveal.md#post-reveal-house-membership-corrections-621--owner-gated). The existing manual-import correction path does **not** enforce the automatic Paid/Waived roster, cutoff or capacity gate: the owner must independently verify eligibility before any correction Lock/Reveal. Do not rerun or reopen the already published payment-gated batch.
 
 ## Statuses
 
