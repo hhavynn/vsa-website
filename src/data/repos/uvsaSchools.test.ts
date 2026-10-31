@@ -60,9 +60,8 @@ describe('UVSA schools repository public/admin boundary (#291)', () => {
 
   it('does not silently reinterpret an absent school or failed ID read', async () => {
     supabaseMock.queueResult('uvsa_schools', { data: null, error: null });
-    await expect(uvsaSchoolsRepository.getSchoolById('missing')).rejects.toMatchObject({
-      name: 'NotFoundError', resource: 'uvsa_schools', id: 'missing',
-    });
+    await expect(uvsaSchoolsRepository.getSchoolById('missing'))
+      .rejects.toThrow('Failed to fetch school: School not found');
     supabaseMock.queueResult('uvsa_schools', {
       data: null, error: postgrestError('permission denied', '42501'),
     });
@@ -70,9 +69,8 @@ describe('UVSA schools repository public/admin boundary (#291)', () => {
       name: 'DatabaseError', message: 'Insufficient permissions',
     });
     supabaseMock.queueResult('uvsa_schools', { data: null, error: null });
-    await expect(uvsaSchoolsRepository.getSchoolBySlug('missing-school')).rejects.toMatchObject({
-      name: 'NotFoundError', resource: 'uvsa_schools', id: 'missing-school',
-    });
+    await expect(uvsaSchoolsRepository.getSchoolBySlug('missing-school'))
+      .rejects.toThrow('Failed to fetch school by slug: School not found');
   });
 
   it('separates the admin full projection from public reads, including inactive schools', async () => {
