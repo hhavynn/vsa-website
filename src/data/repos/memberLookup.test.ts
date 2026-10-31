@@ -68,6 +68,17 @@ it('matches primary and confirmed alternate emails via POST RPC without returnin
   expect(supabaseMock.queriesFor('member_identity_emails')).toHaveLength(0);
 });
 
+it('accepts existing member records with a null first or last name', async () => {
+  supabaseMock.queueResult('rpc:admin_match_members_by_email', { data: [
+    { id: 'm-blank', first_name: null, last_name: 'Example', college: null,
+      year: null, input_email: 'blank@example.edu' },
+  ], error: null });
+  const matches = await memberLookupRepository.matchMembersByEmail(['blank@example.edu']);
+  expect(matches.get('blank@example.edu')).toEqual([
+    expect.objectContaining({ id: 'm-blank', fullName: 'Example' }),
+  ]);
+});
+
 it('keeps distinct members with shared input primary email as ambiguous options', async () => {
   supabaseMock.queueResult('rpc:admin_match_members_by_email', { data: [
     { ...row('m1', 'Ari', 'Example'), input_email: 'shared@example.edu' },

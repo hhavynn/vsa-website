@@ -131,7 +131,8 @@ export class MemberLookupRepository {
           }
           const row = raw as Record<string, unknown>;
           if (typeof row.input_email !== 'string' || typeof row.id !== 'string' ||
-              typeof row.first_name !== 'string' || typeof row.last_name !== 'string') {
+              (row.first_name !== null && typeof row.first_name !== 'string') ||
+              (row.last_name !== null && typeof row.last_name !== 'string')) {
             throw new Error('Email match RPC returned an invalid member row.');
           }
           const key = row.input_email.trim().toLowerCase();
