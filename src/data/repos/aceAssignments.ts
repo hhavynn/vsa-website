@@ -79,8 +79,10 @@ export class AceAssignmentsRepository {
     }, 'Failed to load assignment cycles');
   }
 
-  async createCycle(academicYearStart: number, pickupTerm: string): Promise<AceAssignmentCycle> {
-    if (!isTermConsistentWithYear(pickupTerm, academicYearStart)) {
+  async createCycle(academicYearStart: number, pickupTerm: string | null): Promise<AceAssignmentCycle> {
+    // New Year Setup can prepare an empty private draft without guessing a term.
+    // The ACE workspace requires a choice and the DB rejects Lock/Publish until saved.
+    if (pickupTerm !== null && !isTermConsistentWithYear(pickupTerm, academicYearStart)) {
       throw new ValidationError('Choose an exact pickup term for the selected academic year.', 'pickup_term', pickupTerm);
     }
     return withErrorHandling(async () => {
