@@ -112,7 +112,7 @@ it('uses a pending source candidate exactly and never approves a changed candida
   expect(screen.getByRole('combobox', { name: 'Exact pickup term (optional)' })).toHaveValue('FA');
   expect(screen.getByRole('combobox', { name: 'Evidence/source category' })).toHaveValue('official_pairing');
   fireEvent.click(screen.getByRole('button', { name: 'Review and save year' }));
-  const dialog = screen.getByRole('alertdialog', { name: 'Confirm pickup-year correction' });
+  const dialog = await screen.findByRole('alertdialog', { name: 'Confirm pickup-year correction' });
   fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm audited correction' }));
   await waitFor(() => expect(correction).toHaveBeenCalledTimes(1));
   expect(correction.mock.calls[0][0]).toMatchObject({
@@ -126,7 +126,7 @@ it('never includes a selected evidence id after the proposed source has been edi
   fireEvent.click(screen.getByRole('button', { name: 'Use candidate' }));
   fireEvent.change(screen.getByRole('combobox', { name: 'Exact pickup term (optional)' }), { target: { value: 'SP' } });
   fireEvent.click(screen.getByRole('button', { name: 'Review and save year' }));
-  const dialog = screen.getByRole('alertdialog', { name: 'Confirm pickup-year correction' });
+  const dialog = await screen.findByRole('alertdialog', { name: 'Confirm pickup-year correction' });
   fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm audited correction' }));
   await waitFor(() => expect(correction).toHaveBeenCalledTimes(1));
   expect(correction.mock.calls[0][0]).toMatchObject({
@@ -139,7 +139,7 @@ it('refetches on compare-and-swap conflicts and never retries last-write-wins', 
   const { onConflict, onSaved } = mount();
   fireEvent.change(screen.getByRole('combobox', { name: 'Pickup academic year' }), { target: { value: '2023–24' } });
   fireEvent.click(screen.getByRole('button', { name: 'Review and save year' }));
-  const dialog = screen.getByRole('alertdialog', { name: 'Confirm pickup-year correction' });
+  const dialog = await screen.findByRole('alertdialog', { name: 'Confirm pickup-year correction' });
   fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm audited correction' }));
   await waitFor(() => expect(onConflict).toHaveBeenCalledTimes(1));
   expect(await within(dialog).findByRole('alert')).toHaveTextContent(/Someone else changed this pickup year/);
@@ -175,7 +175,7 @@ it('does not resubmit an already-committed RPC if the post-save view refresh fai
   mount({ onSaved });
   fireEvent.change(screen.getByRole('combobox', { name: 'Pickup academic year' }), { target: { value: '2023–24' } });
   fireEvent.click(screen.getByRole('button', { name: 'Review and save year' }));
-  const dialog = screen.getByRole('alertdialog', { name: 'Confirm pickup-year correction' });
+  const dialog = await screen.findByRole('alertdialog', { name: 'Confirm pickup-year correction' });
   fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm audited correction' }));
   await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
   expect(correction).toHaveBeenCalledTimes(1);
@@ -216,7 +216,7 @@ it('approves matching pending evidence even when the already-approved year stays
   const save = screen.getByRole('button', { name: 'Review and save year' });
   expect(save).toBeEnabled();
   fireEvent.click(save);
-  const dialog = screen.getByRole('alertdialog', { name: 'Confirm pickup-year correction' });
+  const dialog = await screen.findByRole('alertdialog', { name: 'Confirm pickup-year correction' });
   fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm audited correction' }));
   await waitFor(() => expect(correction).toHaveBeenCalledTimes(1));
   expect(correction.mock.calls[0][0]).toMatchObject({
