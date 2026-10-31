@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { axe } from 'jest-axe';
 import type { AceFamilyMember } from '../../../types';
 import type { AcePickupEvidenceRow } from '../../../data/repos/aceFamilies';
-import { reviewFamilyYears, type YearReview } from '../../../lib/aceYearReview';
+import { reviewFamilyYears } from '../../../lib/aceYearReview';
 import { AceYearReviewPanel } from './AceYearReviewPanel';
 
 function node(id: string, values: Partial<AceFamilyMember> = {}): AceFamilyMember {
@@ -24,7 +24,6 @@ function evidence(id: string, nodeId: string, year: number, term: string): AcePi
 function view(nodes: AceFamilyMember[], records: AcePickupEvidenceRow[] = []) {
   return reviewFamilyYears(nodes, records);
 }
-const empty = new Map<string, YearReview>();
 
 it('never exposes partial names, counts or conclusions while a private evidence read is pending', () => {
   const nodes = [node('late')];
