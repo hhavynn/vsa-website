@@ -48,6 +48,108 @@ If the owner's real Reveal request times out or loses the response, reload the *
 
 An interrupted Reveal may have written individual membership rows before it set published_at. Those rows stay out of public_house_memberships through the originating batch's published_at gate. `public_member_house_badge` uses a looser gate until #802 ships, so check it too if an earlier batch that year is already published. **Do not Reopen after a partial Reveal.** Client-side deletion of those intervals is unsupported; a changed House at the same start can conflict. If a same-batch retry is unsafe, stop and escalate for owner-approved, audited SQL recovery only. While publishing_batch_id is set, payment and member-merge writes intentionally refuse with 55006. After successful publication, use the reviewed #621 correction path, never direct updates to members.house or House scores.
 
+## Post-Reveal House membership corrections (#621) — owner-gated
+
+This section is an **operator decision and recovery runbook, not permission to
+change a member's House**. It applies only after a legitimate batch for the same
+academic year has finished Reveal (`status = published`, `published_at` set).
+Do not confuse a timed-out or partial Reveal with a completed one: follow
+"Reveal retry and interrupted-release recovery" above first. **The House Reveal
+freeze also applies to any correction batch.** The release owner must authorize
+the correction and its publication separately.
+
+### Read-only review and explicit authorization
+
+1. In **Admin → Houses → House Assignments → population coverage**, select
+   the exact academic year and the already revealed batch, then run
+   **Check coverage**. Check the payment roster's Paid/Waived final population,
+   eligible/linked/ambiguous/Unassigned/Unknown totals, draft-row identities and
+   `effective_start_date`. A blank or failed roster read means **Unknown**,
+   never zero eligible or authorization to proceed.
+2. In **Admin → Houses → Payments**, confirm the *same person's* application,
+   payment status **Paid** or explicitly **Waived**, not withdrawn, and their
+   canonical `members.id` using reviewed identity evidence. Confirm the correct
+   active `house_page_assets.id` for the selected academic year. A similar
+   display name or last year's `members.house` cache is not sufficient.
+3. Have the House leadership/release owner explicitly approve the intended
+   change (late addition or a transfer), the exact House, the year, and a
+   **prospective** effective date. Capture the before-state interval(s) and
+   the expected after-state in a restricted owner review record. The public
+   GitHub issue/PR, browser URL, CSV exports and public logs must not contain
+   private contact details, payment evidence, raw application answers or
+   sensitive identities. Record **counts-only** completion in the public
+   tracker.
+
+### Existing path for a reviewed late add or transfer
+
+1. Use **Admin → Houses → House Assignments**, select the *approved* academic
+   year, a new accurate effective date, and a generic batch label (e.g.
+   `Approved post-Reveal correction`). Under **Historical / Advanced Import**,
+   choose the **Long CSV with name/email/house** format and paste the minimal
+   **one-person** row from the approved restricted workspace. Do not make a
+   publicly published Google Sheet of member details. This importer creates a
+   `manual` assignment batch, **not** a new timestamp-priority rerun of the
+   already-revealed paid cohort.
+2. **Preview Matches**, review the canonical member and correct year-specific
+   House profile, explicitly resolve any same-name ambiguity, then **Save
+   draft**. Inspect that the saved batch has exactly **one** intended
+   `house_assignment_drafts` row, one confirmed `member_id`, the intended
+   `house_profile_id`, the approved effective date and no extra rows. Do not
+   use name-only matching or create a new canonical member as a shortcut.
+3. Open that draft, run its existing **preflight** and compare its proposed
+   interval against the *complete current-year* `house_memberships` history.
+   `planMembershipChange` uses half-open `[start, end)` intervals: a later
+   effective date can close the earlier open interval and insert the approved
+   House, while a different House at the **same** start date is a conflict and
+   must **STOP**, not be worked around by changing the date, duplicating a
+   member or directly editing the historical row. Never backdate an assignment
+   merely to make Find My House appear immediately.
+4. **Critical gate not automated for manual imports:** the manual batch does
+   **not** carry the payment roster snapshot or automatic cutoff/capacity
+   checks. Its existing generic Lock/preflight can succeed even if payment
+   eligibility was never established. Therefore the signed Paid/Waived,
+   withdrawal and authorized exception review in steps 1–3 is **mandatory**;
+   never treat a green preflight alone as evidence of eligibility or permission
+   to bypass first-come, first-served placement.
+5. Only after approval and review, use the **existing** draft
+   `Lock → Reveal` controls, within an owner-authorized release window.
+   `HouseAssignmentsRepository.publishBatch` uses the existing
+   `HouseMembershipsWriteRepository.applyMembership` writer; it does not
+   write `members.house` alone. A second writer, direct table edits, use of
+   **Historical Backfill** on the active year, and reopening an already
+   published batch are **not** correction paths. Do not click Reveal during a
+   Lock-stop rehearsal.
+
+### After publication: reconciliation and stop conditions
+
+Re-open the exact newly published correction batch, record `published_at`,
+the one intended canonical member, source batch ID (restricted only), applied/
+skipped counts, and the effective date. Re-run **House assignment population
+coverage** for both the original released batch and the correction batch;
+compare **before vs after** approved member/interval totals, including any
+`conflicting-membership`, `missing-member` and out-of-batch counts. An
+out-of-batch membership is not automatically an error: it may be a legitimate
+later correction and must be reconciled against its reviewed source batch.
+
+From an independent anonymous session, verify that the exact batch Reveal
+gate (not merely an earlier published batch in the same year) controls the
+public identity view, that the corrected House starts only on the approved
+effective date, and that no draft person, payment status, private roster or
+House points are exposed. Confirm prior academic-year intervals and House
+history remain available, and that repeating an already published batch
+creates **zero additional** membership rows.
+
+**Stop and escalate instead of retrying blindly** when: a prior Reveal may be
+partial; payment/identity evidence is missing or inconsistent; a manual import
+would override an unapproved priority/capacity decision; the member already
+has a conflicting same-date House interval; the selected House or year is
+wrong; a paginated read is incomplete; the operation produces an unexpected
+applied/skipped count; or hosted permissions / anonymous Reveal checks fail.
+Freeze further writes and use a separate owner-approved, audited recovery
+plan. No client-side delete, forced public grant, direct
+`house_memberships` SQL update, or `members.house` cache patch is a
+substitute for that plan.
+
 ## Go/no-go evidence and outstanding blockers
 
 #635 owns real H01–H12 evidence after #639; closure of #639 does not prove a rehearsal occurred. Staging remains unavailable (#569), so a disposable database with synthetic records or a local UI attempt must be labeled by environment; do not claim it proves production RLS or real-browser behavior. The rehearsal document must retain **Status: staging rehearsal and signoffs NOT performed** and **BLOCKED** until observed evidence and separate House, engineering, privacy, accessibility and final-owner signoffs exist.
