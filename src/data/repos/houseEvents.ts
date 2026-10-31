@@ -81,7 +81,8 @@ export class HouseEventsRepository {
 
       const { data, error } = await query;
       if (error) throw error;
-      return this.mapPublicRelations(data);
+      const events = await this.mapPublicRelations(data);
+      return events.filter((event) => event.houses?.some((host) => host.id === houseProfileId));
     }, 'Failed to fetch upcoming house events');
   }
 
@@ -101,7 +102,8 @@ export class HouseEventsRepository {
       if (error) throw error;
       if (!data) return null;
       const [event] = await this.mapPublicRelations([data]);
-      const hosted = event.house_profile_id === houseProfileId || (event.houses ?? []).some((house) => house.id === houseProfileId);
+      // The raw primary foreign key alone is not a publication grant.
+      const hosted = (event.houses ?? []).some((house) => house.id === houseProfileId);
       return hosted ? event : null;
     }, 'Failed to fetch the linked house event');
   }
@@ -135,7 +137,8 @@ export class HouseEventsRepository {
 
       const { data, error } = await query;
       if (error) throw error;
-      return this.mapPublicRelations(data);
+      const events = await this.mapPublicRelations(data);
+      return events.filter((event) => event.houses?.some((host) => host.id === houseProfileId));
     }, 'Failed to fetch past house events');
   }
 
@@ -343,6 +346,10 @@ export class HouseEventsRepository {
     const rows = data as PublicHouseEventRow[];
     const hostIds = new Set<string>();
     for (const item of rows) {
+      // Older event rows may have only a primary House and no association
+      // row. Resolve that host through the published allowlist too, never
+      // trust house_profile_id by itself to prove a House is public.
+      if (item.house_profile_id) hostIds.add(item.house_profile_id);
       for (const link of item.houses ?? []) {
         if (link.house_page_asset_id) hostIds.add(link.house_page_asset_id);
       }
@@ -360,8 +367,9 @@ export class HouseEventsRepository {
       }
     }
     return rows.map((item) => {
-      const hosts = (item.houses ?? [])
-        .map((link) => published.get(link.house_page_asset_id))
+      const linkedIds = [item.house_profile_id, ...(item.houses ?? []).map((link) => link.house_page_asset_id)];
+      const hosts = Array.from(new Set(linkedIds))
+        .map((id) => published.get(id))
         .filter((house): house is PublicHouseEventHost => !!house && house.is_active)
         .sort((a, b) => Number(b.id === item.house_profile_id) - Number(a.id === item.house_profile_id));
       // Do not spread an untrusted PostgREST row into a public DTO. A future
