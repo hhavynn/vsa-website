@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, type CSSProperties, type ReactNode } from 'react';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { PageTitle } from '../components/common/PageTitle';
 import { Input } from '../components/ui/Input';
@@ -19,7 +19,9 @@ import { usePublishedBoardRoster } from '../hooks/usePublishedBoardRoster';
 import { usePublishedMemberHouses } from '../hooks/usePublishedMemberHouses';
 import type { PublicMemberHouse } from '../data/repos/houseMemberships';
 import { rankPublishedCohort, type LeaderboardCohort } from '../lib/memberCohorts';
-import { rolesForSelectedYear, type PublicMemberRole } from '../lib/memberRoles';
+import { relatedPublicPath, rolesForSelectedYear, type PublicMemberRole } from '../lib/memberRoles';
+import { formatAcademicYear } from '../lib/academicTerms';
+import { houseSlugFromKey } from '../utils/houseSlug';
 import { PublicMemberRoleBadges } from '../components/features/leaderboard/PublicMemberRoleBadges';
 import { leaderboardRepository } from '../data/repos/leaderboard';
 import { useMemberAvatars } from '../hooks/useMemberAvatars';
@@ -271,6 +273,20 @@ function ProfileSection({
   );
 }
 
+/** Only the publication-gated RPC's allowlisted fields qualify for a House link. */
+function houseBadgeToPublished(badge: MemberHouseBadge | null): PublicMemberHouse | null {
+  if (!badge || !Number.isInteger(badge.academic_year_start) ||
+    badge.academic_year_start < 2000 || badge.academic_year_start > 2100 ||
+    !badge.house_profile_id || !badge.display_name) return null;
+  return {
+    houseProfileId: badge.house_profile_id,
+    houseKey: badge.house || null,
+    label: badge.display_name,
+    accentColor: badge.accent_color,
+    academicYearStart: badge.academic_year_start,
+  };
+}
+
 function PublicMemberProfileModal({
   member,
   avatarUrl,
@@ -300,6 +316,14 @@ function PublicMemberProfileModal({
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [historyError, setHistoryError] = useState(false);
   const [houseBadge, setHouseBadge] = useState<MemberHouseBadge | null>(null);
+  const house = houseBadgeToPublished(houseBadge);
+  const houseSlug = house ? houseSlugFromKey(house.houseKey || house.label) : '';
+  const houseTo = house && houseSlug
+    ? '/house/year/' + formatAcademicYear(house.academicYearStart) + '/' + houseSlug : undefined;
+  const roleLinks = Array.from(new Map(roles.flatMap((role) => {
+    const url = relatedPublicPath(role);
+    return url && url !== houseTo ? [[url, 'Open ' + role.label] as const] : [];
+  })).entries());
 
   // Individual event history + House badge are separate, additive fetches
   // against public-safe views -- neither reads nor writes points/ranking data.
@@ -307,6 +331,7 @@ function PublicMemberProfileModal({
     let isCurrent = true;
     setLoadingHistory(true);
     setHistoryError(false);
+    setHouseBadge(null);
 
     const yearFilter = selectedYear === 'all' || selectedYear === null ? undefined : selectedYear;
     leaderboardRepository
@@ -356,19 +381,23 @@ function PublicMemberProfileModal({
               <div className="mt-3 flex flex-wrap gap-2">
                 {isWithinTop(member, 3) && <StickerBadge color="gold" size="sm">TOP {member.rank}</StickerBadge>}
                 <StickerBadge color="primary" size="sm">{primaryLabel.toUpperCase()}</StickerBadge>
-                {houseBadge && (
-                  <span
-                    className="inline-flex items-center gap-1 rounded-full border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wide"
-                    style={{
-                      borderColor: houseBadge.accent_color ?? 'var(--border)',
-                      color: houseBadge.accent_color ?? 'var(--text2)',
-                    }}
-                  >
-                    {houseBadge.display_name}
-                  </span>
-                )}
-                <PublicMemberRoleBadges roles={roles} />
+                <PublicMemberRoleBadges
+                  roles={roles}
+                  house={house}
+                  houseTo={houseTo}
+                  houseYearLabel={selectedYear === 'all' && house ? formatAcademicYear(house.academicYearStart) : undefined}
+                />
               </div>
+              {roleLinks.length > 0 && (
+                <nav aria-label="Verified role pages" className="mt-2 flex flex-wrap gap-2">
+                  {roleLinks.map(([path, label]) => (
+                    <Link key={path} to={path}
+                      className="inline-flex min-h-11 items-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface2)] px-3 text-xs font-semibold text-[var(--color-text)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]">
+                      {label}
+                    </Link>
+                  ))}
+                </nav>
+              )}
               {roleUnavailable && <p className="mt-2 text-xs text-[var(--text3)]">Verified role information is temporarily unavailable.</p>}
               {selectedYear === 'all' && <p className="mt-2 text-xs text-[var(--text3)]">Choose an academic year to see roles for that year.</p>}
             </div>
