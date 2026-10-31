@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { ConfirmDialog } from '../../common/ConfirmDialog';
@@ -110,13 +110,10 @@ export function AcePickupYearEditor({
       && next?.term === selectedEvidence.candidate_term
       && sourceKind === selectedEvidence.source_kind
     : true;
-  const warnings = useMemo(
-    () => next ? pickupChangeWarnings(member, {
-      pickup_academic_year_start: next.academicYearStart,
-      pickup_term: next.term,
-    }, big, littles) : [],
-    [next?.academicYearStart, next?.term, member, big, littles],
-  );
+  const warnings = next ? pickupChangeWarnings(member, {
+    pickup_academic_year_start: next.academicYearStart,
+    pickup_term: next.term,
+  }, big, littles) : [];
   const eligible = ready && !!next && !same(next, current) && consistentEvidence;
 
   const queueConfirmation = (data: AcePickupYearFormData) => {
@@ -154,17 +151,21 @@ export function AcePickupYearEditor({
         nodeId: member.id, expected: current, next: confirm.next,
         sourceKind: confirm.sourceKind, evidenceId: confirm.evidenceId,
       });
-      setError(null);
-      setSuccess('Pickup year saved and audited. Only this node was changed.');
-      await onSaved();
-      setConfirm(null);
     } catch (err) {
       const message = toUserMessage(err, 'Unable to save pickup year. Review the source and try again.');
       setError(message);
       if (err instanceof DatabaseError && err.code === 'P0001') {
-        await onConflict();
+        try { await onConflict(); } catch { /* Conflict still requires a manual refresh; never retry a stale write. */ }
       }
       throw new Error(message);
+    }
+    setError(null);
+    setSuccess('Pickup year saved and audited. Only this node was changed.');
+    setConfirm(null);
+    try {
+      await onSaved();
+    } catch {
+      setError('The correction was saved, but the family view could not refresh. Reload before editing again.');
     }
   };
 
