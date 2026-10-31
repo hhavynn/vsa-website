@@ -106,13 +106,24 @@ export class AceFamiliesRepository {
 
   async getAdminFamilies(): Promise<AceFamily[]> {
     return withErrorHandling(async () => {
-      const { data, error } = await supabase
-        .from('ace_families')
-        .select('*')
-        .order('display_order', { ascending: true })
-        .order('name', { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as AceFamily[];
+      // A pre-Reveal preview cannot treat the first PostgREST page as the
+      // complete family directory. Stable tie-breaking avoids skipped rows
+      // when multiple families share the same display order and name.
+      const pageSize = 1000;
+      const families: AceFamily[] = [];
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+          .from('ace_families')
+          .select('*')
+          .order('display_order', { ascending: true })
+          .order('name', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const page = (data ?? []) as AceFamily[];
+        families.push(...page);
+        if (page.length < pageSize) return families;
+      }
     }, 'Failed to fetch ACE families');
   }
 
