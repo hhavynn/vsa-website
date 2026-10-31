@@ -4421,6 +4421,18 @@ export type Database = {
         };
         Returns: Json;
       };
+      correct_ace_member_pickup_year: {
+        Args: {
+          p_ace_member_id: string;
+          p_expected_year: number | null;
+          p_expected_term: string | null;
+          p_academic_year_start: number | null;
+          p_term: string | null;
+          p_source_kind: string;
+          p_evidence_id?: string | null;
+        };
+        Returns: Json;
+      };
       set_ace_member_pickup_year: {
         Args: {
           p_ace_member_id: string;

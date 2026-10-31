@@ -23,6 +23,22 @@ export interface AcePickupYearChange {
   current: { academic_year_start: number | null; term: string | null };
 }
 
+export type AcePickupCorrectionSourceKind =
+  'official_pairing' | 'workbook_year_row' | 'import_json' | 'admin_entry';
+
+export interface AcePickupEvidenceRow {
+  id: string;
+  ace_member_id: string;
+  source_kind: string;
+  source_label: string | null;
+  raw_value: string | null;
+  candidate_academic_year_start: number | null;
+  candidate_term: string | null;
+  review_status: 'pending' | 'approved' | 'rejected' | 'superseded';
+  reviewed_at: string | null;
+  ace_family_members?: { family_id: string } | { family_id: string }[] | null;
+}
+
 export class AceFamiliesRepository {
   async getPublishedFamilies(options?: { strict?: boolean }): Promise<AceFamily[]> {
     try {
@@ -376,6 +392,55 @@ export class AceFamiliesRepository {
       if (error) throw error;
       return data as unknown as AcePickupYearChange;
     }, 'Failed to set ACE pickup year');
+  }
+
+  /**
+   * CAS + audited correction; never call the legacy setter from an editor.
+   * Row-level evidence is admin-only and never read from the public tree.
+   */
+  async correctPickupYear(input: {
+    nodeId: string;
+    expected: { academicYearStart: number | null; term: string | null };
+    next: { academicYearStart: number | null; term: string | null };
+    sourceKind: AcePickupCorrectionSourceKind;
+    evidenceId?: string | null;
+  }): Promise<AcePickupYearChange> {
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase.rpc('correct_ace_member_pickup_year', {
+        p_ace_member_id: input.nodeId,
+        p_expected_year: input.expected.academicYearStart,
+        p_expected_term: input.expected.term,
+        p_academic_year_start: input.next.academicYearStart,
+        p_term: input.next.term,
+        p_source_kind: input.sourceKind,
+        p_evidence_id: input.evidenceId ?? null,
+      });
+      if (error) throw error;
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        throw new Error('ACE pickup correction returned an invalid result.');
+      }
+      return data as unknown as AcePickupYearChange;
+    }, 'Failed to correct ACE pickup year');
+  }
+
+  /** Bounded by fam, complete pagination, never selects private review_note. */
+  async listPickupEvidenceForFamily(familyId: string): Promise<AcePickupEvidenceRow[]> {
+    return withErrorHandling(async () => {
+      const result: AcePickupEvidenceRow[] = [];
+      const pageSize = 500;
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+          .from('ace_member_pickup_evidence')
+          .select('id,ace_member_id,source_kind,source_label,raw_value,candidate_academic_year_start,candidate_term,review_status,reviewed_at,ace_family_members!inner(family_id)')
+          .eq('ace_family_members.family_id', familyId)
+          .order('id', { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const page = (data ?? []) as unknown as AcePickupEvidenceRow[];
+        result.push(...page.map(({ ace_family_members: _family, ...entry }) => entry));
+        if (page.length < pageSize) return result;
+      }
+    }, 'Failed to load ACE pickup evidence');
   }
 
   async uploadImage(file: File, prefix: 'family' | 'member'): Promise<string> {
