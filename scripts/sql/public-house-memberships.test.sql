@@ -26,7 +26,7 @@ set client_min_messages = warning;
 -- (it also replaces multiple score views). Stub its already-live badge RPC,
 -- then prove the #802 forward migration replaces that signature.
 create function public.public_member_house_badge(p_member_id uuid, p_year integer default null)
-returns jsonb language sql stable as $select null::jsonb$;
+returns jsonb language sql stable as $$select null::jsonb$$;
 \ir ../../supabase/migrations/20261031093000_public_member_house_badge_matches_view.sql
 \ir ../../supabase/migrations/20261031093000_public_member_house_badge_matches_view.sql
 set client_min_messages = notice;
@@ -48,7 +48,7 @@ insert into house_memberships (member_id, house_profile_id, academic_year_start,
  ('22222222-0000-0000-0000-000000000003', '11111111-0000-0000-0000-000000000024', 2024, 2025, '2024-11-01', 'legacy_backfill', null, null);
 
 set role anon;
-do $
+do $$
 begin
  if public.public_member_house_badge('22222222-0000-0000-0000-000000000001', 2026) is not null
    or public.public_member_house_badge('22222222-0000-0000-0000-000000000004', null) is not null then
@@ -63,11 +63,11 @@ begin
    raise exception 'FAIL: null identity or invalid year must return null';
  end if;
  raise notice 'PASS: pre-Reveal badge is null even for guessed IDs, legacy year remains public, and invalid input is refused.';
-end $;
+end $$;
 reset role;
 
 set role anon;
-do $ begin
+do $$ begin
  if exists (select 1 from public.public_house_memberships where academic_year_start = 2026) then
   raise exception 'FAIL: 2026 memberships are public before the Reveal';
  end if;
@@ -91,14 +91,14 @@ reset role;
 -- Even though the rows are already written, neither a draft nor a locked
 -- unrevealed batch can be read through a guessed canonical member ID.
 set role anon;
-do $
+do $$
 begin
  if public.public_member_house_badge('22222222-0000-0000-0000-000000000001', 2026) is not null
     or public.public_member_house_badge('22222222-0000-0000-0000-000000000004', 2026) is not null then
    raise exception 'FAIL: locked batch disclosed a House through badge RPC';
  end if;
  raise notice 'PASS: badge RPC refuses locked unrevealed rows before any Reveal.';
-end $;
+end $$;
 reset role;
 
 -- Fall is revealed; Winter's Reveal failed partway (its rows exist, batch still locked).
@@ -116,7 +116,7 @@ end $$;
 reset role;
 
 set role anon;
-do $
+do $$
 declare
   v_visible jsonb;
 begin
@@ -141,7 +141,7 @@ begin
     raise exception 'FAIL: revealed hand-added upcoming membership not visible';
   end if;
   raise notice 'PASS: badge reveals Fall only, blocks later partial Winter, shows upcoming and returns only six safe fields.';
-end $;
+end $$;
 reset role;
 
 -- Archiving the revealed Fall batch must not hide it; moving the active term
@@ -189,7 +189,7 @@ values
   ((now() at time zone 'America/Los_Angeles')::date - 60),
   ((now() at time zone 'America/Los_Angeles')::date - 10),'admin',null);
 set role anon;
-do $
+do $$
 begin
  if public.public_member_house_badge('22222222-0000-0000-0000-000000000001',2026)
      ->> 'display_name' <> 'Twilight Sparkle' then
@@ -209,10 +209,10 @@ begin
    raise exception 'FAIL: requested year ignored for legacy House';
  end if;
  raise notice 'PASS: archived Reveal, active transfer, ended without successor, and explicit year isolation match view.';
-end $;
+end $$;
 reset role;
 
-do $ declare cols text; begin
+do $$ declare cols text; begin
  select string_agg(column_name, ',' order by ordinal_position) into cols from information_schema.columns where table_name = 'public_house_memberships';
  if cols <> 'member_id,academic_year_start,academic_year_end,effective_start_date,effective_end_date,house_profile_id,house_key,display_name,accent_color' then
   raise exception 'FAIL: unexpected columns %', cols;
