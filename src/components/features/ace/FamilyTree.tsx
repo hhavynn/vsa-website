@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { FamAccent } from './FamCover';
+import { cn } from '../../../lib/utils';
 import { bandRect, edgeGeometry, layoutTree, treeMetrics, uniqueTreeNodes } from '../../../lib/aceTreeLayout';
 import type { LayoutResult, TreeNode } from '../../../lib/aceTreeLayout';
 import { formatPickupAcademicYear } from '../../../lib/acePickupYear';
@@ -183,9 +184,7 @@ export function FamilyTree({
           <rect
             key={String(band.key)}
             data-year-band={String(band.key)}
-            className={'ace-year-band' + (i % 2 ? ' is-alt' : '') +
-              (band.key === 'unknown' ? ' is-unknown' : '') +
-              (focusId && layout.bandKeyById[focusId] === band.key ? ' is-focus' : '')}
+            className={cn('ace-year-band', i % 2 === 1 && 'is-alt', band.key === 'unknown' && 'is-unknown', !!focusId && layout.bandKeyById[focusId] === band.key && 'is-focus')}
             x={0}
             y={rect.top}
             width={w}

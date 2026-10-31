@@ -1,4 +1,5 @@
 import { bandRect } from '../../../lib/aceTreeLayout';
+import { cn } from '../../../lib/utils';
 import { formatPickupAcademicYear, formatPickupAcademicYearShort } from '../../../lib/acePickupYear';
 import type { BandKey, YearBand, treeMetrics } from '../../../lib/aceTreeLayout';
 
@@ -35,11 +36,7 @@ export function AceYearRail({
         const unknown = band.key === 'unknown';
         return (
           <span
-            className={
-              'ace-year-label' + (unknown ? ' is-unknown' : '') +
-              (focusKey === band.key ? ' is-focus' : '') +
-              (index % 2 ? ' is-alt' : '')
-            }
+            className={cn('ace-year-label', unknown && 'is-unknown', focusKey === band.key && 'is-focus', index % 2 === 1 && 'is-alt')}
             key={String(band.key)}
             data-band-key={String(band.key)}
             style={{
