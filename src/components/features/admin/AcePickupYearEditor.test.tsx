@@ -242,8 +242,8 @@ it('locks after a confirmed write when refresh fails, instead of permitting anot
   fireEvent.click(screen.getByRole('button', { name: 'Review and save year' }));
   const dialog = await screen.findByRole('alertdialog', { name: 'Confirm pickup-year correction' });
   fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm audited correction' }));
-  await waitFor(() => expect(screen.getByText(/correction was saved, but the family view could not refresh/i))
-    .toBeInTheDocument());
+  expect(await screen.findByText(/correction was saved, but the family view could not refresh/i))
+    .toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Review and save year' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Set to Unknown…' })).toBeDisabled();
   fireEvent.change(screen.getByRole('combobox', { name: 'Pickup academic year' }), {
