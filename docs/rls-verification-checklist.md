@@ -214,7 +214,7 @@ Verify hosted Supabase **Allow new users to sign up** remains disabled. Existing
 
 ### Public role projection RPC migration phase (#623)
 
-Migration 20261031060000_public_member_roles.sql adds public_member_roles(p_year integer, p_member_ids uuid[]) with exactly six public-safe columns. It grants EXECUTE to anon and authenticated explicitly, not through PUBLIC, and adds no SELECT grant to private tables. The SQL contract test is bash scripts/test-public-member-roles.sh in a disposable, local-only PostgreSQL cluster.
+Migration 20261031070305_public_member_roles.sql adds public_member_roles(p_year integer, p_member_ids uuid[]) with exactly six public-safe columns. It grants EXECUTE to anon and authenticated explicitly, not through PUBLIC, and adds no SELECT grant to private tables. The SQL contract test is bash scripts/test-public-member-roles.sh in a disposable, local-only PostgreSQL cluster.
 
 The hosted verifier accepts RLS_MEMBER_ROLES_PHASE=pre-migration (default: absent RPC produces SKIP) or post-migration (absent RPC produces FAIL). In either phase when the function exists it sends one nil UUID and asserts an empty result, then 201 nil IDs expecting SQLSTATE 22023. Run the RLS verification workflow manually with member_roles_phase=post-migration once the owner has applied the migration, and update the repository variable afterward. The client must not ship until the RPC exists and passes the anonymous checks.
 

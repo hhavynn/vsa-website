@@ -9,7 +9,7 @@ create table public.cabinet_members (
   id uuid primary key, member_id uuid, cabinet_year_id uuid,
   role text, category text, admin_notes text
 );
-\ir ../../supabase/migrations/20261031060000_public_member_roles.sql
+\ir ../../supabase/migrations/20261031070305_public_member_roles.sql
 
 insert into public.academic_terms values (2026, true);
 insert into public.cabinet_years values

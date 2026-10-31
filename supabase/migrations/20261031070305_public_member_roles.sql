@@ -1,4 +1,5 @@
 -- #623: bounded, six-column, public-safe Cabinet/Intern role projection.
+-- Applied to production 2026-10-31 (schema_migrations version 20261031070305).
 -- Owner-reviewed deployment required BEFORE the frontend RPC cutover.
 -- Future House/ACE/VCN arms must replace this whole function with forward migrations.
 create or replace function public.public_member_roles(p_year integer, p_member_ids uuid[])
