@@ -169,8 +169,8 @@ describe('ACE chronological tree acceptance (#675)', () => {
     const orphanButton = screen.getByRole('button', { name: /Fictional Orphan, Little, pickup year unverified/i });
     fireEvent.click(orphanButton);
     expect(orphanButton).toHaveAttribute('aria-pressed', 'true');
-    const lineage = screen.getByRole('navigation', { name: 'Lineage of Fictional Orphan' });
-    expect(within(lineage).getAllByRole('listitem')).toHaveLength(1);
+    // A detached node has no published ancestors, so the rail must not invent a lineage.
+    expect(screen.queryByRole('navigation', { name: 'Lineage of Fictional Orphan' })).not.toBeInTheDocument();
     expect(container.textContent).not.toContain('unpublished-parent');
   });
 
