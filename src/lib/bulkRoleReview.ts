@@ -42,7 +42,7 @@ export function parseRoleNames(raw: string, format: NamePasteFormat): RoleReview
   // A copied spreadsheet column is fine; multiple non-empty TSV cells per
   // row are not. Otherwise a second column (email, role, phone, etc.) can
   // silently become a new person's name in the admin matching queue.
-  if (raw.split(/\\r?\\n/).some((line) => line.split('\\t').filter((cell) => cell.trim()).length > 1)) {
+  if (raw.split(/\r?\n/).some((line) => line.split('\t').filter((cell) => cell.trim()).length > 1)) {
     throw new Error('Paste only the name column from your spreadsheet. Remove other columns before parsing.');
   }
 
