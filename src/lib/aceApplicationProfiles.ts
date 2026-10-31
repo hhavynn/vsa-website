@@ -868,7 +868,9 @@ export function suggestBigs(little: PairSide & { profile: ApplicationProfile }, 
     if (b.capacity != null && candidate.load.incoming >= b.capacity) continue;
     if (checkPair({ profile: b, name: candidate.name }, little).length > 0) continue;
 
-    const components = [
+    // A suggestion needs independent, non-sensitive evidence. Gender preference
+    // alone is never a basis for proposing a personal relationship (#647).
+    const basis = [
       scaleComponent('introvert/extrovert', l.scales.introExtro, b.scales.introExtro, 9),
       scaleComponent('routine vs. spontaneity', l.scales.routine, b.scales.routine, 9),
       scaleComponent('work ethic', l.scales.workEthic, b.scales.workEthic, 9),
@@ -877,11 +879,16 @@ export function suggestBigs(little: PairSide & { profile: ApplicationProfile }, 
       leaningComponent('Same Friday-night answer', leaning(l.fridayNight, HOME, OUT), leaning(b.fridayNight, HOME, OUT)),
       activityComponent('Big is as active as the Little wants', activityLevel(l.wantedActivity), activityLevel(b.activity)),
       activityComponent('Little is as active as the Big wants', activityLevel(b.wantedActivity), activityLevel(l.activity)),
-      // Conflicting preferences were excluded above, so a stated, checkable one is met.
-      genderPreferenceOf(l.genderPreference, l.genderIdentity) && genderOf(b.genderIdentity) ? { value: 1, reason: 'Fits the Little’s gender preference' } : null,
-      genderPreferenceOf(b.genderPreference, b.genderIdentity) && genderOf(l.genderIdentity) ? { value: 1, reason: 'Fits the Big’s gender preference' } : null,
     ].filter((c): c is Component => c !== null);
-    if (components.length === 0) continue;
+    if (basis.length === 0) continue;
+    const components: Component[] = [
+      ...basis,
+      // Stated gender preferences can only supplement a non-gender basis, never create one.
+      ...(genderPreferenceOf(l.genderPreference, l.genderIdentity) && genderOf(b.genderIdentity)
+        ? [{ value: 1, reason: 'Fits the Little’s gender preference' }] : []),
+      ...(genderPreferenceOf(b.genderPreference, b.genderIdentity) && genderOf(l.genderIdentity)
+        ? [{ value: 1, reason: 'Fits the Big’s gender preference' }] : []),
+    ];
 
     const score = Math.round((components.reduce((sum, c) => sum + c.value, 0) / components.length) * 100);
     const reasons = components
