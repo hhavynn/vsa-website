@@ -6,6 +6,7 @@ import {
   normalizeMemberName,
 } from './memberLinkMatching';
 import { parseDelimitedPaste } from './delimitedPaste';
+import { comparePickup, isTermConsistentWithYear, pickupYearOf } from './acePickupYear';
 
 /** A live ACE tree node, as the assignment workspace needs it. */
 export interface AceNodeRef {
@@ -50,6 +51,9 @@ export function formatAcademicYear(start: number): string {
 // ─── Preflight ───────────────────────────────────────────────────────────────
 
 export type AssignmentIssueCode =
+  | 'pickup_term_missing'
+  | 'little_before_big'
+  | 'same_term_as_big'
   | 'unassigned'
   | 'missing_big'
   | 'duplicate_little'
@@ -109,12 +113,36 @@ export function computePreflight(
   nodes: readonly AceNodeRef[],
   nameIndex: MemberNameIndex,
   status: AceAssignmentStatus,
+  pickupTerm?: string | null,
+  academicYearStart?: number,
 ): AssignmentPreflight {
   const nodesById = new Map(nodes.map((node) => [node.id, node]));
   const issues: AssignmentIssue[] = [];
   const push = (code: AssignmentIssueCode, severity: AssignmentIssue['severity'], message: string, ids: string[]) => {
     if (ids.length > 0) issues.push({ code, severity, message, draftIds: ids });
   };
+
+  if (status !== 'published' && pickupTerm !== undefined &&
+      (!pickupTerm || (academicYearStart !== undefined && !isTermConsistentWithYear(pickupTerm, academicYearStart)))) {
+    push('pickup_term_missing', 'blocker', 'Choose an approved pickup term for this academic year', drafts.map(d => d.id));
+  }
+  if (pickupTerm && academicYearStart !== undefined && isTermConsistentWithYear(pickupTerm, academicYearStart)) {
+    const next = { status: 'verified' as const, academicYearStart, term: pickupTerm };
+    const earlier: string[] = [];
+    const sameTerm: string[] = [];
+    for (const d of drafts) {
+      const big = d.big_ace_member_id ? nodesById.get(d.big_ace_member_id) : null;
+      if (!big) continue;
+      const relative = comparePickup(next, pickupYearOf({
+        pickup_academic_year_start: big.pickupAcademicYearStart,
+        pickup_term: big.pickupTerm,
+      }));
+      if (relative === -1) earlier.push(d.id);
+      if (relative === 0) sameTerm.push(d.id);
+    }
+    push('little_before_big', 'warning', 'A Little has a pickup term earlier than their Big', earlier);
+    push('same_term_as_big', 'warning', 'A Little shares the same pickup term as their Big', sameTerm);
+  }
 
   const unassigned = drafts.filter((d) => !d.big_ace_member_id);
   push('unassigned', 'blocker', `${plural(unassigned.length, 'unassigned Little', 'unassigned Littles')}`, unassigned.map((d) => d.id));
