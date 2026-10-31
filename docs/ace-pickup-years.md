@@ -110,10 +110,21 @@ From the app: `aceFamiliesRepository.setPickupYear(nodeId, year, term, evidenceI
 - **Unknown stays unknown:** leave a node out of the batch (or pass
   `null`/`null` to clear a wrong value). Do not write a guessed year.
 
-A #670 batch therefore looks like: insert evidence rows with
-`on conflict do nothing` (the unique key is node + source kind + label + raw
-value, nulls equal), let a reviewer choose, then call the function once per
-approved node and keep its results as the change log.
+A #670 **historical batch** is planned with `npm run ace:years -- plan`
+from a freshly exported published-node snapshot, reviewed sheet, and required
+`--batch-label` (a generic URL-free label, up to 200 characters). The generated
+SQL preview guards **only the two pickup columns** on each existing node's
+unchanged family, Big and prior year, inserts its approved evidence record only
+after a successful change, and records one counts-only admin activity entry per
+family. Any failure aborts the transaction; the preview ends with `ROLLBACK`.
+The operator must back up exact reviewed ids and obtain separate approval before
+any real application. Never run the generated SQL simply because it exists.
+
+The `set_ace_member_pickup_year` function above remains the authorized
+**interactive admin** setter, but cannot be invoked directly from the SQL
+editor or automated migration context: `auth.uid()` is null and its admin
+check fails with 42501. The historical SQL preview uses guarded updates
+instead, with evidence and per-family admin log entries in the same transaction.
 
 Evidence `source_kind` values: `import_json`, `workbook_year_row`,
 `official_pairing`, `assignment_cycle`, `admin_entry`. `source_label` is a

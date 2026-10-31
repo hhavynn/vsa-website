@@ -64,7 +64,7 @@ export function countHouseCoverage(items: readonly CoverageResult[]) {
 
 export type PopulationState =
   | 'assigned' | 'scheduled' | 'unassigned' | 'ambiguous-identity' | 'duplicate-applicant'
-  | 'missing-member' | 'not-in-batch' | 'invalid-house' | 'conflicting-membership' | 'missing-membership';
+  | 'missing-member' | 'not-in-batch' | 'duplicate-batch-row' | 'invalid-house' | 'conflicting-membership' | 'missing-membership';
 export interface PopulationApplicant {
   id: string;
   source_name: string;
@@ -111,8 +111,11 @@ export function reviewHouseBatchPopulation(input: {
     if (a.member_id) duplicates.set(a.member_id, (duplicates.get(a.member_id) ?? 0) + 1);
   });
   const rowByApplicant = new Map<string, CoverageDraft>();
+  const batchRowsPerApplicant = new Map<string, number>();
   [...rows].sort((a, b) => a.source_order - b.source_order).forEach((row) => {
-    if (row.applicant_id && !rowByApplicant.has(row.applicant_id)) rowByApplicant.set(row.applicant_id, row);
+    if (!row.applicant_id) return;
+    batchRowsPerApplicant.set(row.applicant_id, (batchRowsPerApplicant.get(row.applicant_id) ?? 0) + 1);
+    if (!rowByApplicant.has(row.applicant_id)) rowByApplicant.set(row.applicant_id, row);
   });
   const revealedByRow = revealed
     ? new Map(reviewPublishedHouseBatchCoverage(rows, profiles, memberIds, memberships, onDate)
@@ -132,6 +135,9 @@ export function reviewHouseBatchPopulation(input: {
       return make('duplicate-applicant', 'Multiple paid or waived applicants share this canonical member.');
     }
     if (!row) return make('not-in-batch', 'Eligible applicant was not included in the selected batch.');
+    if ((batchRowsPerApplicant.get(applicant.id) ?? 0) > 1) {
+      return make('duplicate-batch-row', 'This eligible applicant appears in multiple rows in the batch. Review all duplicates before Lock or Reveal; a single matching row is not proof of placement.');
+    }
     if (row.member_id !== applicant.member_id || !['match', 'manual'].includes(row.match_status)) {
       return make('ambiguous-identity', 'Batch row identity is not confirmed for this applicant.');
     }

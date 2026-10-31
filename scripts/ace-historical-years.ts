@@ -28,6 +28,7 @@
  *   npm run ace:years -- plan \
  *     --live-families <...> --live-members <...> \
  *     --review <reviewed review_sheet.csv> [--pre-669-snapshot yes] \
+ *     --batch-label <generic-review-batch-name> \\
  *     [--max-year 2025] [--out-dir scripts/reports/ace-historical-years/plan]
  *
  * `plan` is a DRY RUN: it writes backfill_plan.json and a SQL preview that
@@ -57,6 +58,7 @@ import {
   buildBackfillPlan,
   parseReviewSheet,
   planSqlPreview,
+  validatePickupBatchLabel,
   reviewSheetCsv,
   reviewSheetForQueue,
   ReviewQueue,
@@ -271,10 +273,13 @@ function plan(args: ReturnType<typeof parseArgs>) {
   const reviewFile = args.one('review');
   const review = parseReviewSheet(fs.readFileSync(reviewFile, 'utf8'));
   const pre669 = args.one('pre-669-snapshot', 'no') === 'yes';
+  // All applied evidence must carry a generic batch label; preview-only legacy snapshots may omit it.
+  const rawLabel = args.one('batch-label', pre669 ? '' : undefined);
+  const batchLabel = rawLabel ? validatePickupBatchLabel(rawLabel) : undefined;
   const result = buildBackfillPlan(review, snapshot, { maxAcademicYearStart: maxYear, allowMissingPickupColumns: pre669 });
   if (!result.snapshot_has_pickup_columns) console.log('PREVIEW ONLY: snapshot has no pickup columns; previous values assumed blank. Not idempotent.');
   write(outDir, 'backfill_plan.json', `${JSON.stringify(result, null, 2)}\n`);
-  write(outDir, 'backfill_preview.sql', planSqlPreview(result));
+  write(outDir, 'backfill_preview.sql', planSqlPreview(result, { batchLabel }));
   console.log('DRY RUN: nothing was written to any database.');
   console.log(`Updates: ${result.updates.length} (of which overwrite an existing value: ${result.updates.filter((u) => u.overwrites_existing_value).length})`);
   console.log(`Already applied: ${result.unchanged.length}; not approved: ${result.not_approved}; rejected: ${result.rejected.length}`);
