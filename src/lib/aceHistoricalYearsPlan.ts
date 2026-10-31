@@ -438,7 +438,7 @@ export function planSqlPreview(plan: BackfillPlan, options?: { batchLabel?: stri
   const lines: string[] = [
     '-- ACE pickup-year backfill PREVIEW (#670). Generated; review-only.',
     `-- ${plan.updates.length} update(s), ${plan.unchanged.length} already applied, ${plan.rejected.length} rejected.`,
-    `-- Writes only: ${PICKUP_COLUMNS.join(', ')}. Requires the #669 columns.`,
+    `-- Only pickup_* columns are UPDATED on ACE nodes; approved evidence and aggregate admin audit are INSERTED. Requires #669.`,
   ];
   if (!plan.snapshot_has_pickup_columns) {
     lines.push('-- WARNING: planned against a snapshot WITHOUT pickup columns; previous values were assumed blank.', '-- Regenerate from a post-#669 snapshot before any real apply.');
@@ -463,7 +463,7 @@ export function planSqlPreview(plan: BackfillPlan, options?: { batchLabel?: stri
       throw new Error('Unexpected ACE confidence class in reviewed sheet.');
     }
     lines.push(
-      'do $',
+      'do $$',
       'declare changed integer;',
       'begin',
       '  update public.ace_family_members',
@@ -484,7 +484,7 @@ export function planSqlPreview(plan: BackfillPlan, options?: { batchLabel?: stri
         '    on conflict (ace_member_id, source_kind, source_label, raw_value) do nothing;',
         '  end if;',
       ] : []),
-      'end $;'
+      'end $$;'
     );
   }
   const byFam = new Map<string, { updates: number; overwrites: number }>();
@@ -495,12 +495,12 @@ export function planSqlPreview(plan: BackfillPlan, options?: { batchLabel?: stri
     byFam.set(update.family_id, count);
   }
   lines.push(
-    'do $',
+    'do $$',
     'declare failed text;',
     'begin',
     "  select string_agg(ace_node_id::text || ' (' || changed || ' rows)', ', ' order by ace_node_id) into failed from ace_pickup_plan_failures;",
     "  if failed is not null then raise exception 'ACE pickup plan aborted; these nodes did not match their reviewed state: %', failed; end if;",
-    'end $;',
+    'end $$;',
     // An audit failure is transactional: no years or evidence survive unless the audit insert succeeds.
     ...(labelSql !== null ? Array.from(byFam.entries()).map(([famId, count]) =>
       `insert into public.admin_activity_log (actor_user_id, action, entity_type, entity_id, academic_year_start, summary, metadata)
