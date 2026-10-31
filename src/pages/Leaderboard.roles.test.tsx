@@ -192,3 +192,97 @@ describe('revealed House affiliation on visible individual standings (#627/#692)
     expect(within(row).getByText('10')).toBeInTheDocument();
   });
 });
+
+
+describe('rank 4+ modal House and role navigation (#627)', () => {
+  const badge = {
+    academic_year_start: 2026, house: 'fictional', house_profile_id: 'fictional-profile',
+    display_name: 'Fictional House', accent_color: null,
+  };
+
+  it('has one year-correct House link in the modal but no nested link in a row', async () => {
+    jest.spyOn(leaderboardRepository, 'getMemberHouseBadge').mockResolvedValue(badge);
+    mockVisibleHouses.set('four', {
+      houseProfileId: badge.house_profile_id, houseKey: badge.house,
+      label: badge.display_name, accentColor: null, academicYearStart: 2026,
+    });
+    mount();
+    const row = within(await screen.findByRole('table', { name: /Full member standings/ }))
+      .getByRole('row', { name: 'Rank #4: Cam Four' });
+    expect(within(row).queryByRole('link')).not.toBeInTheDocument();
+    fireEvent.click(within(row).getByRole('button', { name: 'Open profile for Cam Four' }));
+    const modal = await screen.findByRole('dialog', { name: 'Cam Four member profile' });
+    const houseLink = await within(modal).findByRole('link', { name: /Open Fictional House House page/ });
+    expect(houseLink).toHaveAttribute('href', '/house/year/2026-2027/fictional');
+    expect(within(modal).getByText('House · Fictional House')).toBeInTheDocument();
+    expect(within(modal).getByText('10')).toBeInTheDocument();
+  });
+
+  it('dates the All-Time House label and never pretends archived leadership is current', async () => {
+    jest.spyOn(leaderboardRepository, 'getMemberHouseBadge').mockResolvedValue(badge);
+    mount();
+    fireEvent.change(await screen.findByRole('combobox', { name: 'Select academic year' }),
+      { target: { value: 'all' } });
+    const table = await screen.findByRole('table', { name: /Full member standings/ });
+    const row = within(table).getByRole('row', { name: 'Rank #4: Cam Four' });
+    fireEvent.click(within(row).getByRole('button', { name: 'Open profile for Cam Four' }));
+    const modal = await screen.findByRole('dialog', { name: 'Cam Four member profile' });
+    const houseLink = await within(modal).findByRole('link', { name: /Open Fictional House House page for 2026-2027/ });
+    expect(houseLink).toHaveAttribute('href', '/house/year/2026-2027/fictional');
+    expect(within(modal).getByText('House · Fictional House · 2026-2027')).toBeInTheDocument();
+    expect(within(modal).queryByText('Board Member')).not.toBeInTheDocument();
+    expect(within(modal).getByText(/Choose an academic year/)).toBeInTheDocument();
+  });
+
+  it('deduplicates a House Parent role destination and the House affiliation link', async () => {
+    jest.spyOn(leaderboardRepository, 'getMemberHouseBadge').mockResolvedValue(badge);
+    mockRoleMap.set('four', [
+      { memberId:'four', kind:'house_parent', label:'House Parent · Fictional House',
+        academicYearStart:2026, sourceType:'house_parents', relatedKey:'fictional' },
+    ]);
+    mount();
+    const row = screen.getByRole('row', { name: 'Rank #4: Cam Four' });
+    fireEvent.click(within(row).getByRole('button', { name: 'Open profile for Cam Four' }));
+    const modal = await screen.findByRole('dialog', { name: 'Cam Four member profile' });
+    await within(modal).findByRole('link', { name: /Open Fictional House House page/ });
+    expect(within(modal).getAllByRole('link')).toHaveLength(1);
+    expect(within(modal).getByText('House Parent · Fictional House')).toBeInTheDocument();
+  });
+
+  it('keeps ranking, roles and the profile visible on House RPC failure', async () => {
+    jest.spyOn(leaderboardRepository, 'getMemberHouseBadge').mockRejectedValue(
+      new Error('synthetic denied House read'));
+    mount();
+    const row = screen.getByRole('row', { name: 'Rank #4: Cam Four' });
+    fireEvent.click(within(row).getByRole('button', { name: 'Open profile for Cam Four' }));
+    const modal = await screen.findByRole('dialog', { name: 'Cam Four member profile' });
+    expect(within(modal).getByText('Events Chair')).toBeInTheDocument();
+    expect(within(modal).getByText('10')).toBeInTheDocument();
+    expect(within(modal).queryByRole('link', { name: /House page/ })).not.toBeInTheDocument();
+  });
+
+
+  it('does not label a prior House as this selected academic year', async () => {
+    jest.spyOn(leaderboardRepository, 'getMemberHouseBadge').mockResolvedValue({
+      ...badge, academic_year_start: 2025,
+    });
+    mount();
+    const row = screen.getByRole('row', { name: 'Rank #4: Cam Four' });
+    fireEvent.click(within(row).getByRole('button', { name: 'Open profile for Cam Four' }));
+    const modal = await screen.findByRole('dialog', { name: 'Cam Four member profile' });
+    expect(within(modal).getByText('Events Chair')).toBeInTheDocument();
+    expect(within(modal).queryByRole('link', { name: /House page/ })).not.toBeInTheDocument();
+    expect(within(modal).queryByText(/House ·/)).not.toBeInTheDocument();
+  });
+
+  it('never links when the House RPC omits a verified academic year', async () => {
+    jest.spyOn(leaderboardRepository, 'getMemberHouseBadge')
+      .mockResolvedValue({ ...badge, academic_year_start: NaN });
+    mount();
+    const row = screen.getByRole('row', { name: 'Rank #4: Cam Four' });
+    fireEvent.click(within(row).getByRole('button', { name: 'Open profile for Cam Four' }));
+    const modal = await screen.findByRole('dialog', { name: 'Cam Four member profile' });
+    expect(within(modal).getByText('Board Member')).toBeInTheDocument();
+    expect(within(modal).queryByRole('link', { name: /House page/ })).not.toBeInTheDocument();
+  });
+});
