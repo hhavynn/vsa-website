@@ -123,7 +123,8 @@ re-run `reconcile` before applying to confirm it.
 `pickup_academic_year_start` on existing ACE nodes, guarded by live
 `family_id`, `parent_member_id`, and reviewed previous values. Every
 successful year update also inserts a deduplicated approved evidence claim
-(source category, generic label, approved term/year; no personal data), and
+(source category, generic label, approved term/year; no personal data),
+marks any earlier approval the node no longer matches as superseded, and adds
 one counts-only `ace.pickup_backfill` admin activity entry per affected
 family is appended **after** every node passes. Any failure is transactional,
 and the generated SQL still ends in `ROLLBACK`. The human operator must

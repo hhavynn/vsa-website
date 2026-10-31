@@ -233,8 +233,11 @@ describe('planSqlPreview', () => {
     expect(executable).toContain("and review_status = 'approved' and reviewed_at is not null");
     expect(executable).toContain('ACE pickup evidence conflict');
     expect(executable.match(/do \$\$/g)).toHaveLength(3);
-    expect(executable.match(/update [\w.]+/g)).toEqual(['update public.ace_family_members', 'update public.ace_family_members']);
-    const sets = preview.match(/set [^\n]+/g) ?? [];
+    expect(executable.match(/update public.ace_family_members/g)).toHaveLength(2);
+    expect(executable.match(/update [\w.]+/g)?.filter((u) => u !== 'update public.ace_family_members'))
+      .toEqual(['update public.ace_member_pickup_evidence', 'update public.ace_member_pickup_evidence']);
+    expect(executable).toContain('candidate_academic_year_start is distinct from 2017');
+    const sets = (preview.match(/set [^\n]+/g) ?? []).filter((set) => !set.startsWith('set review_status'));
     expect(sets).toHaveLength(2);
     for (const set of sets) expect(set).toMatch(/^set pickup_term = (null|'(FA|WI|SP)\d\d'), pickup_academic_year_start = \d{4}$/);
     expect(preview).toContain(`and family_id = '${FAM_ID}'::uuid`);
@@ -275,6 +278,7 @@ describe('planSqlPreview', () => {
     const legacySql = planSqlPreview(legacy);
     expect(legacySql).not.toContain('insert into public.ace_member_pickup_evidence');
     expect(legacySql).not.toContain('insert into public.admin_activity_log');
+    expect(legacySql).not.toContain('update public.ace_member_pickup_evidence');
     expect(legacySql.trim().endsWith('rollback;')).toBe(true);
   });
 

@@ -495,6 +495,15 @@ export function planSqlPreview(plan: BackfillPlan, options?: { batchLabel?: stri
         '    end if;',
         '  end if;',
       ] : []),
+      // Same as set_ace_member_pickup_year: an approval the node no longer matches is superseded.
+      ...(labelSql !== null ? [
+        '  if changed = 1 then',
+        "    update public.ace_member_pickup_evidence set review_status = 'superseded'",
+        `      where ace_member_id = ${sqlUuid(u.ace_node_id)} and review_status = 'approved'`,
+        `        and (candidate_academic_year_start is distinct from ${sqlYear(u.next.pickup_academic_year_start)}`,
+        `          or candidate_term is distinct from ${sqlTerm(u.next.pickup_term)});`,
+        '  end if;',
+      ] : []),
       'end $$;'
     );
   }
