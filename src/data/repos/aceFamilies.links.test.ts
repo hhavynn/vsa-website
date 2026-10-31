@@ -1,5 +1,5 @@
 import { aceFamiliesRepository } from './aceFamilies';
-import { supabaseMock } from '../../test-utils/supabaseMock';
+import { postgrestError, supabaseMock } from '../../test-utils/supabaseMock';
 
 jest.mock('../../lib/supabase', () => ({
   get supabase() {
@@ -154,5 +154,54 @@ describe('complete admin ACE node references (#291)', () => {
       message: 'Insufficient permissions', code: '42501',
     });
     expect(supabaseMock.queriesFor('ace_family_members')).toHaveLength(2);
+  });
+});
+
+describe('complete admin family directory for private ACE preview (#665)', () => {
+  it('loads beyond the PostgREST 1000-row default with deterministic pagination', async () => {
+    const page = Array.from({ length: 1000 }, (_, index) => ({
+      id: 'synthetic-family-' + String(index).padStart(4, '0'),
+      name: 'Fictional Family', display_order: 1, is_published: true,
+    }));
+    supabaseMock.queueResult('ace_families', { data: page, error: null });
+    supabaseMock.queueResult('ace_families', {
+      data: [{ id: 'synthetic-family-1000', name: 'Fictional Family', display_order: 1, is_published: false }],
+      error: null,
+    });
+    const families = await aceFamiliesRepository.getAdminFamilies();
+    expect(families).toHaveLength(1001);
+    expect(families[1000].id).toBe('synthetic-family-1000');
+    const queries = supabaseMock.queriesFor('ace_families');
+    expect(queries).toHaveLength(2);
+    expect(queries.map((query) => query.calls.find((call) => call.method === 'range')?.args))
+      .toEqual([[0, 999], [1000, 1999]]);
+    for (const query of queries) {
+      expect(query.calls.filter((call) => call.method === 'order')).toEqual([
+        { method: 'order', args: ['display_order', { ascending: true }] },
+        { method: 'order', args: ['name', { ascending: true }] },
+        { method: 'order', args: ['id', { ascending: true }] },
+      ]);
+    }
+  });
+
+  it('never returns a partial family list when a later page fails', async () => {
+    supabaseMock.queueResult('ace_families', {
+      data: Array.from({ length: 1000 }, (_, index) => ({ id: 'fake-' + index })), error: null,
+    });
+    supabaseMock.queueResult('ace_families', {
+      data: null, error: postgrestError('permission denied for the next page', '42501'),
+    });
+    await expect(aceFamiliesRepository.getAdminFamilies())
+      .rejects.toMatchObject({ name: 'DatabaseError', message: 'Insufficient permissions' });
+  });
+
+  it('keeps a truly empty family directory distinct from a failed read', async () => {
+    supabaseMock.queueResult('ace_families', { data: null, error: null });
+    await expect(aceFamiliesRepository.getAdminFamilies()).resolves.toEqual([]);
+    supabaseMock.queueResult('ace_families', {
+      data: null, error: postgrestError('permission denied', '42501'),
+    });
+    await expect(aceFamiliesRepository.getAdminFamilies())
+      .rejects.toMatchObject({ name: 'DatabaseError', message: 'Insufficient permissions' });
   });
 });
