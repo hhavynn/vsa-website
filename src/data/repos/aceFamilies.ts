@@ -254,7 +254,7 @@ export class AceFamiliesRepository {
       for (let from = 0; ; from += pageSize) {
         const { data, error } = await supabase
           .from('ace_family_members')
-          .select('id, name, family_id, member_id, parent_member_id, role_label, ace_families(name)')
+          .select('id, name, family_id, member_id, parent_member_id, role_label, is_published, pickup_academic_year_start, pickup_term, ace_families(name)')
           .order('id', { ascending: true })
           .range(from, from + pageSize - 1);
         if (error) throw error;
@@ -268,6 +268,9 @@ export class AceFamiliesRepository {
             memberId: row.member_id,
             parentId: row.parent_member_id,
             roleLabel: row.role_label,
+            isPublished: row.is_published === true,
+            pickupAcademicYearStart: row.pickup_academic_year_start,
+            pickupTerm: row.pickup_term,
           });
         }
         if (!data || data.length < pageSize) return nodes;
