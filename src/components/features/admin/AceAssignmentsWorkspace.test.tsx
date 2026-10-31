@@ -24,6 +24,7 @@ const cycle = (status: string, over: Record<string, unknown> = {}) => ({
   id: 'cycle-1',
   academic_year_start: 2026,
   academic_year_end: 2027,
+  pickup_term: 'FA26',
   status,
   ...over,
   created_by: null,
@@ -124,6 +125,7 @@ describe('draft cycle', () => {
   it('locking changes only the cycle status and publishes nothing', async () => {
     renderWorkspace();
     fireEvent.click(await screen.findByRole('button', { name: 'Lock assignments' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm lock' }));
     await waitFor(() => expect(callsOf('ace_assignment_cycles', 'update')).toHaveLength(1));
     expect(callsOf('ace_assignment_cycles', 'update')[0].args[0]).toMatchObject({ status: 'locked' });
     expect(supabaseMock.filtersFor('ace_assignment_cycles')).toContainEqual(['status', 'draft']);
@@ -288,6 +290,7 @@ describe('filters, bulk actions and activity', () => {
     expect(await screen.findByText('2026–27')).toBeInTheDocument();
     expect(await screen.findByRole('region', { name: '2026–27 ACE progress' })).toHaveTextContent('Assignments 1 / 3');
     fireEvent.click(await screen.findByRole('button', { name: 'Lock assignments' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm lock' }));
     expect(await screen.findByText('Assignments locked')).toBeInTheDocument();
   });
 });
@@ -425,5 +428,47 @@ describe('Admin → ACE page', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'Families' }));
     expect(screen.getByRole('button', { name: '+ New Fam' })).toBeInTheDocument();
+  });
+});
+
+describe('approved pickup-term gate (#674)', () => {
+  it('does not allow locking a legacy cycle until a valid term is saved', async () => {
+    seed('draft', [draft('fictional-d', 'Fictional Little', { big_ace_member_id: 'big-april' })], { pickup_term: null });
+    renderWorkspace();
+    expect(await screen.findByRole('button', { name: 'Lock assignments' })).toBeDisabled();
+    expect(screen.getByText('Choose an approved pickup term for this academic year')).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Approved pickup term' }), { target: { value: 'SP27' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save pickup term' }));
+    await waitFor(() => expect(callsOf('ace_assignment_cycles', 'update')).toHaveLength(1));
+    expect(callsOf('ace_assignment_cycles', 'update')[0].args[0]).toMatchObject({ pickup_term: 'SP27' });
+    expect(supabaseMock.filtersFor('ace_assignment_cycles')).toEqual(
+      expect.arrayContaining([['id', 'cycle-1'], ['status', 'draft'], ['academic_year_start', 2026]]),
+    );
+  });
+
+  it('shows Fall 2026 in the Lock confirmation before any status update', async () => {
+    seed('draft', [draft('fictional-d', 'Fictional Little', { big_ace_member_id: 'big-april' })]);
+    renderWorkspace();
+    fireEvent.click(await screen.findByRole('button', { name: 'Lock assignments' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Confirm lock' });
+    expect(within(dialog).getByText(/Fall 2026 · 2026–27/)).toBeInTheDocument();
+    expect(callsOf('ace_assignment_cycles', 'update')).toHaveLength(0);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(callsOf('ace_assignment_cycles', 'update')).toHaveLength(0);
+  });
+
+  it('refuses publish when an older locked cycle has no pickup term', async () => {
+    seed('locked', [draft('fictional-d', 'Fictional Little', { big_ace_member_id: 'big-april' })], { pickup_term: null });
+    renderWorkspace();
+    expect(await screen.findByRole('button', { name: 'Publish to ACE tree…' })).toBeDisabled();
+    expect(supabaseMock.queriesFor('rpc:publish_ace_assignment_cycle')).toHaveLength(0);
+  });
+
+  it('clearly previews the confirmed Spring 2027 term at Publish', async () => {
+    seed('locked', [draft('fictional-d', 'Fictional Little', { big_ace_member_id: 'big-april' })], { pickup_term: 'SP27' });
+    renderWorkspace();
+    fireEvent.click(await screen.findByRole('button', { name: 'Publish to ACE tree…' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Confirm publish' });
+    expect(within(dialog).getByText(/Spring 2027 · 2026–27/)).toBeInTheDocument();
   });
 });
