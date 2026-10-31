@@ -30,7 +30,7 @@ Find My Points shows the House announced for the selected year (or each member's
 
 ## Lock-stop trial — do not Reveal
 
-This is an operator checklist and is **not authorization to Lock or Reveal**. The House Reveal freeze remains active through November 9, 2026 without explicit release-owner exception. Never create fictional production applicants, upload private form responses to GitHub, or use a production Reveal as a test.
+This is an operator checklist and is **not authorization to Lock or Reveal**. The House Reveal freeze stays active until the release owner lifts it or grants an explicit exception. Never create fictional production applicants, upload private form responses to GitHub, or use a production Reveal as a test.
 
 1. Confirm the selected academic year and read-only House application-window status from public_application_links. No open window or closed/future URL may be visible; record status and cutoff in Los Angeles local time.
 2. On Admin → Houses → Payments, verify the current final roster. The payment roster is unique by year/application key. Do not create a duplicate roster to solve a mismatch.
@@ -46,7 +46,7 @@ This is an operator checklist and is **not authorization to Lock or Reveal**. Th
 
 If the owner's real Reveal request times out or loses the response, reload the **same** batch first and inspect its status, published_at, payment fingerprint and original rows. Do not create another batch or assume the failure was a rollback. The existing planMembershipChange skips already placed members, and admin_begin_house_batch_publish accepts the same batch; only an authorized operator should retry that same Reveal after revalidating its state.
 
-An interrupted Reveal may have written individual membership rows before it set published_at. Those rows remain nonpublic through the originating batch's published_at gate. **Do not Reopen after a partial Reveal.** Client-side deletion of those intervals is unsupported; a changed House at the same start can conflict. If a same-batch retry is unsafe, stop and escalate for owner-approved, audited SQL recovery only. While publishing_batch_id is set, payment and member-merge writes intentionally refuse with 55006. After successful publication, use the reviewed #621 correction path, never direct updates to members.house or House scores.
+An interrupted Reveal may have written individual membership rows before it set published_at. Those rows stay out of public_house_memberships through the originating batch's published_at gate. `public_member_house_badge` uses a looser gate until #802 ships, so check it too if an earlier batch that year is already published. **Do not Reopen after a partial Reveal.** Client-side deletion of those intervals is unsupported; a changed House at the same start can conflict. If a same-batch retry is unsafe, stop and escalate for owner-approved, audited SQL recovery only. While publishing_batch_id is set, payment and member-merge writes intentionally refuse with 55006. After successful publication, use the reviewed #621 correction path, never direct updates to members.house or House scores.
 
 ## Go/no-go evidence and outstanding blockers
 
