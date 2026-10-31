@@ -127,6 +127,38 @@ describe('reviewFamilyYears — approved values and evidence (#673)', () => {
     expect(conflicts.get('a')?.flags).toEqual(['pending_evidence', 'evidence_conflict']);
   });
 
+  it('flags disagreement between active candidates even without an approved year', () => {
+    const unknown = node('unknown');
+    const records = [
+      evidence('one', unknown.id, { candidate_academic_year_start: 2022, candidate_term: 'FA22' }),
+      evidence('two', unknown.id, { candidate_academic_year_start: 2023, candidate_term: 'FA23' }),
+    ];
+    expect(reviewFamilyYears([unknown], records).get(unknown.id)).toEqual({
+      status: 'needs_review',
+      flags: ['missing_year', 'pending_evidence', 'evidence_conflict'],
+    });
+  });
+
+  it('flags contradictory exact-term sources against a year-only approval', () => {
+    const approved = node('approved', { pickup_academic_year_start: 2023, pickup_term: null });
+    const records = [
+      evidence('fall', approved.id, { candidate_term: 'FA23' }),
+      evidence('winter', approved.id, { candidate_term: 'WI24' }),
+    ];
+    expect(reviewFamilyYears([approved], records).get(approved.id)?.flags)
+      .toEqual(['pending_evidence', 'evidence_conflict']);
+  });
+
+  it('does not call an exact-term source contradictory to a compatible year-only source', () => {
+    const approved = node('approved', { pickup_academic_year_start: 2023, pickup_term: 'FA23' });
+    const records = [
+      evidence('exact', approved.id, { candidate_term: 'FA23' }),
+      evidence('year-only', approved.id, { candidate_term: null }),
+    ];
+    expect(reviewFamilyYears([approved], records).get(approved.id)?.flags)
+      .toEqual(['pending_evidence']);
+  });
+
   it('ignores rejected, superseded, and other-family evidence rows', () => {
     const a = node('a', { pickup_academic_year_start: 2023, pickup_term: 'FA23' });
     const results = reviewFamilyYears([a], [
