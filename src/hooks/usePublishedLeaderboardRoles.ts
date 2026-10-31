@@ -16,7 +16,7 @@ export function usePublishedLeaderboardRoles(
 ) {
   const ids = Array.from(new Set(memberIds.filter(Boolean))).sort();
   return useQuery<Map<string, PublicMemberRole[]>, unknown>(
-    ['public-leaderboard-roles', academicYearStart, ids],
+    ['public-leaderboard-roles', 'public', academicYearStart, ids],
     () => getPublicMemberRoles(academicYearStart as number, ids),
     {
       enabled: typeof academicYearStart === 'number' && ids.length > 0,
