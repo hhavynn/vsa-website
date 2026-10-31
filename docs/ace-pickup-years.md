@@ -146,4 +146,12 @@ node scripts/verify-rls-security.mjs   # live anon probes (skips until applied)
 3. Rollback: `scripts/sql/ace-pickup-year.rollback.sql` (export approved years
    and evidence first).
 
-**Status:** not applied to production.
+**Status:** applied to production; 0 of 916 published nodes had a year on 2026-10-30.
+
+## Chronological public tree layout (#671; #675 fixtures)
+
+Published ACE year bands use only verified member pickup academic-year values, never generation number or parent age. A family switches to chronological rows only when at least 25% of its nodes have verified dates. Families with no or sparse verified dates keep generation rows and show no implied time axis. In year mode, undated nodes are placed in a distinct Unknown band above known years, and gap years remain full-height bands even with no nodes. Approved terms determine source labels; siblings can be placed in different pickup-year rows and cousins at different lineage depths can share a row.
+
+Cycle/self-parent/duplicate links are repaired only in the layout graph, never written back to ACE lineage. The admin preview alerts the reviewer; the public tree renders the repaired edges and retains interactions. Reverse-time edges are dashed; long forward edges include a straight drop for lineage animation. The separate year rail, focus insets and accessible labels are scoped to #672. No historical year is manufactured and no production migration is part of this change.
+
+Offline fictional golden fixtures and large-tree tests live in src/lib/__fixtures__/aceTreeFixtures.ts and src/lib/aceTreeLayout.test.ts. The #675 real-device, screenshot, historical coverage and rollout preflight work remain separately tracked. Until browser and live-data checks pass, visual acceptance remains unverified.
