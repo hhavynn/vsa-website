@@ -3,13 +3,13 @@
 // keeps its own id and record (a House event is never turned into an `events`
 // row), and a collab House event is one item listing every host House. Times
 // are Los Angeles wall-clock, through the same lifecycle rules for both kinds.
-import type { Event, HouseEvent } from '../types';
+import type { Event, PublicPublicHouseEvent } from '../types';
 import { houseEventToCalendarItem } from '../utils/calendar';
 import { EventLifecycleCandidate, getEventLifecycleBounds, isEventUpcomingOrOngoing } from './eventLifecycle';
 
 export type UpcomingItem =
   | { kind: 'vsa'; key: string; sortMs: number; event: Event }
-  | { kind: 'house'; key: string; sortMs: number; event: HouseEvent; detailPath: string };
+  | { kind: 'house'; key: string; sortMs: number; event: PublicHouseEvent; detailPath: string };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -23,16 +23,16 @@ export function upcomingSortMs(event: EventLifecycleCandidate): number {
 }
 
 /** A House event in the shape the lifecycle helpers (and their timer) take. */
-export function houseCandidate(event: Pick<HouseEvent, 'event_date' | 'start_time' | 'end_time'>): EventLifecycleCandidate {
+export function houseCandidate(event: Pick<PublicHouseEvent, 'event_date' | 'start_time' | 'end_time'>): EventLifecycleCandidate {
   return { date: event.event_date, start_time: event.start_time, end_time: event.end_time, end_date: null };
 }
 
 /** Not over yet (Los Angeles time): upcoming, or still going on. */
-export function isHouseEventUpcomingOrOngoing(event: HouseEvent, now: Date): boolean {
+export function isPublicHouseEventUpcomingOrOngoing(event: PublicHouseEvent, now: Date): boolean {
   return isEventUpcomingOrOngoing(houseCandidate(event), now);
 }
 
-export function houseEventDetailPath(event: HouseEvent): string {
+export function houseEventDetailPath(event: PublicHouseEvent): string {
   return houseEventToCalendarItem(event).detailPath ?? '/house';
 }
 
@@ -47,11 +47,11 @@ export function compareUpcoming(a: UpcomingItem, b: UpcomingItem): number {
  * Unpublished House events (never returned by public reads) and ones that are
  * over are dropped; the same House event twice is listed once.
  */
-export function mergeUpcoming(vsaEvents: readonly Event[], houseEvents: readonly HouseEvent[], now: Date): UpcomingItem[] {
+export function mergeUpcoming(vsaEvents: readonly Event[], houseEvents: readonly PublicHouseEvent[], now: Date): UpcomingItem[] {
   const items: UpcomingItem[] = vsaEvents.map((event) => ({ kind: 'vsa', key: `vsa:${event.id}`, sortMs: upcomingSortMs(event), event }));
   const seen = new Set<string>();
   for (const event of houseEvents) {
-    if (!event.is_published || seen.has(event.id) || !isHouseEventUpcomingOrOngoing(event, now)) continue;
+    if (!event.is_published || seen.has(event.id) || !isPublicHouseEventUpcomingOrOngoing(event, now)) continue;
     seen.add(event.id);
     items.push({ kind: 'house', key: `house:${event.id}`, sortMs: upcomingSortMs(houseCandidate(event)), event, detailPath: houseEventDetailPath(event) });
   }
