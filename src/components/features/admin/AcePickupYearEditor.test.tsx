@@ -182,3 +182,25 @@ it('does not resubmit an already-committed RPC if the post-save view refresh fai
   await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
   expect(screen.getByRole('alert')).toHaveTextContent(/correction was saved, but the family view could not refresh/);
 });
+
+it('warns when the proposed Little date precedes the Big without changing lineage', () => {
+  mount();
+  fireEvent.change(screen.getByRole('textbox', { name: 'Pickup academic year' }), {
+    target: { value: '2019–20' },
+  });
+  expect(screen.getByRole('list', { name: 'Pickup-year warnings' }))
+    .toHaveTextContent(/Little dated before Big/);
+  expect(correction).not.toHaveBeenCalled();
+});
+
+it('retains old approval history as a count and never exposes raw review notes', () => {
+  const old = {
+    ...example('superseded-one', 2021, 'FA21'),
+    review_status: 'superseded' as const,
+    review_note: 'PRIVATE_NOT_FOR_UI',
+  };
+  mount({ evidence: [old] });
+  expect(screen.getByText(/1 earlier source approval\(s\) superseded/)).toBeInTheDocument();
+  expect(screen.queryByText('PRIVATE_NOT_FOR_UI')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Use candidate' })).not.toBeInTheDocument();
+});
