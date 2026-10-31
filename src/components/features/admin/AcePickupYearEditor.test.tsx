@@ -35,12 +35,18 @@ function mount(extra: {
 } = {}) {
   const onSaved = extra.onSaved ?? jest.fn().mockResolvedValue(undefined);
   const onConflict = extra.onConflict ?? jest.fn().mockResolvedValue(undefined);
-  const view = render(<AcePickupYearEditor member={extra.member ?? base} familyName="Fictional Fam"
-    big={big} littles={[little]} familyYears={[2020, 2022, 2024]}
-    evidence={extra.evidence ?? []} ready={extra.ready ?? true}
-    onSaved={onSaved} onConflict={onConflict} />);
+  const editorFor = (member: AceFamilyMember, evidence: AcePickupEvidenceRow[] = extra.evidence ?? []) =>
+    <AcePickupYearEditor member={member} familyName="Fictional Fam"
+      big={big} littles={[little]} familyYears={[2020, 2022, 2024]}
+      evidence={evidence} ready={extra.ready ?? true}
+      onSaved={onSaved} onConflict={onConflict} />;
+  const view = render(editorFor(extra.member ?? base));
   fireEvent.click(screen.getByRole('button', { name: /Review pickup year/ }));
-  return { ...view, onSaved, onConflict };
+  return {
+    ...view, onSaved, onConflict,
+    rerenderFor: (member: AceFamilyMember, evidence?: AcePickupEvidenceRow[]) =>
+      view.rerender(editorFor(member, evidence)),
+  };
 }
 beforeEach(() => {
   jest.clearAllMocks();
@@ -225,4 +231,86 @@ it('approves matching pending evidence even when the already-approved year stays
     evidenceId: 'same-year-evidence', sourceKind: 'official_pairing',
   });
   expect(await screen.findByText(/Evidence approval recorded. The approved pickup year is unchanged/)).toBeInTheDocument();
+});
+
+it('locks after a confirmed write when refresh fails, instead of permitting another stale submission', async () => {
+  const onSaved = jest.fn().mockRejectedValue(new Error('synthetic refresh failed'));
+  mount({ onSaved });
+  fireEvent.change(screen.getByRole('combobox', { name: 'Pickup academic year' }), {
+    target: { value: '2023–24' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Review and save year' }));
+  const dialog = await screen.findByRole('alertdialog', { name: 'Confirm pickup-year correction' });
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm audited correction' }));
+  await waitFor(() => expect(screen.getByText(/correction was saved, but the family view could not refresh/i))
+    .toBeInTheDocument());
+  expect(screen.getByRole('button', { name: 'Review and save year' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Set to Unknown…' })).toBeDisabled();
+  fireEvent.change(screen.getByRole('combobox', { name: 'Pickup academic year' }), {
+    target: { value: '2024–25' },
+  });
+  expect(screen.getByRole('button', { name: 'Review and save year' })).toBeDisabled();
+  expect(correction).toHaveBeenCalledTimes(1);
+});
+
+it('unlocks a committed correction only when the fresh approved node reflects the result', async () => {
+  const view = mount();
+  fireEvent.change(screen.getByRole('combobox', { name: 'Pickup academic year' }), {
+    target: { value: '2023–24' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Review and save year' }));
+  const dialog = await screen.findByRole('alertdialog', { name: 'Confirm pickup-year correction' });
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm audited correction' }));
+  await waitFor(() => expect(correction).toHaveBeenCalledTimes(1));
+  expect(screen.getByRole('button', { name: 'Set to Unknown…' })).toBeDisabled();
+  view.rerenderFor(base);
+  expect(screen.getByRole('button', { name: 'Set to Unknown…' })).toBeDisabled();
+
+  view.rerenderFor({ ...base, pickup_academic_year_start: 2023 });
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Set to Unknown…' })).toBeEnabled());
+  expect(screen.getByText(/Current approved: 2023–24 \(term unknown\)/)).toBeInTheDocument();
+  expect(correction).toHaveBeenCalledTimes(1);
+});
+
+it('waits for evidence approval confirmation when an already-approved year was unchanged', async () => {
+  correction.mockResolvedValueOnce({
+    changed: false, ace_member_id: base.id,
+    previous: { academic_year_start: 2022, term: null },
+    current: { academic_year_start: 2022, term: null },
+  });
+  const candidate = example('fictional-same-evidence', 2022, null);
+  const view = mount({ evidence: [candidate] });
+  fireEvent.click(screen.getByRole('button', { name: 'Use candidate' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Review and save year' }));
+  const dialog = await screen.findByRole('alertdialog', { name: 'Confirm pickup-year correction' });
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm audited correction' }));
+  await waitFor(() => expect(correction).toHaveBeenCalledTimes(1));
+  fireEvent.change(screen.getByRole('combobox', { name: 'Pickup academic year' }), {
+    target: { value: '2024–25' },
+  });
+  expect(screen.getByRole('button', { name: 'Review and save year' })).toBeDisabled();
+
+  view.rerenderFor(base, [candidate]);
+  expect(screen.getByRole('button', { name: 'Review and save year' })).toBeDisabled();
+  view.rerenderFor(base, [{ ...candidate, review_status: 'approved', reviewed_at: '2026-10-31T00:00:00Z' }]);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Review and save year' })).toBeEnabled());
+  expect(correction).toHaveBeenCalledTimes(1);
+});
+
+it('does not retry a stale confirmation if the CAS conflict refresh fails', async () => {
+  correction.mockRejectedValueOnce(new DatabaseError('Someone else changed this pickup year. Refresh and try again.', 'P0001'));
+  const onConflict = jest.fn().mockRejectedValue(new Error('synthetic refetch denied'));
+  mount({ onConflict });
+  fireEvent.change(screen.getByRole('combobox', { name: 'Pickup academic year' }), {
+    target: { value: '2023–24' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Review and save year' }));
+  const dialog = await screen.findByRole('alertdialog', { name: 'Confirm pickup-year correction' });
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm audited correction' }));
+  await waitFor(() => expect(onConflict).toHaveBeenCalledTimes(1));
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent(/Someone else changed this pickup year/);
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Try again' }));
+  await waitFor(() => expect(within(dialog).getByRole('alert'))
+    .toHaveTextContent(/Refresh the approved pickup year before attempting another correction/));
+  expect(correction).toHaveBeenCalledTimes(1);
 });
