@@ -2,6 +2,7 @@ import { applyQuickFilter, countByFilter } from './adminFilters';
 import {
   ACE_DRAFT_FILTERS,
   ACE_NODE_FILTERS,
+  AceNodeFacts,
   AceDraftFacts,
   HOUSE_ROW_FILTERS,
   HouseRowFacts,
@@ -60,7 +61,7 @@ describe('ACE node filters', () => {
       { node: { id: 'year-unknown', member_id: 'm1' }, yearFlags: ['missing_year'] },
       { node: { id: 'year-verified', member_id: 'm2' }, yearFlags: [] },
       { node: { id: 'evidence-not-loaded', member_id: 'm3' } },
-    ] as never[];
+    ] as unknown as AceNodeFacts[];
     expect(applyQuickFilter(rows, ACE_NODE_FILTERS, 'year_review').map(row => row.node.id))
       .toEqual(['year-unknown']);
   });
