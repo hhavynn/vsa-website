@@ -1,4 +1,4 @@
-import { edgeGeometry, layoutTree, uniqueTreeNodes } from './aceTreeLayout';
+import { bandRect, edgeGeometry, layoutTree, treeMetrics, uniqueTreeNodes } from './aceTreeLayout';
 import { comparePickup } from './acePickupYear';
 import {
   bigAcrossYears, childBeforeParent, cycle2, cycle3, duplicateNames, eightYearGap,
@@ -191,5 +191,25 @@ describe('ACE chronological tree layout (#671 and #675)', () => {
     expect(up.upward).toBe(true);
     expect(up.d).toContain('160 180');
     expect(up.d).toContain('50 128');
+  });
+});
+
+
+describe('shared year rail coordinates (#672)', () => {
+  it('pins every year band guide to the same vertical coordinate as its label', () => {
+    const result = layoutTree(goldenPABC);
+    const metrics = treeMetrics(false);
+    expect(metrics).toMatchObject({ unitY: 148, padY: 48, nodeR: 28 });
+    expect(result.yearBands.map((band) => bandRect(band, metrics).top))
+      .toEqual(result.yearBands.map((band) => 2 + band.startRow * 148));
+    expect(result.yearBands.every((band) => bandRect(band, metrics).height > 0)).toBe(true);
+  });
+  it('gives a same-year two-lane parent-child band double row height', () => {
+    const result = layoutTree(fa23AndSp24);
+    expect(result.yearBands).toHaveLength(1);
+    const band = result.yearBands[0];
+    expect(band.rowCount).toBe(2);
+    expect(bandRect(band, treeMetrics(false)).height).toBe(296);
+    expect(bandRect(band, treeMetrics(true)).height).toBe(236);
   });
 });
