@@ -18,6 +18,9 @@ import { AceFamily, AceFamilyMember } from '../../../types';
 import { getDisplayFamName, isDeadFam, membersToTreeNodes } from '../../../lib/aceFamilyAdapter';
 import { getFamIconUrl } from '../../../lib/aceFamRoster';
 import { FamilyTree, TreeNode, lineagePath, lineageTimeline } from './FamilyTree';
+import { AceYearRail } from './AceYearRail';
+import { layoutTree, treeMetrics } from '../../../lib/aceTreeLayout';
+import { describePickup, pickupYearOf } from '../../../lib/acePickupYear';
 import { FamAccent } from './FamCover';
 import { PhotoRequestSection } from '../avatar/PhotoRequestSection';
 import { useMemberAvatars } from '../../../hooks/useMemberAvatars';
@@ -83,7 +86,9 @@ function capturePointer(e: ReactPointerEvent<HTMLDivElement>) {
   }
 }
 
-function usePannableTree(resetKey: string) {
+function usePannableTree(resetKey: string, leftInset = 0) {
+  const leftInsetRef = useRef(leftInset);
+  leftInsetRef.current = leftInset;
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const activePointersRef = useRef(new Map<number, PanOffset>());
@@ -121,12 +126,12 @@ function usePannableTree(resetKey: string) {
 
     if (!viewportWidth || !viewportHeight || !canvasWidth || !canvasHeight) return next;
 
-    const minX = canvasWidth <= viewportWidth - PAN_BOUND_PADDING * 2
-      ? (viewportWidth - canvasWidth) / 2
-      : viewportWidth - canvasWidth - PAN_BOUND_PADDING;
-    const maxX = canvasWidth <= viewportWidth - PAN_BOUND_PADDING * 2
-      ? (viewportWidth - canvasWidth) / 2
-      : PAN_BOUND_PADDING;
+    const inset = leftInsetRef.current;
+    const availableWidth = Math.max(1, viewportWidth - inset);
+    const fits = canvasWidth <= availableWidth - PAN_BOUND_PADDING * 2;
+    const centered = inset + (availableWidth - canvasWidth) / 2;
+    const minX = fits ? centered : viewportWidth - canvasWidth - PAN_BOUND_PADDING;
+    const maxX = fits ? centered : PAN_BOUND_PADDING + inset;
     const minY = canvasHeight <= viewportHeight - PAN_BOUND_PADDING * 2
       ? PAN_RESET_Y
       : viewportHeight - canvasHeight - PAN_BOUND_PADDING;
@@ -142,12 +147,12 @@ function usePannableTree(resetKey: string) {
     const viewport = viewportRef.current;
     const canvas = canvasRef.current;
     if (!viewport || !canvas) {
-      return { x: 0, y: PAN_RESET_Y };
+      return { x: PAN_BOUND_PADDING + leftInsetRef.current, y: PAN_RESET_Y };
     }
 
     // A tree that fits is centered by boundOffset; a wider one starts at its
     // left edge so the first root is on screen rather than connector lines.
-    return boundOffset({ x: PAN_BOUND_PADDING, y: PAN_RESET_Y }, scale);
+    return boundOffset({ x: PAN_BOUND_PADDING + leftInsetRef.current, y: PAN_RESET_Y }, scale);
   }, [boundOffset]);
 
   const resetView = useCallback(() => {
@@ -180,7 +185,7 @@ function usePannableTree(resetKey: string) {
           return nextOffset;
         }
 
-        const focusX = focus?.x ?? viewport.clientWidth / 2;
+        const focusX = focus?.x ?? (viewport.clientWidth + leftInsetRef.current) / 2;
         const focusY = focus?.y ?? viewport.clientHeight / 2;
         const worldX = (focusX - currentOffset.x) / currentZoom;
         const worldY = (focusY - currentOffset.y) / currentZoom;
@@ -430,12 +435,12 @@ function usePannableTree(resetKey: string) {
     const x = offsetRef.current.x + centerX * zoomRef.current;
     const y = offsetRef.current.y + centerY * zoomRef.current;
     const inView =
-      x - halfW >= PAN_BOUND_PADDING && x + halfW <= viewport.clientWidth - PAN_BOUND_PADDING &&
+      x - halfW >= PAN_BOUND_PADDING + leftInsetRef.current && x + halfW <= viewport.clientWidth - PAN_BOUND_PADDING &&
       y - halfH >= PAN_BOUND_PADDING && y + halfH <= viewport.clientHeight - PAN_BOUND_PADDING;
     if (inView) return;
 
     const nextOffset = boundOffset({
-      x: viewport.clientWidth / 2 - centerX * zoomRef.current,
+      x: (viewport.clientWidth + leftInsetRef.current) / 2 - centerX * zoomRef.current,
       y: viewport.clientHeight / 2 - centerY * zoomRef.current,
     }, zoomRef.current);
     offsetRef.current = nextOffset;
@@ -479,12 +484,14 @@ function usePannableTree(resetKey: string) {
       max: number,
       size: number,
       fallback: () => number,
+      lowerPadding: number,
+      upperPadding: number,
     ): number => {
       const lo = offset + min * scale;
       const hi = offset + max * scale;
-      if (hi - lo > size - PAN_BOUND_PADDING * 2) return fallback();
-      if (lo < PAN_BOUND_PADDING) return offset + (PAN_BOUND_PADDING - lo);
-      if (hi > size - PAN_BOUND_PADDING) return offset - (hi - (size - PAN_BOUND_PADDING));
+      if (hi - lo > size - lowerPadding - upperPadding) return fallback();
+      if (lo < lowerPadding) return offset + (lowerPadding - lo);
+      if (hi > size - upperPadding) return offset - (hi - (size - upperPadding));
       return offset;
     };
 
@@ -495,7 +502,9 @@ function usePannableTree(resetKey: string) {
       Math.min(...boxes.map((b) => b.left)),
       Math.max(...boxes.map((b) => b.right)),
       width,
-      () => width / 2 - ((target.left + target.right) / 2) * scale,
+      () => (width + leftInsetRef.current) / 2 - ((target.left + target.right) / 2) * scale,
+      PAN_BOUND_PADDING + leftInsetRef.current,
+      PAN_BOUND_PADDING,
     );
     const nextY = fitAxis(
       current.y,
@@ -503,6 +512,8 @@ function usePannableTree(resetKey: string) {
       Math.max(...boxes.map((b) => b.bottom)),
       height,
       () => height - PAN_BOUND_PADDING - target.bottom * scale,
+      PAN_BOUND_PADDING,
+      PAN_BOUND_PADDING,
     );
     if (nextX === current.x && nextY === current.y) return;
 
@@ -583,7 +594,15 @@ export function FamSheet({ family, members, accent, viet, dark, onClose, focusNo
     () => membersToTreeNodes(members, memberAvatars),
     [members, memberAvatars],
   );
-  const pan = usePannableTree(`${family.id}:${treeNodes.length}`);
+  const layout = useMemo(() => layoutTree(treeNodes), [treeNodes]);
+  const [smallRail, setSmallRail] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 520);
+  useEffect(() => {
+    const resize = () => setSmallRail(window.innerWidth <= 520);
+    window.addEventListener('resize', resize);
+    return () => window.removeEventListener('resize', resize);
+  }, []);
+  const railWidth = layout.mode === 'year' ? (smallRail ? 56 : 84) : 0;
+  const pan = usePannableTree(`${family.id}:${treeNodes.length}:${layout.mode}:${railWidth}`, railWidth);
   const reduceMotion = !!useReducedMotion();
   const lineage = useMemo(() => lineagePath(treeNodes, selectedNode), [treeNodes, selectedNode]);
   const timeline = lineageTimeline(lineage.length, reduceMotion);
@@ -716,6 +735,11 @@ export function FamSheet({ family, members, accent, viet, dark, onClose, focusNo
         </div>
 
         <div className="ace-sheet-legend">
+          <span className="ace-year-legend-note">
+            {layout.mode === 'year'
+              ? 'Rows show the year each person was picked up.'
+              : 'Rows show generations. Pickup years are still being verified.'}
+          </span>
           <span className="ace-legend-item">
             <span className={`ace-legend-swatch ace-legend-swatch-fill-${accent}`} />
             Big · in fam
@@ -774,6 +798,11 @@ export function FamSheet({ family, members, accent, viet, dark, onClose, focusNo
             ref={pan.canvasRef}
             style={{ transform: `translate3d(${pan.offset.x}px, ${pan.offset.y}px, 0) scale(${pan.zoom})` }}
           >
+            {layout.mode === 'year' && (
+              <AceYearRail bands={layout.yearBands} metrics={treeMetrics(false)}
+                offsetX={pan.offset.x} zoom={pan.zoom} railWidth={railWidth}
+                focusKey={selectedNode ? layout.bandKeyById[selectedNode] ?? null : null} />
+            )}
             {treeNodes.length === 0 ? (
               <div className="ace-fam-empty" style={{ minWidth: 280 }}>
                 This fam has no published members yet.
@@ -781,6 +810,7 @@ export function FamSheet({ family, members, accent, viet, dark, onClose, focusNo
             ) : (
               <FamilyTree
                 nodes={treeNodes}
+                layout={layout}
                 accent={accent}
                 focusId={selectedNode}
                 onSelect={toggleNode}
@@ -857,6 +887,7 @@ export function FamSheet({ family, members, accent, viet, dark, onClose, focusNo
                   {selectedMember.role_label && (
                     <div className="ace-rail-role">{selectedMember.role_label}</div>
                   )}
+                  <div className="ace-rail-pickup">{describePickup(pickupYearOf(selectedMember))}</div>
                 </div>
                 <div className="ace-rail-photo-request">
                   {selectedMember.member_id ? (

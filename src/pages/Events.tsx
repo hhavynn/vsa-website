@@ -41,7 +41,7 @@ import {
   useInfiniteEvents,
   usePublishedPastEventArchiveAvailability,
 } from '../hooks/useEvents';
-import { AcademicTerm, Event, HouseEvent, HousePageAsset } from '../types';
+import { AcademicTerm, Event, PublicHouseEvent, HousePageAsset } from '../types';
 import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
 import { useQuery } from 'react-query';
 
@@ -76,7 +76,7 @@ function HouseEventPreviewCard({ item }: { item: HouseUpcomingItem }) {
   const eventHouses = event.houses ?? [];
   const primaryHouse = eventHouses[0];
   const color = primaryHouse ? houseFill(primaryHouse) : 'var(--brand)';
-  const imageUrl = event.image_thumbnail_url || event.image_url || primaryHouse?.image_thumbnail_url || primaryHouse?.image_url;
+  const imageUrl = event.image_thumbnail_url || event.image_url;
   const timeLabel = event.start_time && event.end_time ? formatEventTimeRange(event.start_time, event.end_time) : null;
 
   return (
@@ -173,7 +173,7 @@ export function Events() {
   );
 
   // Published House events only (the repository filters drafts out).
-  const { data: upcomingHouseEvents = [], isError: houseEventsError, isLoading: houseEventsLoading } = useQuery<HouseEvent[]>({
+  const { data: upcomingHouseEvents = [], isError: houseEventsError, isLoading: houseEventsLoading } = useQuery<PublicHouseEvent[]>({
     queryKey: ['events-page', 'upcoming-house-events', todayDateOnly],
     queryFn: () => houseEventsRepository.getPublicUpcomingPreview(todayDateOnly, null, 24),
     staleTime: 5 * 60 * 1000,

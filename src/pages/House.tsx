@@ -17,7 +17,7 @@ import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { usePublishedHouseAssets } from '../hooks/useHouseAssets';
 import { useProgramContent } from '../hooks/useProgramContent';
 import { OptimizedImage } from '../components/common/OptimizedImage';
-import { HouseEvent, HousePageAsset } from '../types';
+import { PublicHouseEvent, HousePageAsset } from '../types';
 import { getHousePagePath, houseSlugFromKey } from '../utils/houseSlug';
 import { getLegacyHouseArchiveByYear, getLegacyHouseArchiveYears, getVerifiedLegacyHouseYears } from '../data/legacyHouseArchive';
 import { HouseYearSelector } from '../components/features/house/HouseYearSelector';
@@ -215,13 +215,13 @@ function HouseAnchorNav() {
   );
 }
 
-function getHouseEventHousesLabel(event: HouseEvent) {
+function getHouseEventHousesLabel(event: PublicHouseEvent) {
   const houses = event.houses && event.houses.length > 0 ? event.houses : [];
   if (houses.length === 0) return 'House event';
   return houses.map((house) => house.display_name || house.house_key || house.house).join(' + ');
 }
 
-function HouseEventPreviewCard({ event }: { event: HouseEvent }) {
+function HouseEventPreviewCard({ event }: { event: PublicHouseEvent }) {
   const housesLabel = getHouseEventHousesLabel(event);
   const timeLabel = event.start_time && event.end_time ? formatEventTimeRange(event.start_time, event.end_time) : '';
   const house = event.houses?.[0];
@@ -305,7 +305,7 @@ export function House() {
   const isFutureYear = activeYear !== null && activeYear > currentYear;
   const legacyArchiveEntry = activeYearLabel ? getLegacyHouseArchiveByYear(activeYearLabel) : null;
 
-  const { data: upcomingHouseEvents = [] } = useQuery<HouseEvent[]>({
+  const { data: upcomingHouseEvents = [] } = useQuery<PublicHouseEvent[]>({
     queryKey: ['house', 'upcoming-house-event-preview', today, activeYear],
     queryFn: () => houseEventsRepository.getPublicUpcomingPreview(today, activeYear, 3),
     staleTime: 5 * 60 * 1000,
@@ -314,7 +314,7 @@ export function House() {
     enabled: !invalidYearSlug && !isArchive && !isFutureYear && activeYear !== null,
   });
 
-  const { data: pastHouseEvents = [] } = useQuery<HouseEvent[]>({
+  const { data: pastHouseEvents = [] } = useQuery<PublicHouseEvent[]>({
     queryKey: ['house', 'past-house-event-preview', today, activeYear],
     queryFn: () => houseEventsRepository.getPublicPastEventsForYear(today, activeYear!, 4),
     staleTime: 10 * 60 * 1000,
@@ -323,7 +323,7 @@ export function House() {
     enabled: !isArchive && !isFutureYear && activeYear !== null,
   });
 
-  const { data: archiveEvents = [], isLoading: archiveEventsLoading } = useQuery<HouseEvent[]>({
+  const { data: archiveEvents = [], isLoading: archiveEventsLoading } = useQuery<PublicHouseEvent[]>({
     queryKey: ['house', 'archive-events-for-year', activeYear],
     queryFn: () => houseEventsRepository.getPublicEventsForYear(activeYear!, 12),
     staleTime: 10 * 60 * 1000,

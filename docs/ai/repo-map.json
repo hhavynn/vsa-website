@@ -521,6 +521,7 @@
     {
       "path": "src/data/repos/houseAssignmentCoverage.ts",
       "tables": [
+        "house_assignment_batches",
         "house_assignment_drafts"
       ],
       "rpcs": []
@@ -663,7 +664,9 @@
         "members",
         "public_members"
       ],
-      "rpcs": []
+      "rpcs": [
+        "admin_match_members_by_email"
+      ]
     },
     {
       "path": "src/data/repos/memberRoles.ts",

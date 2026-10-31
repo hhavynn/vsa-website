@@ -42,7 +42,7 @@ const houseRow = (id: string, date: string, hosts: object[], title: string) => (
   id, house_profile_id: 'hp-rarity', academic_year_start: 2026, academic_year_end: 2027, title, slug: id, description: null,
   event_date: date, start_time: '17:00:00', end_time: '19:00:00', location: 'Fictional Lawn', image_url: null, image_thumbnail_url: null,
   gallery_url: null, recap_url: null, rsvp_url: null, google_calendar_enabled: true, is_published: true,
-  houses: hosts.map((house) => ({ house })),
+  houses: hosts.map((house) => ({ house_page_asset_id: (house as { id: string }).id })),
 });
 
 function LocationProbe() {
@@ -63,6 +63,7 @@ function renderAt(url: string) {
 
 beforeEach(() => {
   supabaseMock.reset();
+  supabaseMock.setDefault('published_house_page_assets', { data: [rarity, applejack], error: null });
   jest.useFakeTimers();
   jest.setSystemTime(new Date(losAngelesDateTimeToIso('2026-10-20', '12:00')));
   supabaseMock.setDefault('house_events', {
