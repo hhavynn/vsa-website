@@ -256,3 +256,40 @@ describe("RLS verifier House phases", () => {
     expect(yaml).toMatch(/house_cache_phase:[\s\S]*post-migration/);
   });
 });
+
+// The public role RPC is rollout-gated; missing before applying is SKIP, after is FAIL.
+describe('RLS public member-role RPC phase (#623)', () => {
+  it('rejects an unknown phase before making any network request', () => {
+    const result = spawnSync(process.execPath, [script], {
+      cwd: repoRoot, encoding: 'utf8', timeout: 15000,
+      env: { ...process.env,
+        REACT_APP_SUPABASE_URL: 'http://127.0.0.1:9',
+        REACT_APP_SUPABASE_ANON_KEY: 'fictional',
+        RLS_RETIREMENT_PHASE: 'pre-migration',
+        RLS_MEMBER_LOOKUP_PHASE: 'pre-migration',
+        RLS_MEMBER_ROLES_PHASE: 'unknown-phase',
+      },
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('RLS_MEMBER_ROLES_PHASE must be one of');
+  });
+
+  it('bounds anonymous reads and does not log returned member fields or records', () => {
+    const source = fs.readFileSync(script, 'utf8');
+    expect(source).toContain("process.env.RLS_MEMBER_ROLES_PHASE || 'pre-migration'");
+    expect(source).toContain("anon.rpc('public_member_roles'");
+    expect(source).toContain('Array(201).fill(dummyUuid)');
+    expect(source).toContain("oversized.error?.code === '22023'");
+    expect(source).toContain('if (memberRolesRequired) reportFail(');
+    expect(source).toContain('Object.keys(row).length === fields.length');
+    expect(source).not.toContain('console.log(response.data)');
+  });
+
+  it('exposes the pre/post phase to the hosted workflow', () => {
+    const workflowContents = fs.readFileSync(workflow, 'utf8');
+    expect(workflowContents).toMatch(/member_roles_phase:[\s\S]*post-migration/);
+    expect(workflowContents).toContain(
+      'RLS_MEMBER_ROLES_PHASE: ${{ inputs.member_roles_phase || vars.RLS_MEMBER_ROLES_PHASE }}',
+    );
+  });
+});

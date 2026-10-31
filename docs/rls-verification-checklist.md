@@ -211,3 +211,13 @@ Verify hosted Supabase **Allow new users to sign up** remains disabled. Existing
 - **Do NOT** use a Supabase service-role (`service_role`) key in local terminal configs or the environment variables of this verification tool. Doing so bypasses RLS and invalidates all security checks.
 - **Do NOT** paste environment files containing passwords, secret keys, or test credentials into screenshots, github issues, or PR comments.
 - **Do NOT** write the raw data-rights export payloads or private check-in codes to console outputs, debug logs, or files. Keep terminal logs clean of member data.
+
+### Public role projection RPC migration phase (#623)
+
+Migration 20261031070305_public_member_roles.sql adds public_member_roles(p_year integer, p_member_ids uuid[]) with exactly six public-safe columns. It grants EXECUTE to anon and authenticated explicitly, not through PUBLIC, and adds no SELECT grant to private tables. The SQL contract test is bash scripts/test-public-member-roles.sh in a disposable, local-only PostgreSQL cluster.
+
+The hosted verifier accepts RLS_MEMBER_ROLES_PHASE=pre-migration (default: absent RPC produces SKIP) or post-migration (absent RPC produces FAIL). In either phase when the function exists it sends one nil UUID and asserts an empty result, then 201 nil IDs expecting SQLSTATE 22023. Run the RLS verification workflow manually with member_roles_phase=post-migration once the owner has applied the migration, and update the repository variable afterward. The client must not ship until the RPC exists and passes the anonymous checks.
+
+Owner SQL/HTTP review must verify the exact returned keys member_id, kind, label, academic_year_start, source_type, related_key; direct grants to anon/authenticated without PUBLIC inheritance; and no new public table grants, draft joins, stored notes, or future Cabinet years. The nil-UUID verifier alone does not prove the live result schema when it is empty. Use a separately approved fictional/staging row for a nonempty projection contract and keep response values out of GitHub.
+
+This does not verify or publish House Parent, ACE or VCN roles, and it does not change House Reveal/score publication.

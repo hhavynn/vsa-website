@@ -4313,6 +4313,13 @@ export type Database = {
       };
     };
     Functions: {
+      public_member_roles: {
+        Args: { p_year: number; p_member_ids: string[] };
+        Returns: {
+          member_id: string; kind: string; label: string;
+          academic_year_start: number; source_type: string; related_key: string | null;
+        }[];
+      };
       admin_apply_house_placement_override: {
         Args: { p_batch_id: string; p_changes: Json; p_reason?: string | null };
         Returns: Database['public']['Tables']['house_assignment_drafts']['Row'][];

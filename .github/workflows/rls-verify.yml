@@ -82,6 +82,14 @@ on:
           - ''
           - pre-migration
           - post-migration
+      member_roles_phase:
+        description: 'Public member roles RPC rollout phase (defaults to repository variable)'
+        required: false
+        type: choice
+        options:
+          - ''
+          - pre-migration
+          - post-migration
       house_embargo_phase:
         description: 'House score embargo migration phase to verify (default: repository variable RLS_HOUSE_EMBARGO_PHASE, else pre-migration)'
         required: false
@@ -165,5 +173,6 @@ jobs:
           RLS_TEST_MEMBER_ID: ${{ secrets.RLS_TEST_MEMBER_ID }}
           RLS_RETIREMENT_PHASE: ${{ inputs.retirement_phase || vars.RLS_RETIREMENT_PHASE }}
           RLS_MEMBER_LOOKUP_PHASE: ${{ inputs.member_lookup_phase || vars.RLS_MEMBER_LOOKUP_PHASE }}
+          RLS_MEMBER_ROLES_PHASE: ${{ inputs.member_roles_phase || vars.RLS_MEMBER_ROLES_PHASE }}
           RLS_HOUSE_EMBARGO_PHASE: ${{ inputs.house_embargo_phase || vars.RLS_HOUSE_EMBARGO_PHASE }}
           RLS_HOUSE_CACHE_PHASE: ${{ inputs.house_cache_phase || vars.RLS_HOUSE_CACHE_PHASE }}
