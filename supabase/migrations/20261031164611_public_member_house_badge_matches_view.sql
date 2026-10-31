@@ -1,3 +1,4 @@
+-- Applied to production 2026-10-31 (schema_migrations version 20261031164611).
 -- #802 / #641: the House badge RPC must use the SAME exact-batch Reveal
 -- allowlist as public_house_memberships, not a year-wide published status.
 --
