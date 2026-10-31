@@ -119,12 +119,13 @@ export function AcePickupYearEditor({
   const selectedEvidence = evidence.find(e => e.id === evidenceId) ?? null;
   useEffect(() => {
     if (!refreshGate || refreshGate.nodeId !== member.id) return;
+    const currentSnapshot = approvedOf(member);
     const reviewed = refreshGate.kind === 'committed'
       && (!refreshGate.evidenceId
         || evidence.some(row => row.id === refreshGate.evidenceId && row.review_status === 'approved'));
     const verified = refreshGate.kind === 'conflict'
-      ? !same(current, refreshGate.expected)
-      : same(current, refreshGate.next) && reviewed;
+      ? !same(currentSnapshot, refreshGate.expected)
+      : same(currentSnapshot, refreshGate.next) && reviewed;
     if (verified) {
       setRefreshGate(null);
       setError(null);
