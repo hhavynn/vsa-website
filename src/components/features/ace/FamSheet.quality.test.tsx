@@ -133,14 +133,14 @@ describe('ACE chronological tree acceptance (#675)', () => {
   });
 
   it('has no serious accessibility violations in both chronological and all-unknown real DOM trees', async () => {
-    const year = renderTree(golden);
-    expect(await axe(year.container)).toHaveNoViolations();
-    year.unmount();
-    const undated = renderTree([
+    const view = renderTree(golden);
+    expect(await axe(view.container)).toHaveNoViolations();
+    view.unmount();
+    const { container: undatedContainer } = renderTree([
       node('big', 'Fictional Big', null, null, null),
       node('little', 'Fictional Little', 'big', null, null),
     ]);
-    expect(undated.container.querySelector('.ace-year-rail')).toBeNull();
+    expect(undatedContainer.querySelector('.ace-year-rail')).toBeNull();
     expect(screen.getByText('Rows show generations. Pickup years are still being verified.')).toBeInTheDocument();
     expect(await axe(undated.container)).toHaveNoViolations();
   });
