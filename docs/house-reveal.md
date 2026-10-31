@@ -57,3 +57,7 @@ Before authorizing Reveal, verify #640 hosted anonymous public House-event check
 ## Current migration status
 
 The previous claim that 20261028060000_public_house_memberships.sql was 'not yet applied' is stale following #701 and the subsequent #704/#692 privacy changes. This runbook adds **no migration**, and no migration is applied here. Reconfirm live grants and row-level policies independently at the #635 launch gate, not from client tests. Offline synthetic proof: bash scripts/test-public-house-memberships.sh.
+
+### Find My House availability and navigation (#641, pending owner rollout)
+
+The current-year House section displays a **Find My House** anchor in the House navigation only after the Reveal-gated `public_house_memberships` existence read confirms at least one published House membership. If the existence read errors, the lookup and anchor remain hidden and a nonrevealing status message explicitly says availability could not be checked; it must never claim House assignments have not been announced. Archives and future years have no current-year lookup. The results RPC must not be enabled as an accurate discovery source until #802's exact-batch badge function is deployed and anonymously tested under the House Reveal freeze; no migration was applied by this UI PR.
