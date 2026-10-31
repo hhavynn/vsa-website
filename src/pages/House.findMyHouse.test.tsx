@@ -99,7 +99,7 @@ describe('Find My House visibility and navigation (#641)', () => {
     expect(link).toHaveAttribute('href', '#find-my-house');
     expect(link).toHaveClass('touch:min-h-11');
     expect(screen.getByText('Synthetic published lookup')).toBeInTheDocument();
-    expect(screen.queryByRole('status')).not.toHaveTextContent(/Find My House is temporarily unavailable/);
+    expect(screen.queryByText(/Find My House is temporarily unavailable/)).not.toBeInTheDocument();
   });
 
   it('shows an explicit availability notice without a false not-revealed claim when the gate fails', async () => {
@@ -116,7 +116,7 @@ describe('Find My House visibility and navigation (#641)', () => {
   it('omits lookup, disclosure notice and anchor for archived years', async () => {
     reveal.mockResolvedValue(true);
     mount('/house/year/2025-2026');
-    await screen.findByRole('navigation', { name: 'Breadcrumb' }).catch(() => undefined);
+    expect(screen.queryByRole('navigation', { name: 'House page sections' })).not.toBeInTheDocument();
     expect(reveal).not.toHaveBeenCalled();
     expect(assetSearch()).not.toBeInTheDocument();
     expect(screen.queryByText(/This does not mean Houses have not been revealed/)).not.toBeInTheDocument();
@@ -126,7 +126,7 @@ describe('Find My House visibility and navigation (#641)', () => {
   it('never queries or shows the lookup for future academic years', async () => {
     reveal.mockResolvedValue(true);
     mount('/house/year/2027-2028');
-    expect(await screen.findByText(/2027–28|2027-2028|not announced|coming soon/i)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: /2027-2028 Houses have not been announced yet/i })).toBeInTheDocument();
     expect(reveal).not.toHaveBeenCalled();
     expect(assetSearch()).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Find My House' })).not.toBeInTheDocument();
