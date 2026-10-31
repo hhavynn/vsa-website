@@ -437,7 +437,19 @@ export class AceFamiliesRepository {
           .range(from, from + pageSize - 1);
         if (error) throw error;
         const page = (data ?? []) as unknown as AcePickupEvidenceRow[];
-        result.push(...page.map(({ ace_family_members: _family, ...entry }) => entry));
+        for (const row of page) {
+          result.push({
+            id: row.id,
+            ace_member_id: row.ace_member_id,
+            source_kind: row.source_kind,
+            source_label: row.source_label,
+            raw_value: row.raw_value,
+            candidate_academic_year_start: row.candidate_academic_year_start,
+            candidate_term: row.candidate_term,
+            review_status: row.review_status,
+            reviewed_at: row.reviewed_at,
+          });
+        }
         if (page.length < pageSize) return result;
       }
     }, 'Failed to load ACE pickup evidence');
