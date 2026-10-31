@@ -239,6 +239,7 @@ export default function AdminMemberRoles() {
                         </select>
                         {!selected && soleExactMember && row.duplicateOf === null && !readsPending && !readsFailed && (
                           <button type="button" className={actionCls}
+                            aria-label={`Row ${row.index}: choose sole exact member candidate for ${row.name}`}
                             onClick={() => setMemberIds((prev) => ({ ...prev, [row.index]: soleExactMember.id }))}>
                             Choose sole exact member candidate
                           </button>
@@ -255,6 +256,7 @@ export default function AdminMemberRoles() {
                         </select>
                         {canChooseSource && safeSource && (
                           <button type="button" className={actionCls}
+                            aria-label={`Row ${row.index}: choose sole matching ${role === 'board' ? 'Board' : 'Intern'} record for ${row.name}`}
                             onClick={() => setSourceIds((prev) => ({ ...prev, [row.index]: safeSource.id }))}>
                             Choose sole matching {role === 'board' ? 'Board' : 'Intern'} record
                           </button>
