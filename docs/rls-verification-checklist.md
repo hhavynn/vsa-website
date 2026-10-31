@@ -211,3 +211,9 @@ Verify hosted Supabase **Allow new users to sign up** remains disabled. Existing
 - **Do NOT** use a Supabase service-role (`service_role`) key in local terminal configs or the environment variables of this verification tool. Doing so bypasses RLS and invalidates all security checks.
 - **Do NOT** paste environment files containing passwords, secret keys, or test credentials into screenshots, github issues, or PR comments.
 - **Do NOT** write the raw data-rights export payloads or private check-in codes to console outputs, debug logs, or files. Keep terminal logs clean of member data.
+
+### Public House badge RPC matches the per-batch view (#802, owner-gated)
+
+Forward-only migration `20261031093000_public_member_house_badge_matches_view.sql`: same `public_member_house_badge(uuid,integer)` signature and six JSON result keys; `anon`/`authenticated` EXECUTE only, `SECURITY DEFINER`, `search_path=''`, no new grants. Function reads **only** `public_house_memberships`, which is owner-rights, score-free and filters each batch on `source_import_id` and `published_at`. Do not test against raw `house_memberships` as anon; it is correctly denied. Run offline `bash scripts/test-public-house-memberships.sh` first, then on staging check a guessed member UUID from a locked later batch while an earlier same-year batch is published (must return NULL), archived revealed Fall (must show), future effective start (must show), transfer current/ended, inactive House (NULL), invalid year (NULL), and result keys excluding all private fields.
+
+**House Reveal freeze:** no merge or production SQL deployment by an agent. Owner compares live function/view definitions and chooses approved rollout timing, then independently checks hosted `node scripts/verify-rls-security.mjs` with real personas after approval. Status here is NOT applied or staging-proven.
