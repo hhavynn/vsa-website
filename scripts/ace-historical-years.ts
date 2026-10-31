@@ -19,6 +19,12 @@
  *     [--evidence <ace-pickup-evidence/v1 file>]... \
  *     [--max-year 2025] [--out-dir scripts/reports/ace-historical-years/out]
  *
+ *   npm run ace:years -- coverage
+ *     --live-families <published_ace_families.json>
+ *     --live-members <published_ace_family_members.json>
+ *     --repo-families data/ace-families
+ *     [--out-dir scripts/reports/ace-historical-years/coverage]
+ *
  *   npm run ace:years -- plan \
  *     --live-families <...> --live-members <...> \
  *     --review <reviewed review_sheet.csv> [--pre-669-snapshot yes] \
@@ -44,6 +50,8 @@ import {
   reconcilePickupYears,
   summarize,
   AggregateSummary,
+  summarizeYearCoverage,
+  type PickupYearCoverage,
 } from '../src/lib/aceHistoricalYears';
 import {
   buildBackfillPlan,
@@ -132,6 +140,7 @@ function write(dir: string, name: string, content: string) {
 const QUEUES: ReviewQueue[] = ['ambiguous_identity', 'conflicting_years', 'missing_evidence', 'chronology', 'roots'];
 const RECONCILE_OUTPUTS = ['review_sheet.csv', ...QUEUES.map((q) => `queue_${q}.csv`), 'unmatched_evidence.csv', 'summary.json', 'summary.md'];
 const PLAN_OUTPUTS = ['backfill_plan.json', 'backfill_preview.sql'];
+const COVERAGE_OUTPUTS = ['coverage.json', 'coverage.md'];
 
 function loadSnapshot(one: (n: string) => string) {
   const famFile = one('live-families');
@@ -273,12 +282,63 @@ function plan(args: ReturnType<typeof parseArgs>) {
   console.log(`Plan: ${path.resolve(outDir)}`);
 }
 
+
+/** Public only as aggregate counts; never log member names or IDs. */
+function coverageMarkdown(result: PickupYearCoverage): string {
+  const lines = [
+    '# ACE pickup-year coverage (aggregate only)',
+    '',
+    '## Reconstructed source terms — not yet approved',
+    '',
+    '| Source file | Entries | Exact | Year only | Legacy | Absent | Needs review |',
+    '|---|---:|---:|---:|---:|---:|---:|',
+    ...result.sources.map((s) => '| ' + s.file + ' | ' + s.total + ' | ' + s.exact +
+      ' | ' + s.year_only + ' | ' + s.legacy + ' | ' + s.absent + ' | ' + s.needs_review + ' |'),
+    '| **Total** | **' + result.source_total.members + '** | **' + result.source_total.exact +
+      '** | **' + result.source_total.year_only + '** | **' + result.source_total.legacy +
+      '** | **' + result.source_total.absent + '** | **' + result.source_total.needs_review + '** |',
+    '',
+    '## Approved published members (includes Graveyard families)',
+    '',
+    '| Public fam slug | Nodes | Approved year | Approved term | Unknown |',
+    '|---|---:|---:|---:|---:|',
+    ...result.live_families.map((f) => '| ' + f.fam_slug + ' | ' + f.nodes + ' | ' +
+      f.approved_year + ' | ' + f.approved_term + ' | ' + f.unknown + ' |'),
+    '| **Total** | **' + result.live_total.nodes + '** | **' +
+      result.live_total.approved_year + '** | **' + result.live_total.approved_term +
+      '** | **' + result.live_total.unknown + '** |',
+    '',
+    'Source terms are unreviewed historical evidence. Only approved published columns',
+    'count as live years. This is a read-only snapshot, never a backfill instruction.',
+    '',
+  ];
+  return lines.join('\n');
+}
+
+/** #675 Part 3: source files and already-exported public views only; no DB client. */
+function coverage(args: ReturnType<typeof parseArgs>) {
+  const outDir = args.one('out-dir', 'scripts/reports/ace-historical-years/coverage');
+  assertPrivateOutputs(outDir, COVERAGE_OUTPUTS);
+  const { snapshot } = loadSnapshot(args.one);
+  const repoDir = args.one('repo-families', 'data/ace-families');
+  const files = fs.readdirSync(repoDir).filter((name) => name.endsWith('.json')).sort()
+    .map((name) => ({ file: name, json: readJson(path.join(repoDir, name)) }));
+  const result = summarizeYearCoverage(snapshot, files);
+  write(outDir, 'coverage.json', JSON.stringify(result, null, 2) + '\n');
+  write(outDir, 'coverage.md', coverageMarkdown(result));
+  console.log('Aggregate coverage written to ' + path.resolve(outDir));
+  console.log('Source entries: ' + result.source_total.members +
+    '; live nodes: ' + result.live_total.nodes +
+    '; unknown years: ' + result.live_total.unknown);
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.command === 'reconcile') reconcile(args);
   else if (args.command === 'plan') plan(args);
+  else if (args.command === 'coverage') coverage(args);
   else {
-    console.log('Usage: npm run ace:years -- <reconcile|plan> [flags]  (see the header of scripts/ace-historical-years.ts)');
+    console.log('Usage: npm run ace:years -- <reconcile|plan|coverage> [flags]  (see the header of scripts/ace-historical-years.ts)');
     process.exitCode = args.command === undefined || args.command === '--help' ? 0 : 1;
   }
 }

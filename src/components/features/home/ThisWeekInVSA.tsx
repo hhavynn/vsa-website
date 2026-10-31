@@ -19,7 +19,7 @@ import { isEventUpcomingOrOngoing } from '../../../lib/eventLifecycle';
 import { UpcomingItem, houseCandidate, mergeUpcoming, upcomingSortMs } from '../../../lib/upcomingEvents';
 import { useEventLifecycleTimer } from '../../../hooks/useEventLifecycleTimer';
 import { EVENT_TYPE_LABELS } from '../../../constants/eventTypes';
-import { Event, HouseEvent } from '../../../types';
+import { Event, PublicHouseEvent } from '../../../types';
 
 const ArrowUpRightIcon = FiArrowUpRight as ComponentType<IconBaseProps>;
 const StarIcon = FiStar as ComponentType<IconBaseProps>;
@@ -91,7 +91,7 @@ function NextEventCard() {
     refetchOnWindowFocus: false,
   });
   const todayDateOnly = today;
-  const { data: houseEvents = [] } = useQuery<HouseEvent[]>({
+  const { data: houseEvents = [] } = useQuery<PublicHouseEvent[]>({
     queryKey: ['home', 'upcoming-house-event-preview', todayDateOnly],
     // A few, so one that already ended today can be skipped.
     queryFn: () => houseEventsRepository.getPublicUpcomingPreview(todayDateOnly, null, 3),

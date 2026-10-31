@@ -1,6 +1,6 @@
 import { supabase } from '../../lib/supabase';
 import type { Json } from '../../types/database';
-import { HouseEvent, HousePageAsset } from '../../types';
+import type { HouseEvent, PublicHouseEvent, PublicHouseEventHost } from '../../types';
 import { withErrorHandling } from '../errors';
 
 export type HouseEventFormData = Omit<HouseEvent, 'id' | 'created_at' | 'updated_at' | 'house' | 'houses'> & {
@@ -45,10 +45,14 @@ const PUBLIC_FIELDS = [
  * internal_notes and source_doc_url. The published view is a second boundary,
  * not permission to expand network payloads as columns evolve.
  */
-export const PUBLIC_HOUSE_EVENT_HOST_FIELDS = 'id,academic_year_start,academic_year_end,house,house_key,display_name,accent_color,emoji,image_url,image_thumbnail_url,image_alt,cover_image_url,is_active' as const;;
+export const PUBLIC_HOUSE_EVENT_HOST_FIELDS = 'id,house,house_key,display_name,accent_color,is_active' as const;
+
+type PublicHouseEventRow = Omit<PublicHouseEvent, 'house' | 'houses'> & {
+  houses?: Array<{ house_page_asset_id: string }>;
+};
 
 export class HouseEventsRepository {
-  async getPublicUpcomingForHouse(houseProfileId: string, today: string, limit = 12): Promise<HouseEvent[]> {
+  async getPublicUpcomingForHouse(houseProfileId: string, today: string, limit = 12): Promise<PublicHouseEvent[]> {
     return withErrorHandling(async () => {
       // Find event IDs associated with this house via join table
       const { data: associations, error: associationError } = await supabase
@@ -86,7 +90,7 @@ export class HouseEventsRepository {
    * event that is beyond the House page's bounded lists. Null when the event is
    * not published, does not exist, or is not hosted by this House.
    */
-  async getPublicEventForHouse(eventId: string, houseProfileId: string): Promise<HouseEvent | null> {
+  async getPublicEventForHouse(eventId: string, houseProfileId: string): Promise<PublicHouseEvent | null> {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('house_events')
@@ -102,7 +106,7 @@ export class HouseEventsRepository {
     }, 'Failed to fetch the linked house event');
   }
 
-  async getPublicPastForHouse(houseProfileId: string, today: string, limit = 24): Promise<HouseEvent[]> {
+  async getPublicPastForHouse(houseProfileId: string, today: string, limit = 24): Promise<PublicHouseEvent[]> {
     return withErrorHandling(async () => {
       // Find event IDs associated with this house via join table
       const { data: associations, error: associationError } = await supabase
@@ -135,7 +139,7 @@ export class HouseEventsRepository {
     }, 'Failed to fetch past house events');
   }
 
-  async getPublicEventsForYear(academicYearStart: number, limit = 12): Promise<HouseEvent[]> {
+  async getPublicEventsForYear(academicYearStart: number, limit = 12): Promise<PublicHouseEvent[]> {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('house_events')
@@ -151,7 +155,7 @@ export class HouseEventsRepository {
     }, 'Failed to fetch house events for year');
   }
 
-  async getPublicPastEventsForYear(today: string, academicYearStart: number, limit = 4): Promise<HouseEvent[]> {
+  async getPublicPastEventsForYear(today: string, academicYearStart: number, limit = 4): Promise<PublicHouseEvent[]> {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('house_events')
@@ -168,7 +172,7 @@ export class HouseEventsRepository {
     }, 'Failed to fetch past house events for year');
   }
 
-  async getPublicUpcomingPreview(today: string, academicYearStart?: number | null, limit = 4): Promise<HouseEvent[]> {
+  async getPublicUpcomingPreview(today: string, academicYearStart?: number | null, limit = 4): Promise<PublicHouseEvent[]> {
     return withErrorHandling(async () => {
       let query = supabase
         .from('house_events')
@@ -189,7 +193,7 @@ export class HouseEventsRepository {
     }, 'Failed to fetch upcoming house event previews');
   }
 
-  async getPublicEventsInRange(from: string, to: string, limit = 200): Promise<HouseEvent[]> {
+  async getPublicEventsInRange(from: string, to: string, limit = 200): Promise<PublicHouseEvent[]> {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('house_events')
@@ -333,26 +337,33 @@ export class HouseEventsRepository {
    * host first. Profiles the embed could not return (anon cannot read
    * house_page_assets) are read from published_house_page_assets in one query.
    */
-  private async mapPublicRelations(data: any[] | null): Promise<HouseEvent[]> {
-    if (!data) return [];
-    const missing = new Set<string>();
-    for (const item of data) {
-      for (const link of item.houses || []) if (!link.house && link.house_page_asset_id) missing.add(link.house_page_asset_id);
+  private async mapPublicRelations(data: unknown): Promise<PublicHouseEvent[]> {
+    if (data === null) return [];
+    if (!Array.isArray(data)) throw new Error('Unexpected public House event response');
+    const rows = data as PublicHouseEventRow[];
+    const hostIds = new Set<string>();
+    for (const item of rows) {
+      for (const link of item.houses ?? []) {
+        if (link.house_page_asset_id) hostIds.add(link.house_page_asset_id);
+      }
     }
-    const published = new Map<string, HousePageAsset>();
-    if (missing.size > 0) {
+    const published = new Map<string, PublicHouseEventHost>();
+    if (hostIds.size > 0) {
       const { data: assets, error } = await supabase
         .from('published_house_page_assets')
         .select(PUBLIC_HOUSE_EVENT_HOST_FIELDS)
-        .in('id', Array.from(missing));
+        .in('id', Array.from(hostIds));
       if (error) throw error;
-      for (const asset of (assets ?? []) as HousePageAsset[]) published.set(asset.id, asset);
+      for (const asset of (assets ?? []) as PublicHouseEventHost[]) {
+        const { id, house, house_key, display_name, accent_color, is_active } = asset;
+        published.set(id, { id, house, house_key, display_name, accent_color, is_active });
+      }
     }
-    return data.map((item) => {
-      const hosts = (item.houses || [])
-        .map((link: any) => (link.house ?? published.get(link.house_page_asset_id)) as HousePageAsset | undefined)
-        .filter((house: HousePageAsset | undefined): house is HousePageAsset => !!house && house.is_active !== false)
-        .sort((a: HousePageAsset, b: HousePageAsset) => Number(b.id === item.house_profile_id) - Number(a.id === item.house_profile_id));
+    return rows.map((item) => {
+      const hosts = (item.houses ?? [])
+        .map((link) => published.get(link.house_page_asset_id))
+        .filter((house): house is PublicHouseEventHost => !!house && house.is_active)
+        .sort((a, b) => Number(b.id === item.house_profile_id) - Number(a.id === item.house_profile_id));
       return { ...item, houses: hosts };
     });
   }

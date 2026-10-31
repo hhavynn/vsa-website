@@ -5,7 +5,7 @@
 // Google Calendar URL helpers. Date strings are always "YYYY-MM-DD" and are
 // parsed with lib/dateOnly to avoid timezone-shift bugs.
 
-import { ApplicationStatus, Event, HouseEvent, PublicApplicationLink } from '../types';
+import { ApplicationStatus, Event, PublicHouseEvent, PublicApplicationLink } from '../types';
 import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 import { HOUSE_COLORS, normalizeHouse } from '../constants/houses';
 import { buildGcalTimedDates, getEventDateOnly } from '../lib/eventTime';
@@ -107,7 +107,7 @@ export function vsaEventToCalendarItem(event: Event): CalendarItem {
   };
 }
 
-export function houseEventToCalendarItem(event: HouseEvent): CalendarItem {
+export function houseEventToCalendarItem(event: PublicHouseEvent): CalendarItem {
   const assets =
     event.houses && event.houses.length > 0 ? event.houses : event.house ? [event.house] : [];
   const houses: CalendarHouseTag[] = [];

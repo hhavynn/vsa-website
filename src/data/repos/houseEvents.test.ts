@@ -15,7 +15,7 @@
  * A future `getPublicFooBar` that forgets the filter cannot pass silently.
  */
 
-import { houseEventsRepository, HouseEventsRepository } from './houseEvents';
+import { houseEventsRepository, HouseEventsRepository, PUBLIC_HOUSE_EVENT_HOST_FIELDS } from './houseEvents';
 import { supabaseMock, postgrestError } from '../../test-utils/supabaseMock';
 
 // Hoisted above the imports by babel-plugin-jest-hoist; the lazy getter avoids
@@ -157,6 +157,45 @@ describe('HouseEventsRepository — behaviour', () => {
     expect(projection).not.toContain('internal_notes');
     expect(projection).not.toContain('source_doc_url');
     expect(projection).not.toContain('house_parent_body');
+  });
+
+  it('pins the exact minimal host columns for all public reads (#640)', async () => {
+    for (const name of Object.keys(PUBLIC_READ_INVOCATIONS)) {
+      supabaseMock.reset();
+      if (name === 'getPublicUpcomingForHouse' || name === 'getPublicPastForHouse') {
+        supabaseMock.queueResult('house_event_houses', { data: [{ house_event_id: 'event-1' }], error: null });
+      }
+      const row = { id: 'event-1', house_profile_id: HOUSE_ID, is_published: true, houses: [{ house_page_asset_id: HOUSE_ID }] };
+      supabaseMock.queueResult('house_events', { data: name === 'getPublicEventForHouse' ? row : [row], error: null });
+      supabaseMock.queueResult('published_house_page_assets', { data: [{ id: HOUSE_ID, is_active: true }], error: null });
+      await PUBLIC_READ_INVOCATIONS[name]();
+      const selects = supabaseMock.queriesFor('published_house_page_assets')
+        .flatMap(({ calls }) => calls.filter(({ method }) => method === 'select').map(({ args }) => String(args[0])));
+      expect(selects).toEqual(['id,house,house_key,display_name,accent_color,is_active']);
+    }
+    expect(PUBLIC_HOUSE_EVENT_HOST_FIELDS).toBe('id,house,house_key,display_name,accent_color,is_active');
+  });
+
+  it('keeps the active collaborators and removes inactive or extraneous profile fields (#640)', async () => {
+    const row = {
+      id: 'event-1', house_profile_id: 'hp-b', is_published: true,
+      houses: [
+        { house_page_asset_id: 'hp-a' }, { house_page_asset_id: 'hp-b' }, { house_page_asset_id: 'hp-inactive' },
+      ],
+    };
+    supabaseMock.queueResult('house_events', { data: [row], error: null });
+    supabaseMock.queueResult('published_house_page_assets', {
+      data: [
+        { id: 'hp-a', house: 'alpha', house_key: 'alpha', display_name: 'Alpha', accent_color: null, is_active: true, internal_notes: 'private synthetic note' },
+        { id: 'hp-b', house: 'beta', house_key: 'beta', display_name: 'Beta', accent_color: null, is_active: true, image_url: 'synthetic-private-image' },
+        { id: 'hp-inactive', house: 'gamma', house_key: 'gamma', display_name: 'Gamma', accent_color: null, is_active: false },
+      ],
+      error: null,
+    });
+    const [event] = await houseEventsRepository.getPublicUpcomingPreview(TODAY);
+    expect(event.houses?.map((host) => host.id)).toEqual(['hp-b', 'hp-a']);
+    expect(event.houses?.every((host) =>
+      Object.keys(host).sort().join(',') === 'accent_color,display_name,house,house_key,id,is_active')).toBe(true);
   });
 
   it('does not disguise published House-profile lookup failure as an unhosted event', async () => {

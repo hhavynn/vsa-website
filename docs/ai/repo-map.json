@@ -521,6 +521,7 @@
     {
       "path": "src/data/repos/houseAssignmentCoverage.ts",
       "tables": [
+        "house_assignment_batches",
         "house_assignment_drafts"
       ],
       "rpcs": []
