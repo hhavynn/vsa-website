@@ -53,6 +53,7 @@ export function actionPrefixesFor(filter: ActivityFilterKey): string[] | null {
 export const ACTIVITY_ACTIONS = {
   aceAssignmentChanged: 'ace.assignment_changed',
   aceLinkChanged: 'ace.link_changed',
+  acePickupYearChanged: 'ace.pickup_year_changed',
   aceBulkLinked: 'ace.bulk_linked',
   aceCycleStarted: 'ace.cycle_started',
   aceImportAdded: 'ace.import_added',

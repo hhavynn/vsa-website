@@ -280,6 +280,7 @@
         "published_ace_family_members"
       ],
       "rpcs": [
+        "correct_ace_member_pickup_year",
         "set_ace_member_pickup_year"
       ]
     },
