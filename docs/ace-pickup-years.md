@@ -243,7 +243,13 @@ expected compare-and-swap values and changes only the year columns. A competing
 edit surfaces `Someone else changed this pickup year. Refresh and try again.`,
 re-fetches the member data and **never** retries with overwritten expectations.
 A correction committed successfully remains committed even if subsequent
-refresh fails; the UI instructs the admin to reload rather than resubmit.
+refresh fails; the UI locks inputs, source selection and further RPC submissions
+until a fresh approved node snapshot reflects that correction. Evidence-only
+approvals without a year change additionally wait until the selected evidence
+row has `review_status = 'approved'`. A stale compare-and-swap conflict stays
+locked until the approved node has changed from the editor's stale expected
+snapshot. On failed refetch the UI instructs the admin to reload, never to
+resubmit a potentially already-committed correction.
 
 The normal member Save still excludes the two pickup columns and cannot undo
 this correction. Do not auto-reimport a Fam or bulk-move year bands to fix
