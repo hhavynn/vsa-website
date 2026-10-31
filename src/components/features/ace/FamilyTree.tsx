@@ -2,9 +2,10 @@ import React, { useMemo } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { FamAccent } from './FamCover';
 import { edgeGeometry, layoutTree, uniqueTreeNodes } from '../../../lib/aceTreeLayout';
+import type { TreeNode } from '../../../lib/aceTreeLayout';
+
 export { layoutTree } from '../../../lib/aceTreeLayout';
 export type { TreeNode } from '../../../lib/aceTreeLayout';
-import type { TreeNode } from '../../../lib/aceTreeLayout';
 
 interface AccentPalette {
   fill: string;
