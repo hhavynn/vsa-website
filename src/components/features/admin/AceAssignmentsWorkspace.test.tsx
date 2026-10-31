@@ -5,6 +5,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { ThemeProvider } from '../../../context/ThemeContext';
 import AdminAceFamilies from '../../../pages/Admin/AceFamilies';
 import { AceAssignmentsWorkspace } from './AceAssignmentsWorkspace';
 import { postgrestError, supabaseMock } from '../../../test-utils/supabaseMock';
@@ -84,11 +85,13 @@ function seed(status: string, drafts: ReturnType<typeof draft>[], cycleOver: Rec
 function renderWorkspace() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
   render(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
-        <AceAssignmentsWorkspace />
-      </MemoryRouter>
-    </QueryClientProvider>,
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <AceAssignmentsWorkspace />
+        </MemoryRouter>
+      </QueryClientProvider>
+    </ThemeProvider>,
   );
 }
 
@@ -202,6 +205,19 @@ describe('admin-only branch preview (#665)', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Preview family branches' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Family data could not be loaded');
     expect(screen.queryByRole('region', { name: /Private.*family tree preview/ })).not.toBeInTheDocument();
+  });
+
+  it('applies the active dark mode to the same SVG renderer and preview wrapper', async () => {
+    document.documentElement.classList.add('dark');
+    try {
+      renderWorkspace();
+      fireEvent.click(await screen.findByRole('button', { name: 'Preview family branches' }));
+      const region = await screen.findByRole('region', { name: 'Private Fictional Fam family tree preview' });
+      expect(region).toHaveClass('is-dark');
+      expect(region.querySelector('svg.ace-family-tree')).toBeInTheDocument();
+    } finally {
+      document.documentElement.classList.remove('dark');
+    }
   });
 
   it('marks the working preview provisional until the cycle is locked', async () => {
@@ -384,11 +400,13 @@ describe('Admin → ACE page', () => {
     supabaseMock.setDefault('ace_families', { data: [], error: null });
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
     render(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter>
-          <AdminAceFamilies />
-        </MemoryRouter>
-      </QueryClientProvider>,
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <AdminAceFamilies />
+          </MemoryRouter>
+        </QueryClientProvider>
+      </ThemeProvider>,
     );
     expect(await screen.findByRole('tab', { name: 'Families', selected: true })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '+ New Fam' })).toBeInTheDocument();
