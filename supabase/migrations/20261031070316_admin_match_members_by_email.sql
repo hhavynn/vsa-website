@@ -1,4 +1,5 @@
 -- #804: admin-only canonical member email resolution, including confirmed aliases.
+-- Applied to production 2026-10-31 (schema_migrations version 20261031070316).
 -- Email inputs travel in a POST RPC body, never in GET PostgREST filters.
 -- Owner must deploy this migration manually BEFORE client cutover.
 -- Read-only. No member, alias, role, points or attendance writes.

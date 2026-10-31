@@ -28,7 +28,7 @@ create policy member_admin_only on public.members for select to authenticated
 create policy aliases_admin_only on public.member_identity_emails for select to authenticated
   using (public.is_admin_user(auth.uid()));
 
-\ir ../../supabase/migrations/20261031080000_admin_match_members_by_email.sql
+\ir ../../supabase/migrations/20261031070316_admin_match_members_by_email.sql
 
 insert into public.user_profiles values
  ('10000000-0000-0000-0000-000000000001',true),
