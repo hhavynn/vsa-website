@@ -77,6 +77,7 @@ set client_min_messages = warning;
 \ir ../../supabase/migrations/20261027120000_house_placement_override_rpc.sql
 \ir ../../supabase/migrations/20261028050216_house_payment_eligibility.sql
 \ir ../../supabase/migrations/20261029065750_house_applicant_member_merge.sql
+\ir ../../supabase/migrations/20261031050000_house_applicant_merge_reveal_lock.sql
 set client_min_messages = notice;
 
 create function pg_temp.expect_error(statement text, expected_state text, label text) returns void language plpgsql as $$
@@ -416,6 +417,71 @@ begin
 
   raise notice 'PASS: active applicant beats withdrawn applicant during conflict resolution';
 end $$;
+
+-- ─── 7. Conflict: Active Beats a Withdrawn Applicant Still in a Draft ─────────
+insert into public.members (id, first_name, last_name, email) values
+  ('16000000-0000-0000-0000-000000000001', 'Stale', 'Source', 'stalesrc@ucsd.edu'),
+  ('16000000-0000-0000-0000-000000000002', 'Active', 'Target', 'activetgt@ucsd.edu');
+
+insert into public.house_payment_cycles (id, academic_year_start, application_key) values
+  ('56000000-0000-0000-0000-000000000001', 2023, 'house_fall');
+
+insert into public.house_assignment_batches (
+  id, academic_year_start, academic_year_end, effective_start_date, assignment_method, status,
+  payment_cycle_id, eligibility_mode, payment_snapshot_version
+) values (
+  '36000000-0000-0000-0000-000000000001', 2023, 2024, '2023-11-01', 'timestamp_ranked', 'draft',
+  '56000000-0000-0000-0000-000000000001', 'provisional', 0
+);
+
+insert into public.house_applicants (
+  id, cycle_id, applicant_key, source_name, submission_timestamp, source_row_number, preferences,
+  member_id, match_status, payment_status, withdrawn_reason
+) values
+  ('66000000-0000-0000-0000-000000000001', '56000000-0000-0000-0000-000000000001', 'stale#src', 'Stale Source', now(), 1,
+   '["20000000-0000-0000-0000-000000000001"]'::jsonb, '16000000-0000-0000-0000-000000000001', 'match', 'unverified', 'Member requested withdrawal'),
+  ('66000000-0000-0000-0000-000000000002', '56000000-0000-0000-0000-000000000001', 'active#tgt', 'Active Target', now(), 2,
+   '["20000000-0000-0000-0000-000000000002"]'::jsonb, '16000000-0000-0000-0000-000000000002', 'match', 'unverified', null);
+
+insert into public.house_assignment_drafts (
+  id, batch_id, source_name, member_id, applicant_id, match_status, match_method
+) values (
+  '76000000-0000-0000-0000-000000000001', '36000000-0000-0000-0000-000000000001', 'Stale Source',
+  '16000000-0000-0000-0000-000000000001', '66000000-0000-0000-0000-000000000001', 'match', 'manual'
+);
+
+select pg_temp.run_as_admin('select public.smart_merge_members(''16000000-0000-0000-0000-000000000001'', ''16000000-0000-0000-0000-000000000002'')');
+
+do $$
+declare
+  v_tgt public.house_applicants%rowtype;
+begin
+  select * into v_tgt from public.house_applicants where id = '66000000-0000-0000-0000-000000000002';
+
+  if v_tgt.member_id is distinct from '16000000-0000-0000-0000-000000000002'::uuid then
+    raise exception 'FAIL: active applicant lost its member link';
+  end if;
+  if v_tgt.withdrawn_reason is not null then
+    raise exception 'FAIL: merge withdrew the only active application';
+  end if;
+
+  raise notice 'PASS: active applicant beats a withdrawn applicant still placed in a draft';
+end $$;
+
+-- Fixture for the two-session Reveal race in test-house-applicant-merge.sh.
+insert into public.members (id, first_name, last_name, email) values
+  ('17000000-0000-0000-0000-000000000001', 'Race', 'Source', 'racesrc@ucsd.edu'),
+  ('17000000-0000-0000-0000-000000000002', 'Race', 'Target', 'racetgt@ucsd.edu');
+
+insert into public.house_assignment_batches (id, academic_year_start, academic_year_end, effective_start_date, assignment_method, status) values
+  ('37000000-0000-0000-0000-000000000001', 2022, 2023, '2022-11-01', 'timestamp_ranked', 'draft');
+
+insert into public.house_payment_cycles (id, academic_year_start, application_key) values
+  ('57000000-0000-0000-0000-000000000001', 2022, 'house_fall');
+
+insert into public.house_applicants (id, cycle_id, applicant_key, source_name, submission_timestamp, source_row_number, preferences, member_id, match_status) values
+  ('67000000-0000-0000-0000-000000000001', '57000000-0000-0000-0000-000000000001', 'race#src', 'Race Source', now(), 1,
+   '["20000000-0000-0000-0000-000000000001"]'::jsonb, '17000000-0000-0000-0000-000000000001', 'match');
 
 do $$ begin
   raise notice 'ALL HOUSE APPLICANT MERGE TESTS PASSED.';
