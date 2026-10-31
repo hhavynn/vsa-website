@@ -1,6 +1,6 @@
 import { supabase } from '../../lib/supabase';
 import type { Json } from '../../types/database';
-import type { HouseEvent, HousePageAsset, PublicHouseEvent, PublicHouseEventHost } from '../../types';
+import type { HouseEvent, PublicHouseEvent, PublicHouseEventHost } from '../../types';
 import { withErrorHandling } from '../errors';
 
 export type HouseEventFormData = Omit<HouseEvent, 'id' | 'created_at' | 'updated_at' | 'house' | 'houses'> & {
