@@ -68,6 +68,9 @@ export function buildReadiness(issues: readonly UnifiedIssue[], labels: { ready?
 // ─── ACE ─────────────────────────────────────────────────────────────────────
 
 const ACE_ISSUE: Record<AssignmentIssue['code'], { detail: string; fix: IssueFix }> = {
+  pickup_term_missing: { detail: 'Choose the exact Fall, Winter or Spring pickup term before Lock/Publish.', fix: { label: 'Review Term', filter: 'all' } },
+  little_before_big: { detail: "Check source evidence: a Little's pickup term appears earlier than their Big's.", fix: { label: 'Review', filter: 'needs_review' } },
+  same_term_as_big: { detail: 'This Little shares an exact pickup term with their Big; verify that unusual history.', fix: { label: 'Review', filter: 'needs_review' } },
   unassigned: { detail: 'These records must have a Big before publishing.', fix: { label: 'Review Unassigned', filter: 'unassigned' } },
   missing_big: { detail: 'Pick a Big that is still on the ACE tree.', fix: { label: 'Review', filter: 'needs_review' } },
   duplicate_little: { detail: 'A Little can only be added once.', fix: { label: 'Compare Duplicates', filter: 'duplicates' } },

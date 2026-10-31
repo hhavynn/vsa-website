@@ -264,6 +264,8 @@ export interface AceAssignmentCycle {
   id: string;
   academic_year_start: number;
   academic_year_end: number;
+  /** Admin-approved pickup term for new Littles; null on legacy cycles until reviewed. */
+  pickup_term?: string | null;
   status: AceAssignmentStatus;
   /** Saved Little minimum (qualifying events attended); null until the ACE Chair saves it. */
   little_min_events?: number | null;

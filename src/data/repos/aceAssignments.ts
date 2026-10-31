@@ -3,6 +3,7 @@ import { runBulkWrites } from '../../lib/bulkWrites';
 import { AceAssignmentCycle, AceAssignmentDraft, AceAssignmentStatus } from '../../types';
 import { ValidationError, withErrorHandling } from '../errors';
 import { DraftSeed, canTransitionCycle } from '../../lib/aceAssignments';
+import { isTermConsistentWithYear } from '../../lib/acePickupYear';
 
 /** Admin-private published-cycle Little roster; deliberately excludes draft notes/contacts. */
 export interface PublishedAceLittle {
@@ -78,16 +79,45 @@ export class AceAssignmentsRepository {
     }, 'Failed to load assignment cycles');
   }
 
-  async createCycle(academicYearStart: number): Promise<AceAssignmentCycle> {
+  async createCycle(academicYearStart: number, pickupTerm: string | null): Promise<AceAssignmentCycle> {
+    // New Year Setup can prepare an empty private draft without guessing a term.
+    // The ACE workspace requires a choice and the DB rejects Lock/Publish until saved.
+    if (pickupTerm !== null && !isTermConsistentWithYear(pickupTerm, academicYearStart)) {
+      throw new ValidationError('Choose an exact pickup term for the selected academic year.', 'pickup_term', pickupTerm);
+    }
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('ace_assignment_cycles')
-        .insert({ academic_year_start: academicYearStart, academic_year_end: academicYearStart + 1 })
+        .insert({
+          academic_year_start: academicYearStart,
+          academic_year_end: academicYearStart + 1, pickup_term: pickupTerm,
+        })
         .select('*')
         .single();
       if (error) throw error;
       return data as AceAssignmentCycle;
     }, 'Failed to create assignment cycle');
+  }
+
+  /** Draft-only CAS: older screens cannot overwrite a reviewed term. */
+  async setCycleTerm(
+    cycleId: string, academicYearStart: number,
+    expectedTerm: string | null, pickupTerm: string,
+  ): Promise<AceAssignmentCycle> {
+    if (!isTermConsistentWithYear(pickupTerm, academicYearStart)) {
+      throw new ValidationError('The selected term does not belong to this academic year.', 'pickup_term', pickupTerm);
+    }
+    return withErrorHandling(async () => {
+      let query = supabase
+        .from('ace_assignment_cycles')
+        .update({ pickup_term: pickupTerm, updated_at: new Date().toISOString() })
+        .eq('id', cycleId).eq('academic_year_start', academicYearStart).eq('status', 'draft');
+      query = expectedTerm == null ? query.is('pickup_term', null) : query.eq('pickup_term', expectedTerm);
+      const { data, error } = await query.select('*').maybeSingle();
+      if (error) throw error;
+      if (!data) throw new ValidationError('This cycle or pickup term changed. Refresh and review it again.');
+      return data as AceAssignmentCycle;
+    }, 'Failed to update ACE pickup term');
   }
 
   /**

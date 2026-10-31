@@ -398,3 +398,47 @@ describe('resolveImportRows', () => {
     expect(seeds[0].little_member_id).toBeNull();
   });
 });
+
+describe('term-aware ACE publish preflight (#674)', () => {
+  it('blocks a missing term on draft and locked cycles without inventing one', () => {
+    const d = draft('fictional-d', 'Fictional Little');
+    for (const status of ['draft', 'locked'] as const) {
+      const result = computePreflight([d], nodes, index, status, null, 2026);
+      expect(codes(result.blockers)).toContain('pickup_term_missing');
+      expect(result.canPublish).toBe(false);
+    }
+  });
+
+  it('warns when the new Little predates a confirmed Big but does not block', () => {
+    const historicalBig = [node('big-april', 'Fictional Big', {
+      pickupAcademicYearStart: 2024, pickupTerm: 'FA24',
+    })];
+    const result = computePreflight([draft('fictional-d', 'Fictional Little')], historicalBig, index,
+      'locked', 'FA23', 2023);
+    expect(codes(result.warnings)).toContain('little_before_big');
+    expect(codes(result.blockers)).not.toContain('little_before_big');
+  });
+
+  it('warns on exact same-term Big/Little and stays silent for unknown Big year', () => {
+    const d = draft('fictional-d', 'Fictional Little');
+    const sameTerm = [node('big-april', 'Fictional Big', {
+      pickupAcademicYearStart: 2026, pickupTerm: 'SP27',
+    })];
+    expect(codes(computePreflight([d], sameTerm, index, 'locked', 'SP27', 2026).warnings))
+      .toContain('same_term_as_big');
+    expect(codes(computePreflight([d], nodes, index, 'locked', 'SP27', 2026).warnings))
+      .not.toEqual(expect.arrayContaining(['same_term_as_big', 'little_before_big']));
+  });
+
+  it('blocks a term from the wrong academic year, even if it looks canonical', () => {
+    const result = computePreflight([draft('fictional-d', 'Fictional Little')], nodes, index,
+      'locked', 'SP27', 2027);
+    expect(codes(result.blockers)).toContain('pickup_term_missing');
+  });
+
+  it('does not retroactively demand pickup term for an already published cycle', () => {
+    const result = computePreflight([draft('fictional-d', 'Fictional Little')], nodes, index,
+      'published', null, 2026);
+    expect(codes(result.blockers)).not.toContain('pickup_term_missing');
+  });
+});

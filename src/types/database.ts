@@ -190,6 +190,7 @@ export type Database = {
           created_by: string | null;
           id: string;
           little_min_events: number | null;
+          pickup_term: string | null;
           status: string;
           updated_at: string;
         };
@@ -201,6 +202,7 @@ export type Database = {
           created_by?: string | null;
           id?: string;
           little_min_events?: number | null;
+          pickup_term?: string | null;
           status?: string;
           updated_at?: string;
         };
@@ -212,6 +214,7 @@ export type Database = {
           created_by?: string | null;
           id?: string;
           little_min_events?: number | null;
+          pickup_term?: string | null;
           status?: string;
           updated_at?: string;
         };

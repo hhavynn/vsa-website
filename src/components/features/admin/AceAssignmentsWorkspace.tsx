@@ -45,6 +45,8 @@ import {
   selectBulkLittleLinks,
 } from '../../../lib/aceAssignments';
 import { AceAssignmentCycle, AceAssignmentDraft } from '../../../types';
+import { isTermConsistentWithYear } from '../../../lib/acePickupYear';
+import { AceCycleTermField, aceCycleTermLabel } from './AceCycleTermField';
 import { AceApplicationProfilesPanel } from './AceApplicationProfilesPanel';
 import { AceAssignmentImportPanel } from './AceAssignmentImportPanel';
 import { AceMutualRequestPanel } from './AceMutualRequestPanel';
@@ -113,6 +115,9 @@ export function AceAssignmentsWorkspace() {
 
   const [busy, setBusy] = useState(false);
   const [newYear, setNewYear] = useState(String(currentAcademicYearStart()));
+  const [newTerm, setNewTerm] = useState('');
+  const [termDraft, setTermDraft] = useState('');
+  const [confirmLock, setConfirmLock] = useState(false);
   const [newLittle, setNewLittle] = useState('');
   const [importOpen, setImportOpen] = useState(false);
   const [mutualOpen, setMutualOpen] = useState(false);
@@ -125,9 +130,14 @@ export function AceAssignmentsWorkspace() {
   const ready = !!cycle && !draftsLoading && !nodesLoading && !directoryLoading && !draftsError && !nodesError && !directoryError;
   const editable = !!cycle && isCycleEditable(cycle.status);
   const yearStart = cycle?.academic_year_start ?? null;
+  useEffect(() => {
+    setTermDraft(cycle?.pickup_term ?? '');
+    setConfirmLock(false);
+    setConfirmPublish(false);
+  }, [cycle?.id, cycle?.pickup_term]);
 
   const preflight = useMemo(
-    () => (cycle && ready ? computePreflight(drafts, nodes, nameIndex, cycle.status) : null),
+    () => (cycle && ready ? computePreflight(drafts, nodes, nameIndex, cycle.status, cycle.pickup_term ?? null, cycle.academic_year_start) : null),
     [cycle, ready, drafts, nodes, nameIndex],
   );
   // Pre-sort only: once published, #791's participation review takes over.
@@ -222,7 +232,12 @@ export function AceAssignmentsWorkspace() {
       return;
     }
     void run(async () => {
-      const created = await aceAssignmentsRepository.createCycle(start);
+      if (!isTermConsistentWithYear(newTerm, start)) {
+        toast.error('Choose Fall, Winter or Spring for this academic year.');
+        return;
+      }
+      const created = await aceAssignmentsRepository.createCycle(start, newTerm);
+      setNewTerm('');
       setPickedCycleId(created.id);
       await refreshCycles();
       logAdminActivity({
@@ -235,6 +250,15 @@ export function AceAssignmentsWorkspace() {
       toast.success(`Started ACE ${formatAcademicYear(start)} assignments.`);
     }, 'Could not start the cycle');
   };
+
+  const saveCycleTerm = () => cycle && isCycleEditable(cycle.status) &&
+    run(async () => {
+      await aceAssignmentsRepository.setCycleTerm(
+        cycle.id, cycle.academic_year_start, cycle.pickup_term ?? null, termDraft,
+      );
+      await refreshCycles();
+      toast.success('Pickup term saved. Review it before locking.');
+    }, 'Could not save pickup term');
 
   /** Records the change a patch made, with an undo spec for a changed Big. */
   const recordPatch = (before: AceAssignmentDraft | undefined, patch: AceAssignmentDraftPatch) => {
@@ -377,6 +401,7 @@ export function AceAssignmentsWorkspace() {
     run(async () => {
       await aceAssignmentsRepository.setCycleStatus(cycle.id, cycle.status, to);
       setConfirmPublish(false);
+      setConfirmLock(false);
       await refreshCycles();
       if (to === 'locked' || to === 'draft') {
         logAdminActivity({
@@ -394,6 +419,10 @@ export function AceAssignmentsWorkspace() {
   const publish = () =>
     cycle &&
     run(async () => {
+      if (!cycle.pickup_term || !isTermConsistentWithYear(cycle.pickup_term, cycle.academic_year_start)) {
+        toast.error('The locked cycle has no valid pickup term. Unlock and select one first.');
+        return;
+      }
       const result = await aceAssignmentsRepository.publishCycle(cycle.id);
       setConfirmPublish(false);
       await Promise.all([refreshCycles(), refreshDrafts()]);
@@ -439,12 +468,15 @@ export function AceAssignmentsWorkspace() {
               id="ace-cycle-year"
               inputMode="numeric"
               value={newYear}
-              onChange={(e) => setNewYear(e.target.value)}
+              onChange={(e) => { setNewYear(e.target.value); setNewTerm(''); }}
               className={`${inputCls} w-28`}
             />
-            <button type="submit" disabled={busy} className={primaryBtnCls}>
+            <button type="submit" disabled={busy || !isTermConsistentWithYear(newTerm, startYear)} className={primaryBtnCls}>
               Create {formatAcademicYear(startYear)} Assignment Cycle
             </button>
+          </div>
+          <div className="mt-3">
+            <AceCycleTermField id="ace-new-cycle-term" academicYearStart={startYear} value={newTerm} onChange={setNewTerm} disabled={busy} />
           </div>
         </form>
       </div>
@@ -494,12 +526,31 @@ export function AceAssignmentsWorkspace() {
               .filter((c) => c.status !== 'archived')
               .map((c) => (
                 <option key={c.id} value={c.id}>
-                  ACE {formatAcademicYear(c.academic_year_start)} · {STATUS_COPY[c.status].label}
+                  ACE {formatAcademicYear(c.academic_year_start)} · {aceCycleTermLabel(c.pickup_term)} · {STATUS_COPY[c.status].label}
                 </option>
               ))}
           </select>
         )}
       </div>
+
+      <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+        <div className="flex flex-wrap items-end gap-3">
+          <AceCycleTermField id="ace-existing-cycle-term" academicYearStart={cycle.academic_year_start}
+            value={editable ? termDraft : (cycle.pickup_term ?? '')} onChange={setTermDraft} disabled={!editable || busy} />
+          {editable && <button type="button" className={primaryBtnCls} disabled={busy || !termDraft || termDraft === cycle.pickup_term}
+            onClick={saveCycleTerm}>Save pickup term</button>}
+        </div>
+        <p className="mt-2 text-xs text-[var(--color-text2)]">Only newly published Littles receive this term. Their Big’s original pickup year stays unchanged.</p>
+      </div>
+      <form onSubmit={createCycle} className="flex flex-wrap items-end gap-3 rounded-md border border-[var(--color-border)] p-3">
+        <div><label htmlFor="ace-next-cycle-year" className="block text-xs text-[var(--color-text2)]">Start another term in academic year</label>
+          <input id="ace-next-cycle-year" value={newYear}
+            onChange={event => { setNewYear(event.target.value); setNewTerm(''); }}
+            inputMode="numeric" className={inputCls + ' w-28'} /></div>
+        <AceCycleTermField id="ace-next-cycle-term" academicYearStart={Number(newYear) || operatingYear}
+          value={newTerm} onChange={setNewTerm} disabled={busy} />
+        <button type="submit" className={ghostBtnCls} disabled={busy || !isTermConsistentWithYear(newTerm, Number(newYear))}>Create another term</button>
+      </form>
 
       {yearContext.isArchived && (
         <p role="note" className="rounded border border-amber-500/40 bg-amber-500/10 px-3 py-2 font-sans text-xs text-text-secondary">
@@ -547,9 +598,18 @@ export function AceAssignmentsWorkspace() {
           <PossibleDuplicates duplicates={duplicates} onCompare={() => setFilter('duplicates')} />
           <div className="flex flex-wrap items-center gap-2">
             {cycle.status === 'draft' && (
-              <button type="button" onClick={() => setStatus('locked')} disabled={busy || preflight.littleCount === 0} className={primaryBtnCls}>
+              <button type="button" onClick={() => setConfirmLock(true)} disabled={busy || preflight.littleCount === 0 || !cycle.pickup_term || !isTermConsistentWithYear(cycle.pickup_term, cycle.academic_year_start)} className={primaryBtnCls}>
                 Lock assignments
               </button>
+            )}
+            {confirmLock && cycle.status === 'draft' && (
+              <div role="alertdialog" aria-label="Confirm lock" className="rounded border border-[var(--color-border)] p-3 text-xs">
+                <p>Lock this cycle for {aceCycleTermLabel(cycle.pickup_term)} · {formatAcademicYear(cycle.academic_year_start)}? All new Littles will receive this term when published.</p>
+                <div className="mt-3 flex gap-2">
+                  <button type="button" className={primaryBtnCls} onClick={() => setStatus('locked')} disabled={busy}>Confirm lock</button>
+                  <button type="button" className={ghostBtnCls} onClick={() => setConfirmLock(false)}>Cancel</button>
+                </div>
+              </div>
             )}
             {cycle.status === 'locked' && (
               <>
@@ -585,6 +645,7 @@ export function AceAssignmentsWorkspace() {
               </p>
               <p className="mt-1 text-[var(--color-text2)]">
                 Each Little joins their Big's fam with the Big as parent. Fams that are live show them immediately.
+                Their approved pickup term will be {aceCycleTermLabel(cycle.pickup_term)} · {formatAcademicYear(cycle.academic_year_start)}; the Big's history is unchanged.
               </p>
               {shortCount > 0 && (
                 <p className="mt-1 font-semibold text-amber-700 dark:text-amber-400">

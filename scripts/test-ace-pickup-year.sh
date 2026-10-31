@@ -65,6 +65,15 @@ psql "${psql_args[@]}" -d pickup_full -q -c 'set client_min_messages = warning' 
 psql "${psql_args[@]}" -d pickup_full -q -f "$script_dir/sql/ace-year-correction.test.sql" 2>&1 \
   | sed -n -e 's/^.*NOTICE:  //p' -e '/ERROR/p'
 printf 'PASS: #673 CAS/audit fixture on disposable PostgreSQL.\n'
+
+# #674 shares the same fully provisioned disposable fixture and runs only after
+# the prior pickup-year and audit assertions. Repeat migration to prove rerun safety.
+cycle_migration="$repo_dir/supabase/migrations/20261031235959_ace_cycle_pickup_term.sql"
+psql "${psql_args[@]}" -d pickup_full -q -c 'set client_min_messages = warning' \
+  -f "$cycle_migration" -f "$cycle_migration"
+psql "${psql_args[@]}" -d pickup_full -q -f "$script_dir/sql/ace-cycle-term.assert.sql" 2>&1 \
+  | sed -n -e 's/^.*NOTICE:  //p' -e '/ERROR/p'
+printf 'PASS: #674 dual-term publish, locked-term guard, provenance and idempotency fixture.\n'
 psql "${psql_args[@]}" -d pickup_rollback -q -c 'set client_min_messages = warning' -f "$migration"
 psql "${psql_args[@]}" -d pickup_rollback -q <<'SQL'
 update public.ace_family_members set pickup_academic_year_start = 2023, pickup_term = 'FA23'

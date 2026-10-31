@@ -192,3 +192,51 @@ describe('saved eligibility policy', () => {
     expect(supabaseMock.filtersFor('ace_assignment_cycle_events')).toContainEqual(['cycle_id', 'c1']);
   });
 });
+
+describe('approved cycle term writes (#674)', () => {
+
+  it('permits a private year-setup placeholder with null term; Lock remains server-blocked', async () => {
+    supabaseMock.setDefault('ace_assignment_cycles', {
+      data: { id: 'placeholder', academic_year_start: 2026, pickup_term: null, status: 'draft' },
+      error: null,
+    });
+    await aceAssignmentsRepository.createCycle(2026, null);
+    expect(callsOf('ace_assignment_cycles', 'insert')[0].args[0]).toMatchObject({
+      academic_year_start: 2026, pickup_term: null,
+    });
+  });
+  it('creates a cycle with explicit FA26, not a term guessed from the current date', async () => {
+    supabaseMock.setDefault('ace_assignment_cycles', {
+      data: { id: 'cycle-1', academic_year_start: 2026, pickup_term: 'FA26', status: 'draft' }, error: null,
+    });
+    await aceAssignmentsRepository.createCycle(2026, 'FA26');
+    expect(callsOf('ace_assignment_cycles', 'insert')[0].args[0]).toEqual({
+      academic_year_start: 2026, academic_year_end: 2027, pickup_term: 'FA26',
+    });
+  });
+
+  it('allows SP27 in the 2026–27 cycle and rejects SP27 scoped to 2027–28', async () => {
+    supabaseMock.setDefault('ace_assignment_cycles', {
+      data: { id: 'c1', pickup_term: 'SP27' }, error: null,
+    });
+    await expect(aceAssignmentsRepository.createCycle(2026, 'SP27')).resolves.toBeTruthy();
+    await expect(aceAssignmentsRepository.createCycle(2027, 'SP27')).rejects.toBeInstanceOf(ValidationError);
+    expect(callsOf('ace_assignment_cycles', 'insert')).toHaveLength(1);
+  });
+
+  it('updates the term only for matching draft, year and previously approved value', async () => {
+    supabaseMock.setDefault('ace_assignment_cycles', { data: { id: 'c1', pickup_term: 'SP27' }, error: null });
+    await aceAssignmentsRepository.setCycleTerm('c1', 2026, null, 'SP27');
+    const query = supabaseMock.queriesFor('ace_assignment_cycles')[0];
+    expect(query.calls).toContainEqual({ method: 'eq', args: ['status', 'draft'] });
+    expect(query.calls).toContainEqual({ method: 'eq', args: ['academic_year_start', 2026] });
+    expect(query.calls).toContainEqual({ method: 'is', args: ['pickup_term', null] });
+    expect((callsOf('ace_assignment_cycles', 'update')[0].args[0] as { pickup_term: string }).pickup_term).toBe('SP27');
+  });
+
+  it('does not overwrite an edited or locked cycle when the CAS returns no row', async () => {
+    supabaseMock.setDefault('ace_assignment_cycles', { data: null, error: null });
+    await expect(aceAssignmentsRepository.setCycleTerm('c1', 2026, 'FA26', 'SP27')).rejects.toBeInstanceOf(ValidationError);
+    expect(supabaseMock.filtersFor('ace_assignment_cycles')).toContainEqual(['pickup_term', 'FA26']);
+  });
+});

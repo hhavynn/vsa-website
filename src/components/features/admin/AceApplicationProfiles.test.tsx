@@ -76,7 +76,7 @@ const aceNode = (id: string, name: string) => ({
 function seed() {
   supabaseMock.reset();
   supabaseMock.setDefault('ace_assignment_cycles', {
-    data: [{ id: 'cycle-1', academic_year_start: 2026, academic_year_end: 2027, status: 'draft', created_by: null, created_at: '', updated_at: '' }],
+    data: [{ id: 'cycle-1', academic_year_start: 2026, academic_year_end: 2027, pickup_term: 'FA26', status: 'draft', created_by: null, created_at: '', updated_at: '' }],
     error: null,
   });
   supabaseMock.setDefault('ace_assignment_drafts', {
