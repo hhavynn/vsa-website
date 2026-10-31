@@ -50,6 +50,24 @@ it('suggests only exact-name matches and flags several as review', () => {
   expect(suggestHouseParentMember('Kent Nguyen', [option('m-k', 'Kent Nguyenn')])).toBeNull();
 });
 
+it('does not mistake an auto-matched canonical link for public-role approval (#624)', async () => {
+  parentsRepo.listForYear.mockResolvedValue([
+    parent('synthetic-parent', 'Fictional House', 0, 'Ada Example', 'canonical-example'),
+  ]);
+  lookup.listMemberDirectory.mockResolvedValue([
+    option('canonical-example', 'Ada Example'),
+  ]);
+  renderLinks();
+  expect(await screen.findByText(/Every House Parent link matches the directory/)).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: /Matches directory \(1\)/ })).toBeInTheDocument();
+  const row = screen.getByTestId('house-parent-link');
+  expect(within(row).getByText('Directory match · publication not approved here')).toBeInTheDocument();
+  expect(screen.getAllByText(/not an approval to publish|does not approve or publish roles/i).length)
+    .toBeGreaterThan(0);
+  expect(screen.queryByText('Every House Parent link is verified.')).not.toBeInTheDocument();
+  expect(parentsRepo.setMember).not.toHaveBeenCalled();
+});
+
 it('shows linked House Parents and flags the ones that need review', async () => {
   parentsRepo.listForYear.mockResolvedValue([
     parent('hp1', 'Pinkie Pie', 0, 'Ingyin Moh', 'm-ingyin'),
@@ -109,7 +127,7 @@ it('fails closed when the canonical member directory is unavailable', async () =
   lookup.listMemberDirectory.mockRejectedValue(new Error('offline'));
   renderLinks();
   expect(await screen.findByRole('alert')).toHaveTextContent('Member directory unavailable');
-  expect(screen.queryByText('Every House Parent link is verified.')).not.toBeInTheDocument();
+  expect(screen.queryByText(/Every House Parent link matches the directory/)).not.toBeInTheDocument();
   const row = screen.getByTestId('house-parent-link');
   expect(within(row).getByRole('button', { name: 'Change' })).toBeDisabled();
   expect(parentsRepo.setMember).not.toHaveBeenCalled();
