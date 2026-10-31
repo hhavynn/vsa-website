@@ -253,7 +253,7 @@ export const EVIDENCE_SOURCE_KIND: Readonly<Record<string, string>> = {
 
 export function validatePickupBatchLabel(label: string): string {
   const clean = label.trim();
-  if (!clean || clean.length > 200 || /(https?:\/\/|drive\.google|docs\.google)/i.test(clean) || clean.includes('$') || /[\u0000-\u001f]/.test(clean)) {
+  if (!clean || clean.length > 200 || /(https?:\/\/|drive\.google|docs\.google)/i.test(clean) || clean.includes('$$') || /[\u0000-\u001f]/.test(clean)) {
     throw new Error('Batch label must be 1–200 characters and cannot contain URLs or Drive links.');
   }
   // Only deliberately generic labels are appropriate for audit records, never a person's name.
