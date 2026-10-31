@@ -411,6 +411,7 @@ export interface MemberEventHistoryEntry {
 }
 
 export interface MemberHouseBadge {
+  academic_year_start: number;
   house: string;
   house_profile_id: string;
   display_name: string;
