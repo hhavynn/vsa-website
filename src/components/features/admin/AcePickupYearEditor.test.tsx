@@ -3,6 +3,7 @@ import type { AceFamilyMember } from '../../../types';
 import type { AcePickupEvidenceRow } from '../../../data/repos/aceFamilies';
 import { aceFamiliesRepository } from '../../../data/repos/aceFamilies';
 import { AcePickupYearEditor } from './AcePickupYearEditor';
+import { acePickupYearSchema } from '../../../schemas';
 import { DatabaseError } from '../../../data/errors';
 
 jest.mock('../../../data/repos/aceFamilies', () => ({
@@ -158,4 +159,26 @@ it('keeps approved term and node context isolated from normal member Save', () =
   expect(screen.getByText(/Current approved: FA23 · 2023–24/)).toBeInTheDocument();
   expect(screen.getByRole('combobox', { name: 'Exact pickup term (optional)' })).toHaveValue('FA');
   expect(screen.getByRole('button', { name: 'Review and save year' })).toBeDisabled();
+});
+
+it('schema accepts explicit year-only and exact-term choices without guessing a bare year', () => {
+  const valid = { year: '2023–24', season: 'FA', sourceKind: 'official_pairing' };
+  expect(acePickupYearSchema.safeParse(valid).success).toBe(true);
+  expect(acePickupYearSchema.safeParse({ ...valid, year: '2023' }).success).toBe(false);
+  expect(acePickupYearSchema.safeParse({ ...valid, year: 'legacy' }).success).toBe(false);
+  expect(acePickupYearSchema.safeParse({ ...valid, year: '' }).success).toBe(false);
+  expect(acePickupYearSchema.safeParse({ ...valid, sourceKind: 'guess_from_big' }).success).toBe(false);
+});
+
+it('does not resubmit an already-committed RPC if the post-save view refresh fails', async () => {
+  const onSaved = jest.fn().mockRejectedValue(new Error('synthetic refetch outage'));
+  mount({ onSaved });
+  fireEvent.change(screen.getByRole('textbox', { name: 'Pickup academic year' }), { target: { value: '2023–24' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Review and save year' }));
+  const dialog = screen.getByRole('alertdialog', { name: 'Confirm pickup-year correction' });
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm audited correction' }));
+  await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+  expect(correction).toHaveBeenCalledTimes(1);
+  await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+  expect(screen.getByRole('alert')).toHaveTextContent(/correction was saved, but the family view could not refresh/);
 });
