@@ -12,6 +12,19 @@ export type CoverageState =
 
 export interface CoverageResult { row: CoverageDraft; state: CoverageState; reason: string }
 
+/** A blank House row is not proof that the canonical member has no House.
+ * Count active AND upcoming intervals, but not an already ended membership.
+ * Memberships are already scoped to the selected academic year by the repo.
+ */
+function hasCurrentOrUpcomingHouse(
+  intervals: readonly MemberYearMembership[], onDate: string,
+): boolean {
+  return intervals.some((m) =>
+    m.effective_start_date > onDate ||
+    (m.effective_start_date <= onDate &&
+      (!m.effective_end_date || m.effective_end_date > onDate)));
+}
+
 export function reviewPublishedHouseBatchCoverage(
   rows: readonly CoverageDraft[],
   profiles: readonly HouseProfileLite[],
@@ -30,6 +43,10 @@ export function reviewPublishedHouseBatchCoverage(
     if ((seen.get(row.member_id) ?? 0) > 1) return make('duplicate-member', 'The same canonical member appears in multiple rows in this batch.');
     if (!memberIds.has(row.member_id)) return make('missing-member', 'Linked canonical member could not be found in the complete member directory.');
     if (!row.house_profile_id && !row.source_house) {
+      if (hasCurrentOrUpcomingHouse(memberships.get(row.member_id) ?? [], onDate)) {
+        return make('conflicting-membership',
+          'Batch says no House, but this member has a current or upcoming House interval. Review the dated membership before calling them unassigned.');
+      }
       return make('unassigned', 'This confirmed applicant has intentionally not been placed in a House.');
     }
     if (!row.house_profile_id || !validProfiles.has(row.house_profile_id)) {
@@ -141,11 +158,15 @@ export function reviewHouseBatchPopulation(input: {
     if (row.member_id !== applicant.member_id || !['match', 'manual'].includes(row.match_status)) {
       return make('ambiguous-identity', 'Batch row identity is not confirmed for this applicant.');
     }
-    if (!row.house_profile_id && !row.source_house) {
-      return make('unassigned', 'No House chosen yet; no assignment inferred.');
-    }
     if (!memberIds.has(applicant.member_id)) {
       return make('missing-member', 'Canonical member is absent from the complete directory.');
+    }
+    if (!row.house_profile_id && !row.source_house) {
+      if (hasCurrentOrUpcomingHouse(memberships.get(applicant.member_id) ?? [], onDate)) {
+        return make('conflicting-membership',
+          'Roster says no House, but this member already has a current or upcoming House interval; review the timeline.');
+      }
+      return make('unassigned', 'No House chosen yet; no assignment inferred.');
     }
     if (!row.house_profile_id || !validHouses.has(row.house_profile_id)) {
       return make('invalid-house', 'Assigned House is missing, inactive or in another year.');
