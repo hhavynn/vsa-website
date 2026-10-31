@@ -3,7 +3,7 @@ import type { AceFamilyMember } from '../../../types';
 import type { AcePickupEvidenceRow } from '../../../data/repos/aceFamilies';
 import { aceFamiliesRepository } from '../../../data/repos/aceFamilies';
 import { AcePickupYearEditor } from './AcePickupYearEditor';
-import { postgrestError } from '../../../test-utils/supabaseMock';
+import { DatabaseError } from '../../../data/errors';
 
 jest.mock('../../../data/repos/aceFamilies', () => ({
   aceFamiliesRepository: { correctPickupYear: jest.fn() },
@@ -134,7 +134,7 @@ it('never includes a selected evidence id after the proposed source has been edi
 });
 
 it('refetches on compare-and-swap conflicts and never retries last-write-wins', async () => {
-  correction.mockRejectedValueOnce(postgrestError('Someone else changed this pickup year. Refresh and try again.', 'P0001'));
+  correction.mockRejectedValueOnce(new DatabaseError('Someone else changed this pickup year. Refresh and try again.', 'P0001'));
   const { onConflict, onSaved } = mount();
   fireEvent.change(screen.getByRole('textbox', { name: 'Pickup academic year' }), { target: { value: '2023–24' } });
   fireEvent.click(screen.getByRole('button', { name: 'Review and save year' }));
