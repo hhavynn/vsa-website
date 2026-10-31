@@ -80,14 +80,18 @@ describe('membersToTreeNodes pickup year', () => {
     expect(node.cohort).toBeNull();
   });
 
-  it('leaves layout (generation rows) unchanged; chronological rows are #671', () => {
+  it('uses chronological year rows only when source years are verified (#671)', () => {
     const members = [
       member({ id: 'root', role_label: 'Big' }),
       member({ id: 'kid', parent_member_id: 'root' }),
     ];
     const dated = members.map((m, i) => ({ ...m, pickup_academic_year_start: 2020 + i * 3, pickup_term: null }));
-    expect(layoutTree(membersToTreeNodes(dated)).positions).toEqual(
-      layoutTree(membersToTreeNodes(members)).positions,
-    );
+    const unknown = layoutTree(membersToTreeNodes(members));
+    const chronological = layoutTree(membersToTreeNodes(dated));
+    expect(unknown.mode).toBe('generation');
+    expect(unknown.positions.kid.y).toBe(1);
+    expect(chronological.mode).toBe('year');
+    expect(chronological.positions.kid.y).toBe(3);
+    expect(chronological.yearBands.map((band) => band.key)).toEqual([2020, 2021, 2022, 2023]);
   });
 });

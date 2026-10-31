@@ -51,6 +51,8 @@ import {
 } from '../../lib/aceMemberLinks';
 import type { MemberOption } from '../../lib/memberLinkMatching';
 import { sanitizeImageSrc } from '../../utils/sanitizeUrl';
+import { membersToTreeNodes } from '../../lib/aceFamilyAdapter';
+import { layoutTree } from '../../lib/aceTreeLayout';
 
 const inputCls =
   'mt-1 block w-full rounded border px-3 py-2.5 text-[15px] sm:py-2 sm:text-sm focus:outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)] bg-[var(--color-surface2)] border-[var(--color-border)] text-[var(--color-text)] placeholder-[var(--color-text3)] transition';
@@ -418,17 +420,29 @@ function TreePreview({
   members: AceFamilyMember[];
   indicatorFor: (member: AceFamilyMember) => LinkIndicator;
 }) {
+  const previewLayout = useMemo(() => layoutTree(membersToTreeNodes(members)), [members]);
+  const uniqueMembers = useMemo(() => {
+    const seen = new Set<string>();
+    return members.filter((member) => {
+      if (seen.has(member.id)) return false;
+      seen.add(member.id);
+      return true;
+    });
+  }, [members]);
+  const structuralIssues = previewLayout.issues.filter(
+    (issue) => issue.kind === 'cycle' || issue.kind === 'self_parent' || issue.kind === 'duplicate_id',
+  );
   const childrenByParent = useMemo(() => {
     const map = new Map<string | null, AceFamilyMember[]>();
-    members.forEach((m) => {
-      const key = m.parent_member_id ?? null;
+    uniqueMembers.forEach((m) => {
+      const key = previewLayout.parentById[m.id] ?? null;
       const list = map.get(key) ?? [];
       list.push(m);
       map.set(key, list);
     });
     map.forEach((list) => list.sort((a, b) => a.name.localeCompare(b.name)));
     return map;
-  }, [members]);
+  }, [uniqueMembers, previewLayout]);
 
   const renderNode = (m: AceFamilyMember, depth: number) => {
     const kids = childrenByParent.get(m.id) ?? [];
@@ -473,7 +487,18 @@ function TreePreview({
     );
   }
 
-  return <div>{roots.map((r) => renderNode(r, 0))}</div>;
+  return (
+    <div>
+      {structuralIssues.length > 0 && (
+        <p role="alert" className="mb-2 text-xs text-amber-600">
+          ACE tree has {structuralIssues.length} structural issue(s): {structuralIssues
+            .map((issue) => issue.kind + ' (' + issue.nodeIds.join(', ') + ')').join('; ')}.
+          Preview uses repaired in-memory links only; review the source nodes before editing.
+        </p>
+      )}
+      {roots.map((r) => renderNode(r, 0))}
+    </div>
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

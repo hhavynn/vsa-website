@@ -1305,3 +1305,6 @@
 @media (max-width: 767px), (pointer: coarse) {
   .ace-app .ace-famtabs-tab { min-height: 44px; }
 }
+
+/* Reversed chronological links indicate inconsistent or undated source years. */
+.ace-app .ace-family-tree .ace-tree-edge.is-upward { stroke-dasharray: 5 6; }

@@ -170,3 +170,19 @@ describe('FamilyTree lineage spotlight', () => {
     expect(screen.getByRole('button', { name: 'me, Little' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
+
+describe('FamilyTree malformed-graph rendering (#671)', () => {
+  it('renders a two-node cycle with exactly one repaired edge and no crash', () => {
+    const nodes = [node('a', 'b'), node('b', 'a')];
+    const { container } = render(<FamilyTree nodes={nodes} focusId="a" onSelect={() => {}} />);
+    expect(container.querySelectorAll('.ace-tree-node')).toHaveLength(2);
+    expect(container.querySelectorAll('.ace-tree-edge')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'a, Big' })).toBeInTheDocument();
+  });
+
+  it('does not double render a duplicated id', () => {
+    const { container } = render(<FamilyTree nodes={[node('a', null), node('a', 'a')]} />);
+    expect(container.querySelectorAll('.ace-tree-node')).toHaveLength(1);
+  });
+});
+
