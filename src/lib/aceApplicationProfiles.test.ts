@@ -380,6 +380,35 @@ describe('suggestBigs', () => {
   const [ava, eve, gia, hal, ben] = profiles;
   const load = (incoming: number) => ({ current: 0, incoming });
 
+  it('never suggests a Big from gender alignment alone, but permits a real non-gender basis', () => {
+    const { profiles } = parse(
+      big('Fictional Big', '', 'fictional-big', { 'Gender Preference? ': 'Female' }),
+      little('Fictional Little', '', 'fictional-little', {
+        'Gender Identity': 'Female', 'Gender Preference?  2': 'Female',
+      }),
+    );
+    const blankNonGender = (profile: ApplicationProfile): ApplicationProfile => ({
+      ...profile,
+      scales: { introExtro: null, routine: null, workEthic: null, indoorOutdoor: null },
+      morningNight: null, fridayNight: null, activity: null, wantedActivity: null,
+      genderIdentity: 'Female', genderPreference: 'Female',
+    });
+    const b = blankNonGender(profiles[0]);
+    const l = blankNonGender(profiles[1]);
+    const candidate = { nodeId: 'fictional-node', name: 'Fictional Big', profile: b, load: { current: 0, incoming: 0 } };
+    expect(suggestBigs({ profile: l, name: 'Fictional Little' }, [candidate])).toEqual([]);
+
+    // One shared activity/scale fact makes the suggestion eligible. The gender
+    // preference alone did not establish compatibility or a score.
+    const withScale = { ...b, scales: { ...b.scales, introExtro: 5 } };
+    const littleWithScale = { ...l, scales: { ...l.scales, introExtro: 5 } };
+    const selected = suggestBigs({ profile: littleWithScale, name: 'Fictional Little' }, [
+      { ...candidate, profile: withScale },
+    ]);
+    expect(selected).toHaveLength(1);
+    expect(selected[0].reasons).toContain('Similar introvert/extrovert (5 and 5)');
+  });
+
   it('ranks closer answers higher, explains why, and leaves out conflicts and full Bigs', () => {
     const suggestions = suggestBigs({ profile: ben, name: 'Ben Ho' }, [
       { nodeId: 'eve', name: 'Eve Ng', profile: eve, load: load(0) },
