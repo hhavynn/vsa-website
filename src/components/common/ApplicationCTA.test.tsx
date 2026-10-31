@@ -159,11 +159,12 @@ describe('public application-window status cues (#276)', () => {
     jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-31T18:00:00Z'));
     supabaseMock.setDefault('public_application_links', { data: [linkRow({
       status: 'not_open', open_at: '2026-11-05T18:00:00Z',
+      before_open_message: 'Application details will be announced through VSA.',
       target_url: 'https://future-form.invalid/private',
     })], error: null });
     const { container } = renderCTA();
     expect(await screen.findByText('Opening soon')).toBeInTheDocument();
-    expect(screen.getByText('House applications open at GBM #2 on November 21.')).toBeInTheDocument();
+    expect(screen.getByText('Application details will be announced through VSA.')).toBeInTheDocument();
     expect(container.innerHTML).not.toContain('future-form.invalid');
     expect(screen.queryByRole('link', { name: /Apply for a House/ })).not.toBeInTheDocument();
   });
