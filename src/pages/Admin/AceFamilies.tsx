@@ -666,16 +666,21 @@ export default function AdminAceFamilies() {
     .map(node => node.pickup_academic_year_start)
     .filter((year): year is number => typeof year === 'number')))
     .sort((a, b) => a - b), [members]);
-  const onPickupSaved = async () => {
-    await Promise.all([
-      queryClient.invalidateQueries(['ace-family-members']),
-      queryClient.invalidateQueries(['ace-pickup-evidence', 'admin']),
+  const refreshPickupSources = async () => {
+    const [membersResult, evidenceResult] = await Promise.all([
+      refetchMembers(), refetchPickupEvidence(),
     ]);
-    await Promise.all([refetchMembers(), refetchPickupEvidence()]);
+    // React Query v3 resolves refetch() with an error result by default.
+    // A successful DB write + failed refresh must never be reported as a retryable write failure.
+    if (membersResult.isError || evidenceResult.isError) {
+      throw new Error('ACE family data could not refresh after the correction.');
+    }
   };
-  const onPickupConflict = async () => {
-    await Promise.all([refetchMembers(), refetchPickupEvidence()]);
+  const onPickupSaved = async () => {
+    await refreshPickupSources();
+    await queryClient.invalidateQueries(['ace-family-members', 'published']);
   };
+  const onPickupConflict = refreshPickupSources;
   const openReviewNode = (nodeId: string) => {
     if (!selectedFamilyId) return;
     // The filter and target must move in one URL update. Calling setNodeFilter
