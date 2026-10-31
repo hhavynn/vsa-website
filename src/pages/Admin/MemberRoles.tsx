@@ -182,10 +182,10 @@ export default function AdminMemberRoles() {
             {readsFailed && !readsPending && (
               <div role="alert" className="mb-3 rounded border border-red-500/40 p-3 text-sm text-red-700 dark:text-red-400">
                 Identity or Cabinet source data is unavailable. No match is safe to confirm. Check the configured Cabinet year, then retry.
-                <button type="button" onClick={() => { void directory.refetch(); void refreshSources(); }} className={'ml-2 ' + actionCls}>Retry sources</button>
+                <button type="button" onClick={() => { void directory.refetch({ cancelRefetch: false }); void refreshSources({ cancelRefetch: false }); }} className={'ml-2 ' + actionCls}>Retry sources</button>
               </div>
             )}
-            <button type="button" onClick={() => { void directory.refetch(); void refreshSources(); }} className={actionCls}>Refresh identities and Cabinet records</button>
+            <button type="button" onClick={() => { void directory.refetch({ cancelRefetch: false }); void refreshSources({ cancelRefetch: false }); }} className={actionCls}>Refresh identities and Cabinet records</button>
             <p className="mt-2 text-xs text-text-muted">Cabinet editor links open in a separate tab so your review selections stay here.</p>
             <label className="mb-3 block max-w-xs text-xs font-semibold text-text-secondary">
               Show review rows

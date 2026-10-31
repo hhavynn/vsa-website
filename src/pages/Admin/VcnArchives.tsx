@@ -171,7 +171,7 @@ export default function AdminVcnArchives() {
         toast.success('VCN archive created');
       }
 
-      await refreshArchives();
+      await refreshArchives({ cancelRefetch: false });
       resetForm();
     } catch (err) {
       console.error('Error saving VCN archive:', err);

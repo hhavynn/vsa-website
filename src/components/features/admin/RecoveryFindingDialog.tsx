@@ -236,10 +236,10 @@ export function RecoveryFindingDialog({
   const lookupsReady = detail.isSuccess && related.isSuccess && (!sameNameNeeded || sameName.isSuccess)
     && (!record.event_id || attendanceIds.length === 0 || eventAttendance.isSuccess);
   const retryLookups = () => {
-    void detail.refetch();
-    void related.refetch();
-    if (sameNameNeeded) void sameName.refetch();
-    void eventAttendance.refetch();
+    void detail.refetch({ cancelRefetch: false });
+    void related.refetch({ cancelRefetch: false });
+    if (sameNameNeeded) void sameName.refetch({ cancelRefetch: false });
+    void eventAttendance.refetch({ cancelRefetch: false });
   };
 
   const [action, setAction] = useState<RecoveryActionKind | null>(null);

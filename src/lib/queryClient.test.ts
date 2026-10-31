@@ -19,7 +19,7 @@ describe('createQueryClient', () => {
       refetchOnWindowFocus: false,
       staleTime: 5 * 60 * 1000,
       gcTime: 10 * 60 * 1000,
-      networkMode: 'offlineFirst',
+      networkMode: 'always',
       notifyOnChangeProps: 'all',
     });
     expect(queries).not.toHaveProperty('retry');
@@ -60,14 +60,26 @@ describe('createQueryClient', () => {
     unsubscribe();
   });
 
-  it('fetches while the browser reports offline, so an outage reaches degraded mode', async () => {
-    const client = createQueryClient();
-    onlineManager.setOnline(false);
-    try {
+  describe('while the browser reports offline', () => {
+    beforeEach(() => onlineManager.setOnline(false));
+    afterEach(() => onlineManager.setOnline(true));
+
+    it('still fetches', async () => {
+      const client = createQueryClient();
       await expect(client.fetchQuery({ queryKey: ['offline'], queryFn: async () => 'loaded' })).resolves.toBe('loaded');
-    } finally {
-      onlineManager.setOnline(true);
-    }
+    });
+
+    it('ends in an error instead of a paused query pages would read as empty', async () => {
+      const client = createQueryClient();
+      const queryFn = jest.fn(() => Promise.reject(new Error('no network')));
+      const observer = new QueryObserver(client, { queryKey: ['offline'], queryFn, retry: 1, retryDelay: 1 });
+      const unsubscribe = observer.subscribe(() => undefined);
+
+      await waitFor(() => expect(observer.getCurrentResult().isError).toBe(true));
+      expect(queryFn).toHaveBeenCalledTimes(2);
+      expect(observer.getCurrentResult().isPaused).toBe(false);
+      unsubscribe();
+    });
   });
 });
 
@@ -105,6 +117,13 @@ describe('listenForWindowFocus', () => {
 
     window.dispatchEvent(new Event('visibilitychange'));
     await waitFor(() => expect(queryFn).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(client.getQueryState(['thing'])?.fetchStatus).toBe('idle'));
+
+    onlineManager.setOnline(false);
+    window.dispatchEvent(new Event('focus'));
+    await Promise.resolve();
+    expect(queryFn).toHaveBeenCalledTimes(3);
+    onlineManager.setOnline(true);
     unsubscribe();
     client.unmount();
   });

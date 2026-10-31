@@ -230,7 +230,7 @@ export function ProgramContentManager() {
         internal_notes: nullable(form.internal_notes),
       });
       markSaved();
-      await refetch();
+      await refetch({ cancelRefetch: false });
       toast.success('Program content saved');
     } catch (err) {
       console.error(err);

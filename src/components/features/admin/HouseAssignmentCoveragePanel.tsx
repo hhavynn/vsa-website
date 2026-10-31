@@ -140,7 +140,7 @@ export function HouseAssignmentCoveragePanel({ selectedYear }: { selectedYear: n
               <button type="button" className="vsa-btn-primary min-h-11" disabled={!active || isFetching}
                 onClick={() => {
                   if (selectedYear === null || !active) return;
-                  if (enabled) void refetch();
+                  if (enabled) void refetch({ cancelRefetch: false });
                   else setRequest({ year: selectedYear, batchId: active.id });
                 }}>
                 {isFetching ? 'Checking…' : snapshot && enabled ? 'Recheck coverage' : 'Check coverage'}

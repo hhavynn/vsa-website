@@ -232,7 +232,7 @@ export default function AdminResources() {
 
   const refreshResources = async () => {
     await queryClient.invalidateQueries({ queryKey: RESOURCE_LINKS_QUERY_KEY });
-    await refetch();
+    await refetch({ cancelRefetch: false });
   };
 
   const handleSubmit = async (event: FormEvent) => {

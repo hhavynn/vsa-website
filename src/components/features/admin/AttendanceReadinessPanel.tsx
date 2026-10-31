@@ -94,7 +94,7 @@ export function AttendanceReadinessPanel({ selectedYear }: { selectedYear: numbe
             <input type="checkbox" checked={qualifyingOnly} onChange={(event) => setQualifyingOnly(event.target.checked)} />
             Point-earning events only
           </label>
-          <button type="button" className={btn} onClick={() => readiness.refetch()} disabled={readiness.isFetching}>
+          <button type="button" className={btn} onClick={() => readiness.refetch({ cancelRefetch: false })} disabled={readiness.isFetching}>
             {readiness.isFetching ? 'Checking…' : 'Check again'}
           </button>
         </div>

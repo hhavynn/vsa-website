@@ -51,7 +51,7 @@ export function MemberIdentityEmails({ memberId, contactEmail }: { memberId: str
       {isLoading && <p className="text-[11px] text-text-muted">Loading…</p>}
       {error ? (
         <p role="alert" className="text-[11px] text-red-700 dark:text-red-400">
-          Could not load the emails. <button type="button" className="underline" onClick={() => refetch()}>Retry</button>
+          Could not load the emails. <button type="button" className="underline" onClick={() => refetch({ cancelRefetch: false })}>Retry</button>
         </p>
       ) : null}
       {data && data.length === 0 && <p className="text-[11px] text-text-muted">No confirmed emails yet.</p>}

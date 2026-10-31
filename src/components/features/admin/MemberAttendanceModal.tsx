@@ -102,7 +102,7 @@ export function MemberAttendanceModal({
           <Button
             variant="outline"
             className="ml-2"
-            onClick={() => history.refetch()}
+            onClick={() => history.refetch({ cancelRefetch: false })}
           >
             Retry
           </Button>
@@ -130,7 +130,7 @@ export function MemberAttendanceModal({
                 <Button
                   variant="outline"
                   className="ml-2"
-                  onClick={() => events.refetch()}
+                  onClick={() => events.refetch({ cancelRefetch: false })}
                 >
                   Retry events
                 </Button>

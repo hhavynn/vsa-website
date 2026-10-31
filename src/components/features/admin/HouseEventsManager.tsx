@@ -444,7 +444,7 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
         today={today}
         loading={eventsLoading || profilesLoading}
         error={eventsError || !!profilesError}
-        onRetry={() => { void refetch(); void refetchProfiles(); }}
+        onRetry={() => { void refetch({ cancelRefetch: false }); void refetchProfiles({ cancelRefetch: false }); }}
         truncated={events.length >= ADMIN_HOUSE_EVENT_LIMIT}
       />
       <form ref={formRef} onSubmit={handleSubmit} aria-label="House event form" className="scrapbook-paper p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
@@ -621,7 +621,7 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
         isLoading={eventsLoading}
         isError={eventsError}
         truncated={events.length >= ADMIN_HOUSE_EVENT_LIMIT}
-        onRetry={() => refetch()}
+        onRetry={() => refetch({ cancelRefetch: false })}
         onEdit={editEvent}
         onDuplicate={duplicateEvent}
         onDelete={setDeletingEvent}

@@ -509,8 +509,8 @@ export default function AdminEvents() {
         toast.success('Event created');
       }
       setNewEvent(EMPTY_EVENT); setNewExternal(EMPTY_EXTERNAL_DETAILS); setImageFile(null); setImagePreview(null); setDuplicatedFrom(null);
-      refreshTerms();
-      refreshEvents(); setActiveTab('manage');
+      refreshTerms({ cancelRefetch: false });
+      refreshEvents({ cancelRefetch: false }); setActiveTab('manage');
     } catch (err) {
       console.error(err); toast.error('Failed to create event');
     } finally { setUploading(false); }
@@ -547,7 +547,7 @@ export default function AdminEvents() {
     try {
       queryClient.invalidateQueries({ queryKey: ['external-events'] });
       queryClient.invalidateQueries({ queryKey: ['admin-external-events'] });
-      refreshEvents();
+      refreshEvents({ cancelRefetch: false });
       if (selectedEvent?.id === event.id) setSelectedEvent(null);
     } catch (refreshErr) {
       // The delete already happened; a refresh hiccup must not read as a failed delete.
@@ -615,7 +615,7 @@ export default function AdminEvents() {
     if (outcome.tone === 'success') toast.success(outcome.headline);
     else toast.error(outcome.headline);
     selection.clear();
-    refreshEvents();
+    refreshEvents({ cancelRefetch: false });
   }
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -698,8 +698,8 @@ export default function AdminEvents() {
       setEditImageFile(null); setEditImagePreview(null); setSelectedEvent(null);
       setSelectedExternal(EMPTY_EXTERNAL_DETAILS); setSelectedExternalBaseline(EMPTY_EXTERNAL_DETAILS);
       setSelectedEventOriginalImageUrl(null); setSelectedEventOriginalThumbnailUrl(null); setSelectedEventOriginalPoints(0);
-      refreshTerms();
-      refreshEvents();
+      refreshTerms({ cancelRefetch: false });
+      refreshEvents({ cancelRefetch: false });
     } catch (err) {
       console.error(err); toast.error('Failed to update event');
     } finally { setEditUploading(false); }

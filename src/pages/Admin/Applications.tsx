@@ -217,7 +217,7 @@ export default function AdminApplications() {
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ADMIN_APPLICATION_LINKS_QUERY_KEY });
     await queryClient.invalidateQueries({ queryKey: PUBLIC_APPLICATION_LINKS_QUERY_KEY });
-    await refetch();
+    await refetch({ cancelRefetch: false });
   };
 
   const api = useAdminForm({

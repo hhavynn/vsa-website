@@ -59,7 +59,7 @@ export function HousePointsCheckPanel({ selectedYear }: { selectedYear: number |
           </div>
           <button
             type="button"
-            onClick={() => check.refetch()}
+            onClick={() => check.refetch({ cancelRefetch: false })}
             disabled={check.isFetching}
             className="rounded border bg-transparent px-3 py-1.5 text-xs font-semibold hover:bg-[var(--color-surface2)] disabled:opacity-50 border-[var(--color-border)] text-text-primary"
           >

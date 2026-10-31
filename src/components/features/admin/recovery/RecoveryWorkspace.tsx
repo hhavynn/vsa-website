@@ -400,7 +400,7 @@ export function RecoveryWorkspace() {
                 {key === 'reconcile' ? 'Reconcile' : 'Recovery history'}
               </button>
             ))}
-            <button type="button" className={smallBtn} onClick={() => { void records.refetch(); void actions.refetch(); refetchLookups(); }}>
+            <button type="button" className={smallBtn} onClick={() => { void records.refetch({ cancelRefetch: false }); void actions.refetch({ cancelRefetch: false }); refetchLookups(); }}>
               Refresh
             </button>
           </div>

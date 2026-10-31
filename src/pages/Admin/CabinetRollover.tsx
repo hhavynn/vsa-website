@@ -548,7 +548,7 @@ export default function AdminCabinetRollover() {
     if (!cycle || !cabinetYear) return;
     return run(async () => {
       await cabinetYearsRepository.setActiveYear(cabinetYear.id);
-      await refreshCabinetYears();
+      await refreshCabinetYears({ cancelRefetch: false });
       invalidatePublicCabinet();
       toast.success(`${cabinetYear.label} is now the active Cabinet.`);
       setActivateConfirmed(false);

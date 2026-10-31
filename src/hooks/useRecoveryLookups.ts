@@ -83,11 +83,11 @@ export function useRecoveryLookups(findings: readonly RecoveryFinding[], eventId
   );
 
   const refetch = () => {
-    if (identity) void aliases.refetch();
-    void byIds.refetch();
-    void bySurname.refetch();
-    void byEmail.refetch();
-    if (realEvent) void attended.refetch();
+    if (identity) void aliases.refetch({ cancelRefetch: false });
+    void byIds.refetch({ cancelRefetch: false });
+    void bySurname.refetch({ cancelRefetch: false });
+    void byEmail.refetch({ cancelRefetch: false });
+    if (realEvent) void attended.refetch({ cancelRefetch: false });
   };
 
   return { lookup, loading: enabled && !ready && error == null, error, refetch };

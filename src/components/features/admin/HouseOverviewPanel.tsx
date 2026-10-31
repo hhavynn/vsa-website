@@ -100,7 +100,7 @@ export function HouseOverviewPanel({ selectedYear }: { selectedYear: number | nu
               {yearTerms.map((term) => <option key={term.id} value={term.id}>{term.label}</option>)}
             </select>
           </div>
-          <button type="button" onClick={() => { overview.refetch(); readiness.refetch(); }} disabled={overview.isFetching} className="min-h-[36px] rounded border bg-transparent px-3 py-1 text-xs font-semibold border-[var(--color-border)] text-text-primary hover:bg-[var(--color-surface2)] disabled:opacity-50">
+          <button type="button" onClick={() => { overview.refetch({ cancelRefetch: false }); readiness.refetch({ cancelRefetch: false }); }} disabled={overview.isFetching} className="min-h-[36px] rounded border bg-transparent px-3 py-1 text-xs font-semibold border-[var(--color-border)] text-text-primary hover:bg-[var(--color-surface2)] disabled:opacity-50">
             {overview.isFetching ? 'Refreshing…' : 'Refresh'}
           </button>
         </div>

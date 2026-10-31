@@ -97,7 +97,7 @@ export function HouseParentLinks({ selectedYear }: { selectedYear: number | null
           ) : directoryError ? (
             <div role="alert" className="mt-3 text-sm text-red-700 dark:text-red-400">
               Member directory unavailable. Link status is unknown; changes are disabled until a successful retry.
-              <button type="button" className="ml-2 underline" onClick={() => void retryDirectory()}>Retry directory</button>
+              <button type="button" className="ml-2 underline" onClick={() => void retryDirectory({ cancelRefetch: false })}>Retry directory</button>
             </div>
           ) : (
             <p role="status" className={`mt-3 text-xs font-semibold ${needsReview > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-text-secondary'}`}>

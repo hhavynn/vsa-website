@@ -175,7 +175,7 @@ export function HouseRerunPanel({ batch, drafts, profiles, userId, onSaved, onCl
       const fresh = await housePaymentsRepository.getCycle(cycleId);
       if (fresh.status_version !== current.version) {
         setGenerated(null);
-        await Promise.all([cycleQuery.refetch(), applicantsQuery.refetch()]);
+        await Promise.all([cycleQuery.refetch({ cancelRefetch: false }), applicantsQuery.refetch({ cancelRefetch: false })]);
         toast.error('Payments changed since this preview. Review and generate again; nothing was saved.');
         return;
       }

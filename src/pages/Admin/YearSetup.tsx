@@ -153,7 +153,7 @@ export default function AdminYearSetup() {
       const result = await yearSetupRepository.runSetup(targetYear, options, userId);
       setReport(result.report);
       await loadSnapshot(targetYear);
-      await refreshCabinetYears();
+      await refreshCabinetYears({ cancelRefetch: false });
       queryClient.invalidateQueries({ queryKey: ['cabinet-years'] });
       if (result.report.created > 0) {
         logAdminActivity({
