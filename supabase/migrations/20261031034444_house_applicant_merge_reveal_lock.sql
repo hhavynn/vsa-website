@@ -1,4 +1,5 @@
 -- ─── Member Merge: Reveal Lock and Active Applicant Priority (#697) ───────────
+-- Applied to production 2026-10-30 (schema_migrations version 20261031034444).
 -- Replaces public.smart_merge_members from 20261029065750, which is already live
 -- in production and is not edited. Two corrections:
 --

@@ -77,7 +77,7 @@ set client_min_messages = warning;
 \ir ../../supabase/migrations/20261027120000_house_placement_override_rpc.sql
 \ir ../../supabase/migrations/20261028050216_house_payment_eligibility.sql
 \ir ../../supabase/migrations/20261029065750_house_applicant_member_merge.sql
-\ir ../../supabase/migrations/20261031050000_house_applicant_merge_reveal_lock.sql
+\ir ../../supabase/migrations/20261031034444_house_applicant_merge_reveal_lock.sql
 set client_min_messages = notice;
 
 create function pg_temp.expect_error(statement text, expected_state text, label text) returns void language plpgsql as $$
