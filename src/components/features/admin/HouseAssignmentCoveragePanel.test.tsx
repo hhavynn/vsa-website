@@ -128,3 +128,37 @@ it('retains a published row-only review when the payment roster is not associate
   expect(housePaymentsRepository.listApplicants).not.toHaveBeenCalled();
 });
 
+
+it('puts a blank House row with an active interval in the admin exception list, not Unassigned', async () => {
+  (getCompleteHouseBatchCoverage as jest.Mock).mockResolvedValue([{
+    ...row, house_profile_id: null, source_house: null,
+  }]);
+  (houseMembershipsWriteRepository.listMembershipsForYear as jest.Mock).mockResolvedValue(new Map([[
+    'canonical-one', [{
+      id: 'fictional-membership', house_profile_id: 'hp-one',
+      effective_start_date: '2026-10-01', effective_end_date: null,
+    }],
+  ]]));
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Check coverage' }));
+  expect(await screen.findByText(/Fictional Applicant one · conflicting-membership/)).toBeInTheDocument();
+  expect(screen.getByText(/Roster says no House/)).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Review draft row' })).toHaveAttribute(
+    'href', '/admin/houses?batch=fictional-batch&row=fictional-row',
+  );
+  expect(getCompleteHouseBatchCoverage).toHaveBeenCalledWith('fictional-batch');
+});
+
+it('does not silently accept a blank House when the linked canonical member is missing', async () => {
+  (getCompleteHouseBatchCoverage as jest.Mock).mockResolvedValue([{
+    ...row, member_id: 'fictional-removed', house_profile_id: null, source_house: null,
+  }]);
+  (housePaymentsRepository.listApplicants as jest.Mock).mockResolvedValue([
+    applicant('one', 'fictional-removed'),
+  ]);
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Check coverage' }));
+  expect(await screen.findByText(/Fictional Applicant one · missing-member/)).toBeInTheDocument();
+  expect(screen.getByText(/Canonical member is absent/)).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Review draft row' })).toBeInTheDocument();
+});
