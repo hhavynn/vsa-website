@@ -253,7 +253,7 @@ export const EVIDENCE_SOURCE_KIND: Readonly<Record<string, string>> = {
 
 export function validatePickupBatchLabel(label: string): string {
   const clean = label.trim();
-  if (!clean || clean.length > 200 || /(https?:\/\/|drive\.google|docs\.google)/i.test(clean)) {
+  if (!clean || clean.length > 200 || /(https?:\/\/|drive\.google|docs\.google)/i.test(clean) || clean.includes('$') || /[\u0000-\u001f]/.test(clean)) {
     throw new Error('Batch label must be 1–200 characters and cannot contain URLs or Drive links.');
   }
   // Only deliberately generic labels are appropriate for audit records, never a person's name.
@@ -482,6 +482,17 @@ export function planSqlPreview(plan: BackfillPlan, options?: { batchLabel?: stri
         '      (ace_member_id, source_kind, source_label, raw_value, candidate_academic_year_start, candidate_term, source_confidence, review_status, reviewed_at)',
         `    values (${sqlUuid(u.ace_node_id)}, ${sqlLiteral(sourceKind)}, ${labelSql}, ${sqlLiteral(u.next.pickup_term ?? academicYearLabel(u.next.pickup_academic_year_start))}, ${sqlYear(u.next.pickup_academic_year_start)}, ${sqlTerm(u.next.pickup_term)}, ${sqlLiteral(u.review_sheet_confidence_class)}, 'approved', now())`,
         '    on conflict (ace_member_id, source_kind, source_label, raw_value) do nothing;',
+        // ON CONFLICT alone is unsafe: an existing pending/rejected/superseded
+        // row cannot be used as proof of this reviewed change.
+        '    if not exists (select 1 from public.ace_member_pickup_evidence',
+        `      where ace_member_id = ${sqlUuid(u.ace_node_id)} and source_kind = ${sqlLiteral(sourceKind)}`,
+        `        and source_label = ${labelSql} and raw_value = ${sqlLiteral(u.next.pickup_term ?? academicYearLabel(u.next.pickup_academic_year_start))}`,
+        `        and candidate_academic_year_start = ${sqlYear(u.next.pickup_academic_year_start)}`,
+        `        and candidate_term is not distinct from ${sqlTerm(u.next.pickup_term)}`,
+        `        and source_confidence is not distinct from ${sqlLiteral(u.review_sheet_confidence_class)}`,
+        "        and review_status = 'approved' and reviewed_at is not null) then",
+        "      raise exception 'ACE pickup evidence conflict: reviewed evidence is missing or not approved. Use a fresh batch label.';",
+        '    end if;',
         '  end if;',
       ] : []),
       'end $$;'
