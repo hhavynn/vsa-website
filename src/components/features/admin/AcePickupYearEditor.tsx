@@ -14,6 +14,9 @@ import { pickupChangeWarnings, type YearFlag } from '../../../lib/aceYearReview'
 
 type Pickup = { academicYearStart: number | null; term: string | null };
 type Confirmation = { next: Pickup; sourceKind: AcePickupCorrectionSourceKind; evidenceId: string | null };
+type RefreshGate =
+  | { kind: 'committed'; nodeId: string; next: Pickup; evidenceId: string | null }
+  | { kind: 'conflict'; nodeId: string; expected: Pickup };
 
 const sourceLabels: Record<AcePickupCorrectionSourceKind, string> = {
   official_pairing: 'Official pairing',
@@ -83,6 +86,9 @@ export function AcePickupYearEditor({
   const [confirm, setConfirm] = useState<Confirmation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  // A committed write is never replayed while the displayed node/evidence is stale.
+  // An optimistic CAS conflict likewise needs a fresh snapshot before retrying.
+  const [refreshGate, setRefreshGate] = useState<RefreshGate | null>(null);
   const {
     register, handleSubmit, setValue, reset, watch, formState: { errors },
   } = useForm<AcePickupYearFormData>({ resolver: zodResolver(acePickupYearSchema), defaultValues: asForm(member) });
@@ -111,6 +117,19 @@ export function AcePickupYearEditor({
     : null;
   const current = approvedOf(member);
   const selectedEvidence = evidence.find(e => e.id === evidenceId) ?? null;
+  useEffect(() => {
+    if (!refreshGate || refreshGate.nodeId !== member.id) return;
+    const reviewed = refreshGate.kind === 'committed'
+      && (!refreshGate.evidenceId
+        || evidence.some(row => row.id === refreshGate.evidenceId && row.review_status === 'approved'));
+    const verified = refreshGate.kind === 'conflict'
+      ? !same(current, refreshGate.expected)
+      : same(current, refreshGate.next) && reviewed;
+    if (verified) {
+      setRefreshGate(null);
+      setError(null);
+    }
+  }, [member.id, member.pickup_academic_year_start, member.pickup_term, evidence, refreshGate]);
   const consistentEvidence = selectedEvidence
     ? next?.academicYearStart === selectedEvidence.candidate_academic_year_start
       && next?.term === selectedEvidence.candidate_term
@@ -122,7 +141,8 @@ export function AcePickupYearEditor({
   }, big, littles) : [];
   // A pending candidate can still require approval when its value matches the approved node.
   const approvingPendingEvidence = selectedEvidence?.review_status === 'pending' && consistentEvidence;
-  const eligible = ready && !!next && consistentEvidence && (!same(next, current) || approvingPendingEvidence);
+  const eligible = ready && !refreshGate && !!next && consistentEvidence
+    && (!same(next, current) || approvingPendingEvidence);
 
   const queueConfirmation = (data: AcePickupYearFormData) => {
     const parsedYear = parsePickupValue(data.year);
@@ -154,6 +174,9 @@ export function AcePickupYearEditor({
 
   const applyCorrection = async () => {
     if (!confirm) return;
+    if (!ready || refreshGate) {
+      throw new Error('Refresh the approved pickup year before attempting another correction.');
+    }
     let changed = false;
     try {
       const result = await aceFamiliesRepository.correctPickupYear({
@@ -165,10 +188,14 @@ export function AcePickupYearEditor({
       const message = toUserMessage(err, 'Unable to save pickup year. Review the source and try again.');
       setError(message);
       if (err instanceof DatabaseError && err.code === 'P0001') {
-        try { await onConflict(); } catch { /* Conflict still requires a manual refresh; never retry a stale write. */ }
+        setRefreshGate({ kind: 'conflict', nodeId: member.id, expected: current });
+        try { await onConflict(); } catch { /* Stay blocked until a fresh changed snapshot is visible. */ }
       }
       throw new Error(message);
     }
+    setRefreshGate({
+      kind: 'committed', nodeId: member.id, next: confirm.next, evidenceId: confirm.evidenceId,
+    });
     setError(null);
     setSuccess(changed
       ? 'Pickup year saved and audited. Only this node was changed.'
@@ -182,7 +209,7 @@ export function AcePickupYearEditor({
   };
 
   const unknown = () => {
-    if (!ready || current.academicYearStart === null) return;
+    if (!ready || refreshGate || current.academicYearStart === null) return;
     setError(null);
     setConfirm({ next: { academicYearStart: null, term: null }, sourceKind, evidenceId: null });
   };
@@ -212,6 +239,13 @@ export function AcePickupYearEditor({
               Littles: {littles.length ? littles.map(child => child.name + ' (' + describe(approvedOf(child)) + ')').join('; ') : 'None recorded'}
             </p>
           </div>
+          {refreshGate && (
+            <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+              {refreshGate.kind === 'committed'
+                ? 'The correction was submitted. Editing is blocked until the new approved year and evidence are confirmed by a fresh read. Reload if the refresh failed.'
+                : 'Another admin changed this pickup year. Editing is blocked until the latest approved value is loaded. Reload if it does not update.'}
+            </p>
+          )}
           {!ready ? (
             <p role="alert" className="text-sm text-red-600 dark:text-red-400">
               Private year evidence is unavailable or still loading. Corrections are disabled until the family review is ready.
@@ -262,7 +296,7 @@ export function AcePickupYearEditor({
                 {!consistentEvidence && <p role="alert" className="text-xs text-red-600">Selected evidence no longer matches this proposed year/term. Choose the source again or use a reviewed admin entry.</p>}
                 <div className="flex flex-wrap gap-2">
                   <button type="submit" className="vsa-btn-primary min-h-11 text-sm" disabled={!eligible}>Review and save year</button>
-                  <button type="button" className="vsa-btn-secondary min-h-11 text-sm" disabled={current.academicYearStart === null}
+                  <button type="button" className="vsa-btn-secondary min-h-11 text-sm" disabled={!!refreshGate || current.academicYearStart === null}
                     onClick={unknown}>Set to Unknown…</button>
                   <button type="button" className="vsa-btn-secondary min-h-11 text-sm"
                     onClick={() => { reset(asForm(member)); setEvidenceId(null); setError(null); setSuccess(null); }}>Discard draft</button>
