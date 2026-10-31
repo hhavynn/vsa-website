@@ -119,3 +119,9 @@ Persisting any approved year needs #669's `pickup_term` and
 `pickup_academic_year_start` on `ace_family_members` and in the published view.
 The plan format here targets exactly those two columns. Until then the review
 can proceed, and `plan` runs as a dry run against a snapshot without them.
+
+## Future approved-year coverage audit (#675)
+
+**Not executed here.** This report records the historical 2026-10-27 candidate reconciliation, not fresh approved values from the live #669 columns. To measure actual public-tree coverage, use the read-only `npm run ace:years -- coverage ...` command described in [ace-pickup-years.md](ace-pickup-years.md). It emits aggregate-only per-source and per-public-family counts plus overall unknowns. Do not replace old candidate counts with unverified live numbers.
+
+Owner must reconcile complete published view node counts, archived families, year-only values and read-error status; run the pre/post [shape-preservation query](../scripts/sql/ace-year-only-hash.sql) for any approved #670 correction batch; and record verifier and human approval. Only an owner-reviewed, non-identifying counts table belongs in this public file.

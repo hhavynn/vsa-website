@@ -3,6 +3,8 @@ import {
   MIN_PICKUP_ACADEMIC_YEAR,
   academicYearStartForSeason,
   formatPickupAcademicYear,
+  formatPickupAcademicYearShort,
+  describePickup,
   formatPickupLabel,
   isTermConsistentWithYear,
   parsePickupValue,
@@ -201,5 +203,26 @@ describe('pickupYearOf', () => {
     expect(formatPickupLabel({ status: 'verified', academicYearStart: 2023, term: 'SP24' })).toBe('SP24');
     expect(formatPickupLabel({ status: 'verified', academicYearStart: 2021, term: null })).toBe('2021–22');
     expect(formatPickupLabel({ status: 'unknown' })).toBeNull();
+  });
+});
+
+
+describe('year rail pickup descriptions (#672)', () => {
+  it.each([
+    [2023, 'FA23', 'Picked up: Fall 2023 · 2023–24'],
+    [2023, 'WI24', 'Picked up: Winter 2024 · 2023–24'],
+    [2023, 'SP24', 'Picked up: Spring 2024 · 2023–24'],
+    [1999, 'SP00', 'Picked up: Spring 2000 · 1999–00'],
+  ])('describes approved year %i and term %s without guessing', (year, term, expected) => {
+    expect(describePickup({ status: 'verified', academicYearStart: year, term })).toBe(expected);
+  });
+  it('labels approved year without term and unknown without inventing a date', () => {
+    expect(describePickup({ status: 'verified', academicYearStart: 2023, term: null }))
+      .toBe('Picked up: 2023–24 (term unknown)');
+    expect(describePickup({ status: 'unknown' })).toBe('Pickup year unverified');
+  });
+  it('formats narrow labels including the 2099 century boundary', () => {
+    expect(formatPickupAcademicYearShort(2023)).toBe('23–24');
+    expect(formatPickupAcademicYearShort(2099)).toBe('99–00');
   });
 });

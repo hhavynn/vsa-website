@@ -1,20 +1,13 @@
 import React, { useMemo } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { FamAccent } from './FamCover';
-import type { AcePickupYear } from '../../../lib/acePickupYear';
+import { cn } from '../../../lib/utils';
+import { bandRect, edgeGeometry, layoutTree, treeMetrics, uniqueTreeNodes } from '../../../lib/aceTreeLayout';
+import type { LayoutResult, TreeNode } from '../../../lib/aceTreeLayout';
+import { formatPickupAcademicYear } from '../../../lib/acePickupYear';
 
-export interface TreeNode {
-  id: string;
-  initial: string;
-  label: string;
-  role: string;
-  /** Display label of the approved pickup year (FA23 or 2021–22). */
-  cohort?: string | null;
-  /** Approved pickup year; unknown unless an admin reviewed it. Not generation depth. */
-  pickup?: AcePickupYear;
-  parent?: string | null;
-  photoUrl?: string | null;
-}
+export { layoutTree } from '../../../lib/aceTreeLayout';
+export type { TreeNode } from '../../../lib/aceTreeLayout';
 
 interface AccentPalette {
   fill: string;
@@ -39,59 +32,6 @@ const ACCENTS: Record<'light' | 'dark', Record<FamAccent, AccentPalette>> = {
     gold:  { fill: '#c9b6f0', dark: '#4f3a8a', ring: 'rgba(201,182,240,0.22)', edge: '#3b4a6e', label: '#f4f0fc', sub: '#c6cee6', node2bg: '#1b2843' },
   },
 };
-
-interface LayoutResult {
-  positions: Record<string, { x: number; y: number }>;
-  totalWidth: number;
-  depthMax: number;
-}
-
-export function layoutTree(nodes: TreeNode[]): LayoutResult {
-  const byId: Record<string, TreeNode> = {};
-  const children: Record<string, string[]> = {};
-  nodes.forEach((n) => {
-    byId[n.id] = n;
-    children[n.id] = [];
-  });
-  nodes.forEach((n) => {
-    if (n.parent && children[n.parent]) children[n.parent].push(n.id);
-  });
-
-  // A Big who isn't in the tree (e.g. unpublished) leaves their Little as a
-  // root; otherwise that Little would never be placed.
-  const roots = nodes.filter((n) => !n.parent || !byId[n.parent]).map((n) => n.id);
-
-  const widths: Record<string, number> = {};
-  function computeWidth(id: string): number {
-    const kids = children[id];
-    if (!kids.length) return (widths[id] = 1);
-    return (widths[id] = kids.reduce((s, k) => s + computeWidth(k), 0));
-  }
-  roots.forEach(computeWidth);
-
-  const positions: Record<string, { x: number; y: number }> = {};
-  let cursor = 0;
-  function place(id: string, depth: number) {
-    const kids = children[id];
-    if (!kids.length) {
-      positions[id] = { x: cursor + 0.5, y: depth };
-      cursor += 1;
-      return;
-    }
-    const startX = cursor;
-    kids.forEach((k) => place(k, depth + 1));
-    const endX = cursor;
-    positions[id] = { x: (startX + endX) / 2, y: depth };
-  }
-  roots.forEach((r) => place(r, 0));
-
-  let depthMax = 0;
-  Object.values(positions).forEach((p) => {
-    if (p.y > depthMax) depthMax = p.y;
-  });
-
-  return { positions, totalWidth: Math.max(cursor, 1), depthMax };
-}
 
 /**
  * Ancestry of `targetId`, family root first and `targetId` last. Each member
@@ -147,24 +87,6 @@ export function lineageTimeline(pathLength: number, reduceMotion = false): Linea
   };
 }
 
-type Point = { x: number; y: number };
-
-function cubicLength(p0: Point, p1: Point, p2: Point, p3: Point): number {
-  const at = (t: number, a: number, b: number, c: number, d: number) => {
-    const u = 1 - t;
-    return u * u * u * a + 3 * u * u * t * b + 3 * u * t * t * c + t * t * t * d;
-  };
-  let length = 0;
-  let prev = p0;
-  for (let i = 1; i <= 24; i++) {
-    const t = i / 24;
-    const next = { x: at(t, p0.x, p1.x, p2.x, p3.x), y: at(t, p0.y, p1.y, p2.y, p3.y) };
-    length += Math.hypot(next.x - prev.x, next.y - prev.y);
-    prev = next;
-  }
-  return length;
-}
-
 const SPARK_LENGTH = 22;
 
 function lineageStyle(vars: Record<string, string>): React.CSSProperties {
@@ -173,6 +95,7 @@ function lineageStyle(vars: Record<string, string>): React.CSSProperties {
 
 interface FamilyTreeProps {
   nodes: TreeNode[];
+  layout?: LayoutResult;
   accent?: FamAccent;
   focusId?: string | null;
   onSelect?: (id: string) => void;
@@ -182,23 +105,25 @@ interface FamilyTreeProps {
 
 export function FamilyTree({
   nodes,
+  layout: layoutProp,
   accent = 'teal',
   focusId,
   onSelect,
   compact = false,
   dark = false,
 }: FamilyTreeProps) {
-  const layout = useMemo(() => layoutTree(nodes), [nodes]);
+  const uniqueNodes = useMemo(() => uniqueTreeNodes(nodes), [nodes]);
+  const layout = useMemo(() => layoutProp ?? layoutTree(uniqueNodes), [layoutProp, uniqueNodes]);
+  const safeNodes = useMemo(
+    () => uniqueNodes.map((node) => ({ ...node, parent: layout.parentById[node.id] ?? null })),
+    [uniqueNodes, layout],
+  );
   const reduceMotion = !!useReducedMotion();
 
-  const unitX = compact ? 96 : 132;
-  const unitY = compact ? 118 : 148;
-  const padX = compact ? 24 : 48;
-  const padY = compact ? 24 : 48;
-  const nodeR = compact ? 22 : 28;
+  const metrics = treeMetrics(compact);
+  const { unitX, unitY, padX, padY, nodeR } = metrics;
 
-  const w = layout.totalWidth * unitX + padX * 2;
-  const h = (layout.depthMax + 1) * unitY + padY * 2;
+  const h = layout.rowCount * unitY + padY * 2;
 
   const A = ACCENTS[dark ? 'dark' : 'light'][accent] ?? ACCENTS.light.teal;
 
@@ -207,27 +132,21 @@ export function FamilyTree({
     return { x: p.x * unitX + padX, y: p.y * unitY + padY };
   };
 
-  const edges: Array<{ id: string; d: string; length: number }> = [];
-  nodes.forEach((n) => {
-    if (!n.parent) return;
-    if (!layout.positions[n.parent]) return;
-    const a = xy(n.parent);
-    const b = xy(n.id);
-    const my = (a.y + b.y) / 2;
-    edges.push({
-      id: `${n.parent}-${n.id}`,
-      d: `M ${a.x} ${a.y + nodeR} C ${a.x} ${my}, ${b.x} ${my}, ${b.x} ${b.y - nodeR}`,
-      length: cubicLength(
-        { x: a.x, y: a.y + nodeR },
-        { x: a.x, y: my },
-        { x: b.x, y: my },
-        { x: b.x, y: b.y - nodeR },
-      ),
-    });
+  const edges: Array<{ id: string; d: string; length: number; upward: boolean; maxX: number }> = [];
+  safeNodes.forEach((n) => {
+    if (!n.parent || !layout.positions[n.parent]) return;
+    const obstacles = safeNodes.filter((other) => other.id !== n.id && other.id !== n.parent)
+      .map((other) => xy(other.id));
+    const geometry = edgeGeometry(xy(n.parent), xy(n.id), nodeR, unitY, obstacles);
+    edges.push({ id: n.parent + '-' + n.id, ...geometry });
   });
+  // Keep detoured connections inside the SVG viewBox even for a single-column
+  // family in compact mode; never clip a lineage trace at the right edge.
+  const w = Math.max(layout.totalWidth * unitX + padX * 2,
+    ...edges.map((edge) => edge.maxX + padX));
   const edgeById = new Map(edges.map((e) => [e.id, e]));
 
-  const lineage = focusId ? lineagePath(nodes, focusId) : [];
+  const lineage = focusId ? lineagePath(safeNodes, focusId) : [];
   const lineageIds = new Set(lineage);
   const lineageEdges = lineage.slice(1).map((id, i) => edgeById.get(`${lineage[i]}-${id}`));
   const lineageEdgeIds = new Set(lineageEdges.map((e) => e?.id));
@@ -259,10 +178,27 @@ export function FamilyTree({
       </defs>
       <rect width={w} height={h} fill={`url(#${patternId})`} opacity="0.7" />
 
+      {layout.mode === 'year' && layout.yearBands.map((band, i) => {
+        const rect = bandRect(band, metrics);
+        return (
+          <rect
+            key={String(band.key)}
+            data-year-band={String(band.key)}
+            className={cn('ace-year-band', i % 2 === 1 && 'is-alt', band.key === 'unknown' && 'is-unknown', !!focusId && layout.bandKeyById[focusId] === band.key && 'is-focus')}
+            x={0}
+            y={rect.top}
+            width={w}
+            height={rect.height}
+            pointerEvents="none"
+          />
+        );
+      })}
+
+
       {edges.map((e) => (
         <path
           key={e.id}
-          className={`ace-tree-edge${lineageEdgeIds.has(e.id) ? ' is-lineage' : ''}`}
+          className={`ace-tree-edge${lineageEdgeIds.has(e.id) ? ' is-lineage' : ''}${e.upward ? ' is-upward' : ''}`}
           d={e.d}
           fill="none"
           stroke={A.edge}
@@ -368,7 +304,7 @@ export function FamilyTree({
         </g>
       )}
 
-      {nodes.map((n) => {
+      {safeNodes.map((n) => {
         const p = xy(n.id);
         const isFocus = focusId === n.id;
         const isOG = n.role && n.role.startsWith('OG');
@@ -383,7 +319,10 @@ export function FamilyTree({
             onClick={() => onSelect && onSelect(n.id)}
             role={onSelect ? 'button' : undefined}
             tabIndex={onSelect ? 0 : undefined}
-            aria-label={onSelect ? `${n.label}, ${n.role || 'Member'}` : undefined}
+            aria-label={onSelect ? `${n.label}, ${n.role || 'Member'}` +
+              (n.pickup?.status === 'verified'
+                ? ', picked up ' + formatPickupAcademicYear(n.pickup.academicYearStart)
+                : layout.mode === 'year' ? ', pickup year unverified' : '') : undefined}
             aria-pressed={onSelect ? isFocus : undefined}
             onKeyDown={onSelect ? (e) => {
               if (e.key !== 'Enter' && e.key !== ' ') return;

@@ -14,6 +14,7 @@ import {
   parseTerm,
   reconcilePickupYears,
   summarize,
+  summarizeYearCoverage,
 } from './aceHistoricalYears';
 import { evidenceFromRepoFamilies, evidenceFromResearchPackage } from './aceHistoricalEvidence';
 
@@ -442,5 +443,93 @@ describe('evidence adapters', () => {
     expect(b.records.find((r) => r.kind === 'master_year_cell')).toMatchObject({ academic_year_start: 2021, ref: 'REEF FAM!E6' });
     expect(() => evidenceFromResearchPackage({ official: [] })).toThrow(/master/);
     expect(evidenceFromResearchPackage(pkg, ['master']).bundle.sources.map((s) => s.source_id)).toEqual(['PKG_MASTER_A']);
+  });
+});
+
+
+describe('aggregate pickup-year coverage, not private evidence (#675)', () => {
+  const publicSnapshot = () => parseLiveSnapshot([
+    { id: 'active-fam', slug: 'active-fictional', name: 'Fictional Active' },
+    { id: 'old-fam', slug: 'dead-fictional', name: 'Fictional Graveyard' },
+  ], [
+    { ...node('root', 'Fictional Root', null, 'active-fam'),
+      pickup_academic_year_start: 2021, pickup_term: 'FA21' },
+    { ...node('child', 'Fictional Child', 'root', 'active-fam'),
+      pickup_academic_year_start: 2023, pickup_term: null },
+    { ...node('other', 'Fictional Other', 'root', 'active-fam'),
+      pickup_academic_year_start: null, pickup_term: null },
+    { ...node('archived', 'Fictional Archived', null, 'old-fam'),
+      pickup_academic_year_start: 2023, pickup_term: 'SP24' },
+    { ...node('bad', 'Fictional Bad', 'archived', 'old-fam'),
+      pickup_academic_year_start: 2021, pickup_term: 'FA23' },
+  ]);
+  const sources = [
+    { file: 'alpha.json', json: {
+      family: 'Fictional Alpha', members: [
+        { name: 'Secret Name Alpha', big: null, added_term: 'FA21' },
+        { name: 'Secret Name Beta', big: 'Secret Name Alpha', added_term: 'SP22' },
+        { name: 'Secret Name Gamma', big: 'Secret Name Alpha', added_term: '2023–24' },
+        { name: 'Secret Name Delta', big: 'Secret Name Alpha', added_term: 'legacy' },
+        { name: 'Secret Name Epsilon', big: 'Secret Name Alpha' },
+        { name: 'Secret Name Zeta', big: 'Secret Name Alpha', added_term: 'SU23' },
+      ],
+    }},
+    { file: 'graveyard.json', json: { family: 'Fictional Graveyard', members: [
+      { name: 'Secret Archived Name', big: null, added_term: 'FA23' },
+    ]}},
+  ];
+
+  it('counts exact terms, year-only, legacy, absent and malformed separately', () => {
+    const result = summarizeYearCoverage(publicSnapshot(), sources);
+    expect(result.source_total).toEqual({
+      files: 2, members: 7, exact: 3, year_only: 1, legacy: 1,
+      absent: 1, needs_review: 1,
+    });
+    expect(result.sources.map((s) => [s.file, s.total, s.exact])).toEqual([
+      ['alpha.json', 6, 2], ['graveyard.json', 1, 1],
+    ]);
+  });
+
+  it('uses only approved public pickup columns and includes archived families', () => {
+    const result = summarizeYearCoverage(publicSnapshot(), sources);
+    expect(result.live_total).toEqual({
+      families: 2, nodes: 5, approved_year: 3, approved_term: 2, unknown: 2,
+    });
+    expect(result.live_families).toEqual([
+      { fam_slug: 'active-fictional', nodes: 3, approved_year: 2, approved_term: 1, unknown: 1 },
+      { fam_slug: 'dead-fictional', nodes: 2, approved_year: 1, approved_term: 1, unknown: 1 },
+    ]);
+    expect(result.live_total.approved_year + result.live_total.unknown)
+      .toBe(result.live_total.nodes);
+  });
+
+  it('requires #669 columns and refuses a misleading empty or incomplete snapshot', () => {
+    expect(() => summarizeYearCoverage(snapshot(BASE), sources)).toThrow(/both #669 approved pickup columns/);
+    const incomplete = publicSnapshot();
+    delete incomplete.nodes[0].pickup_term;
+    expect(() => summarizeYearCoverage(incomplete, sources)).toThrow(/both #669 approved pickup columns/);
+    expect(() => summarizeYearCoverage(publicSnapshot(), [])).toThrow(/source coverage is unknown/);
+  });
+
+  it('never includes person name, member ID, photo, source note, or raw evidence in the report', () => {
+    const report = JSON.stringify(summarizeYearCoverage(publicSnapshot(), sources));
+    for (const privateField of ['Secret Name', 'Fictional Child', 'member_id',
+      'parent_member_id', 'photo_url', 'source_confidence', 'review_note',
+      'added_term', 'source_doc_url', 'live_node_id']) {
+      expect(report).not.toContain(privateField);
+    }
+    expect(report).toContain('dead-fictional');
+  });
+
+  it('refuses duplicated node IDs and invalid reconstruction inputs', () => {
+    const invalid = publicSnapshot();
+    invalid.nodes.push({ ...invalid.nodes[0] });
+    expect(() => summarizeYearCoverage(invalid, sources)).toThrow(/Duplicate live node IDs/);
+    expect(() => summarizeYearCoverage(publicSnapshot(), [
+      sources[0], { ...sources[1], file: 'alpha.json' },
+    ])).toThrow(/distinct safe JSON basenames/);
+    expect(() => summarizeYearCoverage(publicSnapshot(), [
+      { file: 'invalid.json', json: { family: 'Fictional', members: [] } },
+    ])).toThrow(/malformed/);
   });
 });
