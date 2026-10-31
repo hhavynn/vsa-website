@@ -200,3 +200,28 @@ One database transaction locks that node, validates the expected year/term, crea
 Migration `20261031080736_ace_pickup_year_correction.sql` must be applied **after** `20261002040000_admin_activity_log_and_review_marks.sql` and `20261027190000_ace_member_pickup_year.sql`. Owner first confirms both prerequisites exist on staging, then manually applies the correction migration. Never run `supabase db push` or apply production SQL from an agent. If an RPC is absent, the client correction must fail closed; never fall back to the unaudited setter.
 
 Verification: run `bash scripts/test-ace-pickup-year.sh` for the existing rollback suite and new `ace-year-correction.test.sql` section in a disposable local cluster. On authorized staging, validate a conflict between two admin browser tabs, approved and Unknown values, evidence review history, activity entry, and anon/nonadmin EXECUTE denial; compare node identity, Big, children, role, avatar, publication before/after. These hosted checks and production application have **not been performed**.
+
+## Admin pickup-year review queue (#673, read-only frontend foundation)
+
+The ACE admin family editor now checks two private, family-scoped sources: all admin ACE
+nodes for the selected family, and the paginated `ace_member_pickup_evidence` review
+projection. Both must load successfully before the queue shows counts or names. A
+failed evidence read is **unavailable**, not zero conflicts; selecting another family
+changes the admin query key. The private evidence cache is never reused on `/ace`.
+
+A review-only **Needs year review** filter and node-ID-based queue identify missing
+approved years, pending or conflicting dated sources, same-term and reverse-time
+Big/Little dates, gaps of six or more academic years, and duplicate names/member
+links. A year-only source does not fabricate a Fall/Winter/Spring term; past sources
+marked rejected/superseded are not promoted back to approved dates. The queue
+offers direct navigation to the existing ACE node editor, **not** an automatic fix,
+bulk date assignment or lineage change. A clean queue is not proof of historical
+source completeness.
+
+**Incomplete:** the per-node correction form, source approval, explicit overwrite
+and Unknown confirmations, and post-save refresh/last-write conflict interactions
+remain #673 follow-up. The UI must use only
+`aceFamiliesRepository.correctPickupYear` (audited compare-and-swap RPC) when
+those controls are added; never wire the legacy `setPickupYear` to a Save button.
+Live admin/anonymous RLS, migration availability, mobile/keyboard and two-tab
+conflict rehearsal must be independently verified before closing #673.
