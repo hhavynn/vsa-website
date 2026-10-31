@@ -14,7 +14,7 @@ import {
   planExternalSync,
   UVSA_SOCAL_HOST_VALUE,
 } from '../../lib/externalEventLinking';
-import { supabaseMock } from '../../test-utils/supabaseMock';
+import { postgrestError, supabaseMock } from '../../test-utils/supabaseMock';
 
 jest.mock('../../lib/supabase', () => ({
   get supabase() {
@@ -101,6 +101,96 @@ describe('Upcoming Externals source', () => {
     await externalEventsRepository.getEvents({ status: 'upcoming' });
     expect(supabaseMock.queriesFor('external_events')).toHaveLength(1);
     expect(supabaseMock.filtersFor('external_events')).toContainEqual(['status', 'upcoming']);
+  });
+});
+
+describe('external event read paths — public/admin safety (#291)', () => {
+  it('applies public requested filters, bounds and chronological sorting without admin-only columns', async () => {
+    supabaseMock.queueResult('external_events', { data: [{
+      id: 'fictional-public-event', title: 'Fictional UVSA Social',
+      status: 'upcoming', uvsa_school_id: 'fictional-school',
+    }], error: null });
+    const rows = await externalEventsRepository.getEvents({
+      status: 'upcoming', uvsa_school_id: 'fictional-school',
+      is_featured: true, limit: 2,
+    });
+    expect(rows).toHaveLength(1);
+    const calls = supabaseMock.queriesFor('external_events')[0].calls;
+    expect(calls).toContainEqual({ method: 'eq', args: ['status', 'upcoming'] });
+    expect(calls).toContainEqual({ method: 'eq', args: ['uvsa_school_id', 'fictional-school'] });
+    expect(calls).toContainEqual({ method: 'eq', args: ['is_featured', true] });
+    expect(calls).toContainEqual({ method: 'limit', args: [2] });
+    expect(calls).toContainEqual({ method: 'order', args: ['date', { ascending: true, nullsFirst: false }] });
+    const select = String(calls.find((call) => call.method === 'select')?.args[0]);
+    expect(select).toContain('uvsa_school:uvsa_schools(');
+    expect(select).toContain('source_event:events(');
+    expect(select).not.toContain('source_notes');
+    expect(select).not.toContain('confidence_level');
+    expect(select).not.toContain('uvsa_schools(*)');
+  });
+
+  it('returns empty public results without inventing a status, but rejects a denied read', async () => {
+    supabaseMock.queueResult('external_events', { data: null, error: null });
+    await expect(externalEventsRepository.getEvents()).resolves.toEqual([]);
+    const [query] = supabaseMock.queriesFor('external_events');
+    expect(query.calls.some((call) => call.method === 'eq' && call.args[0] === 'status')).toBe(false);
+
+    supabaseMock.queueResult('external_events', {
+      data: null, error: postgrestError('public event read denied', '42501'),
+    });
+    await expect(externalEventsRepository.getEvents({ status: 'upcoming' }))
+      .rejects.toMatchObject({ name: 'DatabaseError', message: 'Insufficient permissions' });
+  });
+
+  it('reads a published event by ID through the same narrow public projection, with missing/error behavior', async () => {
+    supabaseMock.queueResult('external_events', {
+      data: { id: 'synthetic-event', title: 'Fictional Gathering' }, error: null,
+    });
+    await expect(externalEventsRepository.getEventById('synthetic-event'))
+      .resolves.toMatchObject({ id: 'synthetic-event' });
+    const query = supabaseMock.queriesFor('external_events')[0];
+    expect(query.calls).toContainEqual({ method: 'eq', args: ['id', 'synthetic-event'] });
+    const projection = String(query.calls.find((call) => call.method === 'select')?.args[0]);
+    expect(projection).toContain('status');
+    expect(projection).not.toContain('source_notes');
+
+    supabaseMock.queueResult('external_events', { data: null, error: null });
+    await expect(externalEventsRepository.getEventById('missing-event'))
+      .rejects.toThrow('Failed to fetch external event: External event not found');
+    supabaseMock.queueResult('external_events', {
+      data: null, error: postgrestError('permission denied', '42501'),
+    });
+    await expect(externalEventsRepository.getEventById('private-event'))
+      .rejects.toMatchObject({ name: 'DatabaseError', message: 'Insufficient permissions' });
+  });
+
+  it('keeps the full admin projection and distinguishes it from public reads', async () => {
+    const admin = { id: 'synthetic-draft', status: 'draft', source_notes: 'private synthetic planning note' };
+    supabaseMock.queueResult('external_events', { data: [admin], error: null });
+    await expect(externalEventsRepository.getAllEvents()).resolves.toEqual([admin]);
+    const calls = supabaseMock.queriesFor('external_events')[0].calls;
+    expect(String(calls.find((call) => call.method === 'select')?.args[0]))
+      .toContain('*, uvsa_school:uvsa_schools(*)');
+
+    supabaseMock.queueResult('external_events', { data: null, error: null });
+    await expect(externalEventsRepository.getAllEvents()).resolves.toEqual([]);
+    supabaseMock.queueResult('external_events', {
+      data: null, error: postgrestError('admin event read denied', '42501'),
+    });
+    await expect(externalEventsRepository.getAllEvents())
+      .rejects.toMatchObject({ name: 'DatabaseError', message: 'Insufficient permissions' });
+  });
+
+  it('does not invent linked-event mappings on empty results or hidden-source errors', async () => {
+    supabaseMock.queueResult('external_events', { data: null, error: null });
+    await expect(externalEventsRepository.getListingsBySourceEventIds(['synthetic-event']))
+      .resolves.toEqual(new Map());
+
+    supabaseMock.queueResult('external_events', {
+      data: null, error: postgrestError('linked event lookup denied', '42501'),
+    });
+    await expect(externalEventsRepository.getListingsBySourceEventIds(['synthetic-event']))
+      .rejects.toMatchObject({ name: 'DatabaseError', message: 'Insufficient permissions' });
   });
 });
 
