@@ -57,6 +57,26 @@ function evidenceConflictsWithApproved(
   return Boolean(evidence.candidate_term && approved.term && evidence.candidate_term !== approved.term);
 }
 
+function activeEvidenceCandidatesConflict(rows: readonly AcePickupEvidenceRow[]): boolean {
+  const active = rows.filter(row =>
+    row.review_status === 'pending' || row.review_status === 'approved'
+  );
+  for (let i = 0; i < active.length; i += 1) {
+    for (let j = i + 1; j < active.length; j += 1) {
+      const left = active[i];
+      const right = active[j];
+      if (left.candidate_academic_year_start == null || right.candidate_academic_year_start == null) {
+        continue;
+      }
+      if (left.candidate_academic_year_start !== right.candidate_academic_year_start) return true;
+      if (left.candidate_term && right.candidate_term && left.candidate_term !== right.candidate_term) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 /**
  * Admin-only advisory data. Never infer a year from lineage or pending evidence.
  * The approved node fields are the sole source of verified pickup placement.
@@ -96,7 +116,7 @@ export function reviewFamilyYears(
     if (ownEvidence.some(row => row.review_status === 'pending')) {
       addFlag(flags, 'pending_evidence');
     }
-    if (ownEvidence.some(row => evidenceConflictsWithApproved(node, row))) {
+    if (ownEvidence.some(row => evidenceConflictsWithApproved(node, row)) || activeEvidenceCandidatesConflict(ownEvidence)) {
       addFlag(flags, 'evidence_conflict');
     }
     if (parent) chronologyFlags(parent, node).forEach(flag => addFlag(flags, flag));
