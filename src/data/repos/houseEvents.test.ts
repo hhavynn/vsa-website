@@ -198,6 +198,104 @@ describe('HouseEventsRepository — behaviour', () => {
       Object.keys(host).sort().join(',') === 'accent_color,display_name,house,house_key,id,is_active')).toBe(true);
   });
 
+  it('does not advertise a published event as belonging to a hidden primary House (#640)', async () => {
+    const row = {
+      id: 'published-event-hidden-house', house_profile_id: 'hidden-profile',
+      is_published: true, houses: [{ house_page_asset_id: 'hidden-profile' }],
+    };
+    for (const method of ['getPublicUpcomingForHouse', 'getPublicPastForHouse'] as const) {
+      supabaseMock.reset();
+      supabaseMock.queueResult('house_event_houses', {
+        data: [{ house_event_id: row.id }], error: null,
+      });
+      supabaseMock.queueResult('house_events', { data: [row], error: null });
+      supabaseMock.queueResult('published_house_page_assets', {
+        data: [], error: null,
+      });
+      await expect(houseEventsRepository[method]('hidden-profile', TODAY)).resolves.toEqual([]);
+    }
+    supabaseMock.reset();
+    supabaseMock.queueResult('house_events', { data: row, error: null });
+    supabaseMock.queueResult('published_house_page_assets', { data: [], error: null });
+    await expect(houseEventsRepository.getPublicEventForHouse(row.id, 'hidden-profile')).resolves.toBeNull();
+  });
+
+  it('retains a published primary House for a legacy event without an association row (#640)', async () => {
+    supabaseMock.queueResult('house_events', { data: {
+      id: 'legacy-event', house_profile_id: HOUSE_ID,
+      is_published: true, houses: [],
+    }, error: null });
+    supabaseMock.queueResult('published_house_page_assets', { data: [{
+      id: HOUSE_ID, house: 'fictional', house_key: 'fictional',
+      display_name: 'Fictional House', accent_color: null, is_active: true,
+    }], error: null });
+    const event = await houseEventsRepository.getPublicEventForHouse('legacy-event', HOUSE_ID);
+    expect(event).toMatchObject({
+      id: 'legacy-event', houses: [{ id: HOUSE_ID, display_name: 'Fictional House' }],
+    });
+    const ids = supabaseMock.queriesFor('published_house_page_assets')
+      .flatMap((query) => query.calls.filter((call) => call.method === 'in'));
+    expect(ids).toContainEqual({ method: 'in', args: ['id', [HOUSE_ID]] });
+  });
+
+  it('never forwards unexpected private event or nested fields to public consumers (#640)', async () => {
+    const eventRow = {
+      id: 'synthetic-ev', house_profile_id: HOUSE_ID,
+      academic_year_start: 2026, academic_year_end: 2027,
+      title: 'Fictional House Social', slug: 'fictional-house-social',
+      description: 'Public-facing description', event_date: TODAY,
+      start_time: '18:00', end_time: '19:00', location: 'Campus',
+      image_url: null, image_thumbnail_url: null,
+      gallery_url: null, recap_url: null, rsvp_url: null,
+      google_calendar_enabled: true, is_published: true,
+      created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z',
+      houses: [{ house_page_asset_id: HOUSE_ID, internal_notes: 'private association note' }],
+      internal_notes: 'private event note',
+      client_request_id: 'private synthetic request token',
+      house: { id: HOUSE_ID, internal_notes: 'private nested profile' },
+      score_audit: { total_points: 99 },
+    };
+    supabaseMock.queueResult('house_events', { data: [eventRow], error: null });
+    supabaseMock.queueResult('published_house_page_assets', { data: [
+      { id: HOUSE_ID, house: 'fictional', house_key: 'fictional',
+        display_name: 'Fictional House', accent_color: '#000000',
+        is_active: true, internal_notes: 'private profile note' },
+    ], error: null });
+
+    const [event] = await houseEventsRepository.getPublicUpcomingPreview(TODAY, YEAR);
+    expect(Object.keys(event).sort()).toEqual([
+      'id', 'house_profile_id', 'academic_year_start', 'academic_year_end',
+      'title', 'slug', 'description', 'event_date', 'start_time', 'end_time',
+      'location', 'image_url', 'image_thumbnail_url', 'gallery_url', 'recap_url',
+      'rsvp_url', 'google_calendar_enabled', 'is_published', 'created_at',
+      'updated_at', 'houses',
+    ].sort());
+    expect(event).toMatchObject({
+      id: 'synthetic-ev', title: 'Fictional House Social', location: 'Campus',
+      houses: [{ id: HOUSE_ID, display_name: 'Fictional House' }],
+    });
+    const resultJson = JSON.stringify(event);
+    for (const secret of ['private event note', 'private profile note',
+      'private association note', 'private synthetic request token',
+      'score_audit', 'private nested profile']) {
+      expect(resultJson).not.toContain(secret);
+    }
+    expect(event.houses?.[0]).toEqual({
+      id: HOUSE_ID, house: 'fictional', house_key: 'fictional',
+      display_name: 'Fictional House', accent_color: '#000000', is_active: true,
+    });
+  });
+
+  it('fails closed if a supposedly public event response includes an unpublished row (#640)', async () => {
+    supabaseMock.queueResult('house_events', {
+      data: [{ id: 'fictional-hidden', house_profile_id: HOUSE_ID,
+        is_published: false, houses: [] }],
+      error: null,
+    });
+    await expect(houseEventsRepository.getPublicUpcomingPreview(TODAY, YEAR))
+      .rejects.toThrow(/Unexpected unpublished House event/);
+  });
+
   it('does not disguise published House-profile lookup failure as an unhosted event', async () => {
     supabaseMock.queueResult('house_events', {
       data: [{ id: 'event-1', house_profile_id: HOUSE_ID, is_published: true, houses: [{ house_page_asset_id: HOUSE_ID }] }],
