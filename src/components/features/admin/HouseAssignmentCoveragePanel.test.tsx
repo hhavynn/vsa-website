@@ -88,6 +88,21 @@ it('shows an eligible applicant missing from a batch with a payment-roster revie
     .toHaveAttribute('href', '/admin/houses?tab=payments');
 });
 
+it('shows duplicate applicant batch rows as review exceptions, not successful assignments', async () => {
+  (getCompleteHouseBatchCoverage as jest.Mock).mockResolvedValue([
+    row,
+    { ...row, id: 'fictional-duplicate-row', source_order: 1, house_profile_id: 'hp-two' },
+  ]);
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Check coverage' }));
+  expect(await screen.findByText(/Fictional Applicant one · duplicate-batch-row/)).toBeInTheDocument();
+  expect(screen.getByText('Duplicate batch rows')).toBeInTheDocument();
+  expect(screen.getByText('Needs review')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Review draft row' })).toHaveAttribute(
+    'href', '/admin/houses?batch=fictional-batch&row=fictional-row',
+  );
+});
+
 it('reports a failed applicant read as unknown, never a zero-success summary', async () => {
   (housePaymentsRepository.listApplicants as jest.Mock).mockRejectedValue(new Error('synthetic outage'));
   mount();
