@@ -250,8 +250,8 @@ export function HouseDetail() {
         {isDegraded && <DegradedModeBanner sourceName="house" />}
         <div className="vsa-container py-24 text-center">
           <span className="scrapbook-sticker scrapbook-sticker-gold mb-6">Temporarily unavailable</span>
-          <h1 className="font-serif text-[42px] leading-tight" style={{ color: 'var(--color-text)' }}>House details are temporarily unavailable</h1>
-          <p className="mx-auto mt-4 max-w-md font-sans text-[15px] leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+          <h1 className="font-serif text-[42px] leading-tight text-text-primary">House details are temporarily unavailable</h1>
+          <p className="mx-auto mt-4 max-w-md font-sans text-[15px] leading-relaxed text-text-muted">
             This does not mean this House is missing. Please check back soon.
           </p>
           <div className="mt-8">
