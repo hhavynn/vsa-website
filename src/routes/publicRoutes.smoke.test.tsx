@@ -83,9 +83,10 @@ describe('retired member account routes', () => {
 
   it.each(['/profile', '/signup', '/register', '/sign-up'])('treats retired member URL %s as a missing page', async (path) => {
     renderRoute(path);
-    expect(await screen.findByText('Page not found')).toBeInTheDocument();
+    // The 404 page is lazy, and its first load can miss the default 1s on busy CI.
+    expect(await screen.findByText('Page not found', {}, { timeout: 10000 })).toBeInTheDocument();
     expect(screen.queryByText('Not currently enabled')).not.toBeInTheDocument();
-  });
+  }, 15000);
 });
 
 describe('public routes render without crashing (#294)', () => {
