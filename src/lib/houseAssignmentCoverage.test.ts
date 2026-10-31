@@ -115,4 +115,41 @@ describe('eligible House population read-only review (#621)', () => {
     expect(r.rowsNotEligible).toHaveLength(0);
     expect(review([approved('A','one')],[linked('1','two','hp1','B')]).rowsNotEligible).toHaveLength(1);
   });
+  it('does not report an unassigned applicant as clean when a House interval is active', () => {
+    const blank = { ...linked('1', 'one', null, 'A'), source_house: null };
+    const history = new Map([['one', [interval('hp1', '2026-10-01')]]]);
+    const published = reviewPublishedHouseBatchCoverage([blank], profiles, memberIds, history, date);
+    expect(published[0].state).toBe('conflicting-membership');
+    expect(countHouseCoverage(published)).toMatchObject({ unassigned: 0, needsReview: 1 });
+    const population = review([approved('A', 'one')], [blank], history);
+    expect(population.results[0]).toMatchObject({ state: 'conflicting-membership', rowId: '1' });
+    expect(review([approved('A', 'one')], [blank], history, true).results[0].state)
+      .toBe('conflicting-membership');
+  });
+
+  it('flags a future House interval instead of claiming the confirmed person has none', () => {
+    const blank = { ...linked('1', 'one', null, 'A'), source_house: null };
+    const upcoming = new Map([['one', [interval('hp1', '2026-11-10')]]]);
+    expect(reviewPublishedHouseBatchCoverage([blank], profiles, memberIds, upcoming, date)[0].state)
+      .toBe('conflicting-membership');
+    expect(review([approved('A', 'one')], [blank], upcoming).results[0].state)
+      .toBe('conflicting-membership');
+  });
+
+  it('allows real unassigned after a previous membership has ended on this date', () => {
+    const blank = { ...linked('1', 'one', null, 'A'), source_house: null };
+    const expired = new Map([['one', [interval('hp1', '2026-10-01', '2026-10-29')]]]);
+    expect(reviewPublishedHouseBatchCoverage([blank], profiles, memberIds, expired, date)[0].state)
+      .toBe('unassigned');
+    expect(review([approved('A', 'one')], [blank], expired).results[0].state).toBe('unassigned');
+  });
+
+  it('never counts an unassigned row as valid if its canonical member is absent', () => {
+    const blank = { ...linked('1', 'fictional-missing', null, 'A'), source_house: null };
+    expect(reviewPublishedHouseBatchCoverage([blank], profiles, memberIds, new Map(), date)[0].state)
+      .toBe('missing-member');
+    expect(review([approved('A', 'fictional-missing')], [blank]).results[0].state)
+      .toBe('missing-member');
+  });
+
 });
