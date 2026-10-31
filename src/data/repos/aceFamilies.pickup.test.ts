@@ -146,3 +146,102 @@ describe('setPickupYear', () => {
     await expect(aceFamiliesRepository.setPickupYear('node-1', 2023, 'FA23')).rejects.toBeTruthy();
   });
 });
+
+
+describe('reviewed ACE year correction and private evidence reader (#673)', () => {
+  const input = {
+    nodeId: 'fictional-node',
+    expected: { academicYearStart: 2021, term: 'FA21' },
+    next: { academicYearStart: 2023, term: 'FA23' },
+    sourceKind: 'official_pairing' as const,
+    evidenceId: 'fictional-evidence',
+  };
+
+  it('uses only the atomic compare-and-swap audit RPC and preserves caller expected values', async () => {
+    const result = {
+      ace_member_id: 'fictional-node', changed: true,
+      previous: { academic_year_start: 2021, term: 'FA21' },
+      current: { academic_year_start: 2023, term: 'FA23' },
+    };
+    supabaseMock.setDefault('rpc:correct_ace_member_pickup_year', { data: result, error: null });
+    await expect(aceFamiliesRepository.correctPickupYear(input)).resolves.toEqual(result);
+    expect(callArgs('rpc:correct_ace_member_pickup_year', 'rpc')).toEqual([{
+      p_ace_member_id: 'fictional-node', p_expected_year: 2021, p_expected_term: 'FA21',
+      p_academic_year_start: 2023, p_term: 'FA23', p_source_kind: 'official_pairing',
+      p_evidence_id: 'fictional-evidence',
+    }]);
+    expect(supabaseMock.queriesFor('rpc:set_ace_member_pickup_year')).toHaveLength(0);
+    expect(supabaseMock.queriesFor('ace_family_members')).toHaveLength(0);
+    expect(supabaseMock.queriesFor('admin_activity_log')).toHaveLength(0);
+  });
+
+  it('refuses a stale review and leaves rollback to the server transaction', async () => {
+    supabaseMock.setDefault('rpc:correct_ace_member_pickup_year', {
+      data: null,
+      error: postgrestError('Someone else changed this pickup year. Refresh and try again.', 'P0001'),
+    });
+    await expect(aceFamiliesRepository.correctPickupYear(input)).rejects.toThrow(
+      /Someone else changed this pickup year/);
+    expect(supabaseMock.queriesFor('ace_family_members')).toHaveLength(0);
+  });
+
+  it('sends explicit Unknown/null, not a guessed term or current year', async () => {
+    supabaseMock.setDefault('rpc:correct_ace_member_pickup_year', {
+      data: { ace_member_id: input.nodeId, changed: true }, error: null,
+    });
+    await aceFamiliesRepository.correctPickupYear({
+      nodeId: input.nodeId, expected: input.next,
+      next: { academicYearStart: null, term: null }, sourceKind: 'admin_entry',
+    });
+    expect(callArgs('rpc:correct_ace_member_pickup_year', 'rpc')).toEqual([{
+      p_ace_member_id: input.nodeId, p_expected_year: 2023, p_expected_term: 'FA23',
+      p_academic_year_start: null, p_term: null,
+      p_source_kind: 'admin_entry', p_evidence_id: null,
+    }]);
+  });
+
+  const row = (id: number) => ({
+    id: 'fictional-evidence-' + id, ace_member_id: 'fictional-node',
+    source_kind: 'official_pairing', source_label: 'synthetic source',
+    raw_value: 'FA23', candidate_academic_year_start: 2023, candidate_term: 'FA23',
+    review_status: 'pending', reviewed_at: null,
+    review_note: 'PRIVATE SHOULD NEVER APPEAR', created_by: 'private-actor',
+    ace_family_members: { family_id: 'fictional-fam' },
+  });
+
+  it('pages past 500 evidence rows with exact ID ordering and omits private notes', async () => {
+    supabaseMock.queueResult('ace_member_pickup_evidence', {
+      data: Array.from({ length: 500 }, (_, i) => row(i)), error: null,
+    });
+    supabaseMock.queueResult('ace_member_pickup_evidence', {
+      data: [row(500)], error: null,
+    });
+    const result = await aceFamiliesRepository.listPickupEvidenceForFamily('fictional-fam');
+    expect(result).toHaveLength(501);
+    expect(JSON.stringify(result)).not.toContain('PRIVATE SHOULD NEVER APPEAR');
+    expect(JSON.stringify(result)).not.toContain('private-actor');
+    expect(result[500]).not.toHaveProperty('ace_family_members');
+    const qs = supabaseMock.queriesFor('ace_member_pickup_evidence');
+    expect(qs).toHaveLength(2);
+    expect(qs.flatMap((q) => q.calls).filter((c) => c.method === 'range')).toEqual([
+      { method: 'range', args: [0, 499] }, { method: 'range', args: [500, 999] },
+    ]);
+    for (const q of qs) {
+      const select = q.calls.find((c) => c.method === 'select')?.args[0];
+      expect(String(select)).not.toContain('review_note');
+      expect(String(select)).not.toContain('created_by');
+      expect(q.calls).toContainEqual({ method: 'eq', args: ['ace_family_members.family_id', 'fictional-fam'] });
+    }
+  });
+
+  it('fails the whole evidence read when a later page returns an error', async () => {
+    supabaseMock.queueResult('ace_member_pickup_evidence', {
+      data: Array.from({ length: 500 }, (_, i) => row(i)), error: null,
+    });
+    supabaseMock.queueResult('ace_member_pickup_evidence', {
+      data: null, error: postgrestError('synthetic denied second page', 'P0001'),
+    });
+    await expect(aceFamiliesRepository.listPickupEvidenceForFamily('fictional-fam'))
+      .rejects.toThrow(/synthetic denied second page/);
+  });
+});

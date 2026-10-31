@@ -211,3 +211,33 @@ Verify hosted Supabase **Allow new users to sign up** remains disabled. Existing
 - **Do NOT** use a Supabase service-role (`service_role`) key in local terminal configs or the environment variables of this verification tool. Doing so bypasses RLS and invalidates all security checks.
 - **Do NOT** paste environment files containing passwords, secret keys, or test credentials into screenshots, github issues, or PR comments.
 - **Do NOT** write the raw data-rights export payloads or private check-in codes to console outputs, debug logs, or files. Keep terminal logs clean of member data.
+### Reviewed ACE pickup-year corrections (#673, additive migration)
+
+Migration `20261031080736_ace_pickup_year_correction.sql` adds `correct_ace_member_pickup_year(uuid,integer,text,integer,text,text,uuid)`, a SECURITY INVOKER RPC with `search_path=''` and `is_admin_user(auth.uid())` check, EXECUTE restricted to authenticated. It uses a locked member row, compares both expected fields to prevent lost admin edits, records pending evidence and approvals via the existing #669 setter, and writes an `ace.pickup_year_changed` audit row in that same transaction only on changes. This is a **migration-gated backend PR**, not an applied deployment.
+
+Run `bash scripts/test-ace-pickup-year.sh` offline; it applies #673 twice in the disposable PostgreSQL fixture after #669 regression tests, then checks denied personas, allowed and rejected sources, stale expected values, FA23/year-only/Unknown, audit count, 1998 and no lineage/identity changes. The owner must separately run live anon, ordinary and approved-admin probes after explicitly applying on staging, then verify actor/time/year metadata with no PII pasted to GitHub. No new public table/view/grant, and no new public evidence projection. Follow the production change-control and database schema-migration checklist before any rollout.
+
+
+### Admin ACE email matching by POST (#804)
+
+Migration `20261031070316_admin_match_members_by_email.sql` adds the read-only, SECURITY INVOKER `admin_match_members_by_email(p_emails text[])` function. It replaces `members?email=in.(...)` GET URL filters with POST RPC bodies, joins normalized `members.email` and confirmed `member_identity_emails.email`, returns only `{input_email,id,first_name,last_name,college,year}`, and preserves ambiguous shared-email matches. Admin guard, pinned search path, explicit GET/HEAD refusal, 1000-address server bound, PUBLIC/anon grant revocation, and authenticated-only EXECUTE apply.
+
+Applied to production 2026-10-31 as version 20261031070316, before the frontend RPC cutover. Offline proof: `bash scripts/test-admin-email-match.sh` in a disposable local PostgreSQL cluster, exercising anon denial, non-admin denial, admin POST alias resolution, ambiguous primary, HTTP GET refusal, 1001-address rejection. Hosted check: `node scripts/verify-rls-security.mjs` and approved anon/non-admin/admin PostgREST requests on production only after authorized migration; no service-role key, never a GET URL containing an email. Inspect the three ACE admin pages' Network requests at the same time. A failed RPC must fail the entire match, not return zero identities.
+
+`memberIdentity.ts` already reads confirmed aliases with keyset pagination using row ID, and scopes an individual alias read by canonical member ID. It does not filter GET URLs by email. Historical Supabase gateway logs may contain addresses from the old URL method; owner must determine retention/impact without copying actual email values into issues or PRs.
+
+### Public role projection RPC migration phase (#623)
+
+Migration 20261031070305_public_member_roles.sql adds public_member_roles(p_year integer, p_member_ids uuid[]) with exactly six public-safe columns. It grants EXECUTE to anon and authenticated explicitly, not through PUBLIC, and adds no SELECT grant to private tables. The SQL contract test is bash scripts/test-public-member-roles.sh in a disposable, local-only PostgreSQL cluster.
+
+The hosted verifier accepts RLS_MEMBER_ROLES_PHASE=pre-migration (default: absent RPC produces SKIP) or post-migration (absent RPC produces FAIL). In either phase when the function exists it sends one nil UUID and asserts an empty result, then 201 nil IDs expecting SQLSTATE 22023. Run the RLS verification workflow manually with member_roles_phase=post-migration once the owner has applied the migration, and update the repository variable afterward. The client must not ship until the RPC exists and passes the anonymous checks.
+
+Owner SQL/HTTP review must verify the exact returned keys member_id, kind, label, academic_year_start, source_type, related_key; direct grants to anon/authenticated without PUBLIC inheritance; and no new public table grants, draft joins, stored notes, or future Cabinet years. The nil-UUID verifier alone does not prove the live result schema when it is empty. Use a separately approved fictional/staging row for a nonempty projection contract and keep response values out of GitHub.
+
+This does not verify or publish House Parent, ACE or VCN roles, and it does not change House Reveal/score publication.
+
+### Public House badge RPC matches the per-batch view (#802, owner-gated)
+
+Forward-only migration `20261031093000_public_member_house_badge_matches_view.sql`: same `public_member_house_badge(uuid,integer)` signature and six JSON result keys; `anon`/`authenticated` EXECUTE only, `SECURITY DEFINER`, `search_path=''`, no new grants. Function reads **only** `public_house_memberships`, which is owner-rights, score-free and filters each batch on `source_import_id` and `published_at`. Do not test against raw `house_memberships` as anon; it is correctly denied. Run offline `bash scripts/test-public-house-memberships.sh` first, then on staging check a guessed member UUID from a locked later batch while an earlier same-year batch is published (must return NULL), archived revealed Fall (must show), future effective start (must show), transfer current/ended, inactive House (NULL), invalid year (NULL), and result keys excluding all private fields.
+
+**House Reveal freeze:** the owner approved merging this file on 2026-10-31; applying it to production still needs its own owner request. Owner compares live function/view definitions and chooses approved rollout timing, then independently checks hosted `node scripts/verify-rls-security.mjs` with real personas after approval. Status here is NOT applied or staging-proven.

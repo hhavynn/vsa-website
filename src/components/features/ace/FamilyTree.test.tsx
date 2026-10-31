@@ -216,3 +216,22 @@ describe('visible year bands and node accessibility (#672)', () => {
     expect(screen.getByRole('button', { name: 'cousin, Little' })).toBeInTheDocument();
   });
 });
+
+
+describe('private draft marker (#665)', () => {
+  it('visibly differentiates unannounced Littles without marking published nodes as drafts', () => {
+    const { container } = render(
+      <FamilyTree nodes={[
+        node('big', null),
+        { ...node('draft:one', 'big', 'Little'), isDraft: true, label: 'Fictional Incoming' },
+      ]} onSelect={() => {}} />,
+    );
+    const draft = container.querySelector('[data-node-id="draft:one"]');
+    const big = container.querySelector('[data-node-id="big"]');
+    expect(draft).toHaveClass('is-draft');
+    expect(draft).toHaveTextContent('DRAFT · NOT PUBLISHED');
+    expect(draft?.querySelector('circle[stroke-dasharray="4 3"]')).not.toBeNull();
+    expect(big).not.toHaveClass('is-draft');
+    expect(big).not.toHaveTextContent('DRAFT · NOT PUBLISHED');
+  });
+});

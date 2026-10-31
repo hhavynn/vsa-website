@@ -187,3 +187,16 @@ Owner signoff checklist:
 - [ ] Manual phone/tablet/desktop year-rail, focus, pan/zoom, deep link, light/dark and screen-reader evidence waits for #671 and #672. No screenshot or device signoff is implied by this CLI.
 
 The existing 2026-10-27 counts in `docs/ace-historical-pickup-years-results.md` are historical **review candidates**, not this newly measured approved-year state. Publish only independently reviewed count-only updates there, and keep private evidence outside git.
+## Reviewed correction API — #673 backend, staged until owner approval
+
+`correct_ace_member_pickup_year` is a new separate RPC; the legacy `set_ace_member_pickup_year` used for the historical plan remains unchanged. The correction RPC requires the ACE member **UUID**, both exact expected values (including NULL) from the admin editor, next approved year/term, an approved source kind (`official_pairing`, `workbook_year_row`, `import_json`, `admin_entry`), and optional matching evidence UUID. It refuses non-admin users, source mismatches and stale expected values with a refresh message. It never guesses from the Big or family.
+
+One database transaction locks that node, validates the expected year/term, creates a deduplicated pending admin-year evidence row if no evidence was chosen, asks the existing #669 setter to approve and write only the year fields, then appends a protected `admin_activity_log` entry **only if the approved value changed**. The audit stores the old and new year/term and selected source kind only; no notes, contacts, student names or Drive links. An audit failure rolls back the node change and evidence. The activity year column is deliberately NULL (1998 and earlier ACE year corrections do not satisfy the activity-log 2000 minimum).
+
+**No admin editor is wired in this PR.** #673 follow-up PR2 will implement the per-node form, explicit overwrite/Unknown confirmation, family/year review queue, evidence status and accessible controls. Do not use the old setter for that new UI.
+
+**Status:** applied to production 2026-10-31 as version 20261031080736, with no staging run because no staging project exists. The admin correction UI is not built yet.
+
+Migration `20261031080736_ace_pickup_year_correction.sql` must be applied **after** `20261002040000_admin_activity_log_and_review_marks.sql` and `20261027190000_ace_member_pickup_year.sql`. Owner first confirms both prerequisites exist on staging, then manually applies the correction migration. Never run `supabase db push` or apply production SQL from an agent. If an RPC is absent, the client correction must fail closed; never fall back to the unaudited setter.
+
+Verification: run `bash scripts/test-ace-pickup-year.sh` for the existing rollback suite and new `ace-year-correction.test.sql` section in a disposable local cluster. On authorized staging, validate a conflict between two admin browser tabs, approved and Unknown values, evidence review history, activity entry, and anon/nonadmin EXECUTE denial; compare node identity, Big, children, role, avatar, publication before/after. These hosted checks and production application have **not been performed**.

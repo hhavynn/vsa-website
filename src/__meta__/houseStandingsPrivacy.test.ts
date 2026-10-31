@@ -3,6 +3,7 @@ import { resolve } from 'path';
 
 const read = (file: string) => readFileSync(resolve(__dirname, '../..', file), 'utf8');
 const migration = read('supabase/migrations/20261028073000_embargo_public_house_scores.sql');
+const revealBadgeFix = read('supabase/migrations/20261031093000_public_member_house_badge_matches_view.sql');
 const privateViews = [
   'house_yearly_points',
   'house_all_time_points',
@@ -60,5 +61,37 @@ describe('House standings embargo release invariants (#692)', () => {
     const badge = leaderboard.slice(leaderboard.indexOf('async getMemberHouseBadge('), leaderboard.indexOf('async getYearsWithData('));
     expect(badge).toContain("badgeClient.rpc('public_member_house_badge'");
     expect(badge).not.toContain(".from('house_member_");
+  });
+});
+
+
+describe('House badge follows exact-batch Reveal view (#802)', () => {
+  it('sources badge results only from the existing Reveal-gated public view', () => {
+    const body = revealBadgeFix.slice(
+      revealBadgeFix.indexOf('create or replace function public.public_member_house_badge('),
+      revealBadgeFix.indexOf('revoke all on function public.public_member_house_badge('),
+    );
+    expect(body).toContain('from public.public_house_memberships m');
+    expect(body).toContain('security definer set search_path');
+    expect(body).toContain("America/Los_Angeles");
+    expect(body).not.toContain('from public.house_memberships ');
+    expect(body).not.toContain('house_assignment_batches');
+    expect(body).not.toMatch(/total_points|member_event_attendance|events_attended|review_note/);
+    expect(body).toContain("'academic_year_start', m.academic_year_start");
+    expect(body).toContain("'latest_activity_at', null");
+  });
+
+  it('preserves public RPC signature, deny-by-default grants, and identity-only return', () => {
+    expect(revealBadgeFix).toContain('p_member_id uuid,');
+    expect(revealBadgeFix).toContain('p_year integer default null');
+    expect(revealBadgeFix).toContain(
+      'revoke all on function public.public_member_house_badge(uuid,integer) from public, anon, authenticated;');
+    expect(revealBadgeFix).toContain(
+      'grant execute on function public.public_member_house_badge(uuid,integer) to anon, authenticated;');
+    expect(revealBadgeFix).toContain("'house', m.house_key");
+    expect(revealBadgeFix).toContain("'house_profile_id', m.house_profile_id");
+    expect(revealBadgeFix).toContain("'display_name', m.display_name");
+    expect(revealBadgeFix).toContain("'accent_color', m.accent_color");
+    expect(revealBadgeFix).not.toMatch(/grant\s+select\s+on\s+public\.(house_yearly_points|house_member_all_time_points)/i);
   });
 });

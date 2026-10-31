@@ -4313,6 +4313,13 @@ export type Database = {
       };
     };
     Functions: {
+      public_member_roles: {
+        Args: { p_year: number; p_member_ids: string[] };
+        Returns: {
+          member_id: string; kind: string; label: string;
+          academic_year_start: number; source_type: string; related_key: string | null;
+        }[];
+      };
       admin_apply_house_placement_override: {
         Args: { p_batch_id: string; p_changes: Json; p_reason?: string | null };
         Returns: Database['public']['Tables']['house_assignment_drafts']['Row'][];
@@ -4357,6 +4364,10 @@ export type Database = {
       };
       admin_import_recovery_findings: {
         Args: Record<string, never>;
+        Returns: Json;
+      };
+      admin_match_members_by_email: {
+        Args: { p_emails: string[] };
         Returns: Json;
       };
       admin_lookup_members: {
@@ -4418,6 +4429,18 @@ export type Database = {
           p_little_min_events: number;
           p_big_min_events: number;
           p_event_ids: string[];
+        };
+        Returns: Json;
+      };
+      correct_ace_member_pickup_year: {
+        Args: {
+          p_ace_member_id: string;
+          p_expected_year: number | null;
+          p_expected_term: string | null;
+          p_academic_year_start: number | null;
+          p_term: string | null;
+          p_source_kind: string;
+          p_evidence_id?: string | null;
         };
         Returns: Json;
       };
