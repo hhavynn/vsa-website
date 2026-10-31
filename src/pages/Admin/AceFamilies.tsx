@@ -12,6 +12,7 @@ import {
   useAceMemberLinks,
   useAdminAceFamilies,
   useAdminAceFamilyMembers,
+  useAcePickupEvidence,
 } from '../../hooks/useAceFamilies';
 import { useMemberDirectory } from '../../hooks/useMemberDirectory';
 import {
@@ -29,6 +30,7 @@ import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader
 import { MemberLinkPicker, MemberLinkSuggestion } from '../../components/features/admin/MemberLinkPicker';
 import { AceLinkReviewPanel } from '../../components/features/admin/AceLinkReviewPanel';
 import { AceFamHeadReview } from '../../components/features/admin/AceFamHeadReview';
+import { AceYearReviewPanel } from '../../components/features/admin/AceYearReviewPanel';
 import { EmptyState, FilterChips, NextStepBanner, SaveBar, YearContextBadge } from '../../components/features/admin/ops';
 import { logAdminActivity } from '../../data/repos/adminActivity';
 import { useOperatingYear } from '../../hooks/useOperatingYear';
@@ -39,6 +41,7 @@ import { isDirty, saveStatus } from '../../lib/adminDirty';
 import { applyQuickFilter, countByFilter } from '../../lib/adminFilters';
 import { NextStep, nextStepFor } from '../../lib/adminNextSteps';
 import { ACE_NODE_FILTERS, ACE_NODE_FILTER_KEYS, AceNodeFacts } from '../../lib/adminQueues';
+import { reviewFamilyYears, type YearReview } from '../../lib/aceYearReview';
 import { describeYearContext } from '../../lib/adminYearContext';
 import { AceAssignmentsWorkspace } from '../../components/features/admin/AceAssignmentsWorkspace';
 import {
@@ -529,7 +532,8 @@ export default function AdminAceFamilies() {
   const [savingFamily, setSavingFamily] = useState(false);
   const [autoSlug, setAutoSlug] = useState(true);
 
-  const { members, refetch: refetchMembers } = useAdminAceFamilyMembers(selectedFamilyId);
+  const { members, loading: membersLoading, error: membersError, refetch: refetchMembers } = useAdminAceFamilyMembers(selectedFamilyId);
+  const { evidence: pickupEvidence, ready: evidenceReady, loading: evidenceLoading, error: evidenceError } = useAcePickupEvidence(selectedFamilyId);
   const [savingMemberId, setSavingMemberId] = useState<string | null>(null);
   const [newMemberName, setNewMemberName] = useState('');
   const [deleteFamilyOpen, setDeleteFamilyOpen] = useState(false);
@@ -609,12 +613,39 @@ export default function AdminAceFamilies() {
   const linkSummary = summarizeLinks(members);
   const unlinkedCount = linkSummary.total - linkSummary.linked;
   const obviousMatchCount = reviewItems.filter((item) => item.status === 'recommended').length;
-  const nodeFacts = useMemo<AceNodeFacts[]>(
-    () => members.map((node) => ({ node, review: reviewByNodeId.get(node.id) })),
-    [members, reviewByNodeId],
+  // Both reads must complete before showing advisory year counts or applying
+  // the year filter. An empty fallback must never mean "no problems".
+  const yearReviewReady = !!selectedFamilyId && !membersLoading && !membersError && evidenceReady && !evidenceError;
+  const yearReviews = useMemo<ReadonlyMap<string, YearReview>>(
+    () => yearReviewReady ? reviewFamilyYears(members, pickupEvidence) : new Map(),
+    [yearReviewReady, members, pickupEvidence],
   );
-  const nodeCounts = useMemo(() => countByFilter(nodeFacts, ACE_NODE_FILTERS), [nodeFacts]);
-  const visibleNodes = useMemo(() => applyQuickFilter(nodeFacts, ACE_NODE_FILTERS, nodeFilter), [nodeFacts, nodeFilter]);
+  const nodeFacts = useMemo<AceNodeFacts[]>(
+    () => members.map((node) => ({
+      node,
+      review: reviewByNodeId.get(node.id),
+      yearFlags: yearReviewReady ? yearReviews.get(node.id)?.flags : undefined,
+    })),
+    [members, reviewByNodeId, yearReviewReady, yearReviews],
+  );
+  const availableNodeFilters = useMemo(
+    () => ACE_NODE_FILTERS.filter((filter) =>
+      (yearReviewReady || filter.key !== 'year_review') &&
+      (matchingReady || (filter.key !== 'possible_match' && filter.key !== 'no_match'))
+    ),
+    [yearReviewReady, matchingReady],
+  );
+  const effectiveNodeFilter = availableNodeFilters.some(filter => filter.key === nodeFilter) ? nodeFilter : 'all';
+  const nodeCounts = useMemo(() => countByFilter(nodeFacts, availableNodeFilters), [nodeFacts, availableNodeFilters]);
+  const visibleNodes = useMemo(() => applyQuickFilter(nodeFacts, availableNodeFilters, effectiveNodeFilter), [nodeFacts, availableNodeFilters, effectiveNodeFilter]);
+  const openReviewNode = (nodeId: string) => {
+    if (!selectedFamilyId) return;
+    setNodeFilter('all');
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('family', selectedFamilyId);
+    nextParams.set('node', nodeId);
+    setSearchParams(nextParams);
+  };
   useEffect(() => {
     if (nodeParam && members.some((node) => node.id === nodeParam)) {
       document.getElementById(`ace-node-${nodeParam}`)?.scrollIntoView?.({ block: 'center' });
@@ -1479,13 +1510,17 @@ export default function AdminAceFamilies() {
                 directoryById={directoryById}
                 allLinks={allMemberLinks}
                 evidenceReady={matchingReady}
-                onReviewNode={(nodeId) => {
-                  setNodeFilter('all');
-                  const nextParams = new URLSearchParams(searchParams);
-                  nextParams.set('family', selectedFamily.id);
-                  nextParams.set('node', nodeId);
-                  setSearchParams(nextParams);
-                }}
+                onReviewNode={openReviewNode}
+              />
+
+              <AceYearReviewPanel
+                familyName={selectedFamily.name}
+                nodes={members}
+                reviews={yearReviews}
+                ready={yearReviewReady}
+                loading={membersLoading || evidenceLoading}
+                failed={Boolean(membersError || evidenceError)}
+                onReviewNode={openReviewNode}
               />
 
               <NextStepBanner step={nextStep} onDismiss={() => setNextStep(null)} />
@@ -1557,9 +1592,9 @@ export default function AdminAceFamilies() {
                 </button>
               </div>
 
-              {members.length > 0 && matchingReady && (
+              {members.length > 0 && (matchingReady || yearReviewReady) && (
                 <div className="mb-3">
-                  <FilterChips filters={ACE_NODE_FILTERS} counts={nodeCounts} active={nodeFilter} onChange={setNodeFilter} label="Filter people" />
+                  <FilterChips filters={availableNodeFilters} counts={nodeCounts} active={effectiveNodeFilter} onChange={setNodeFilter} label="Filter people" />
                 </div>
               )}
 
