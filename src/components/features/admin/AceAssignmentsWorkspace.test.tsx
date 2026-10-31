@@ -282,6 +282,7 @@ describe('filters, bulk actions and activity', () => {
   it('records locking in the activity log', async () => {
     renderWorkspace();
     fireEvent.click(await screen.findByRole('button', { name: 'Lock assignments' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm lock' }));
     await waitFor(() => expect(logAdminActivity).toHaveBeenCalledWith(expect.objectContaining({ action: 'ace.cycle_locked' })));
   });
 
@@ -437,7 +438,7 @@ describe('approved pickup-term gate (#674)', () => {
     renderWorkspace();
     expect(await screen.findByRole('button', { name: 'Lock assignments' })).toBeDisabled();
     expect(screen.getByText('Choose an approved pickup term for this academic year')).toBeInTheDocument();
-    fireEvent.change(screen.getByRole('combobox', { name: 'Approved pickup term' }), { target: { value: 'SP27' } });
+    fireEvent.change(screen.getAllByRole('combobox', { name: 'Approved pickup term' })[0], { target: { value: 'SP27' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save pickup term' }));
     await waitFor(() => expect(callsOf('ace_assignment_cycles', 'update')).toHaveLength(1));
     expect(callsOf('ace_assignment_cycles', 'update')[0].args[0]).toMatchObject({ pickup_term: 'SP27' });
