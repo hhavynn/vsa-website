@@ -132,6 +132,48 @@ describe('ACE chronological tree acceptance (#675)', () => {
     expect(container.querySelector('.ace-year-label.is-focus')).toHaveAttribute('data-band-key', '2022');
   });
 
+  it('renders and navigates 153 nodes across three independent published branches in the real DOM', () => {
+    const members = Array.from({ length: 153 }, (_, index) => {
+      const inBranch = index % 51;
+      const branch = Math.floor(index / 51);
+      const id = 'massive-' + index;
+      return node(
+        id, 'Fictional Massive Member ' + index,
+        inBranch === 0 ? null : 'massive-' + (index - 1),
+        2016 + branch + Math.floor(inBranch / 7),
+        null,
+      );
+    });
+    const { container } = renderTree(members);
+    expect(container.querySelectorAll('.ace-tree-node')).toHaveLength(153);
+    expect(container.querySelectorAll('.ace-tree-edge')).toHaveLength(150);
+    expect(container.querySelectorAll('.ace-year-label[data-band-key]').length).toBeGreaterThan(3);
+    const last = screen.getByRole('button', { name: /Fictional Massive Member 152, Little, picked up/ });
+    fireEvent.click(last);
+    expect(last).toHaveAttribute('aria-pressed', 'true');
+    const lineage = screen.getByRole('navigation', { name: 'Lineage of Fictional Massive Member 152' });
+    expect(within(lineage).getAllByRole('listitem')).toHaveLength(51);
+    expect(container.querySelector('.ace-year-band.is-focus')).not.toBeNull();
+    expect(container.querySelectorAll('.ace-tree-node[aria-pressed="true"]')).toHaveLength(1);
+  });
+
+  it('shows an unverified orphan without silently inventing a year or a missing parent', () => {
+    const orphan = [
+      node('published-root', 'Fictional Root', null, 2022, 'FA22'),
+      node('orphan', 'Fictional Orphan', 'unpublished-parent', null, null),
+      node('known-little', 'Fictional Known Little', 'published-root', 2023, 'SP24'),
+    ];
+    const { container } = renderTree(orphan);
+    expect(container.querySelectorAll('.ace-tree-node')).toHaveLength(3);
+    expect(container.querySelectorAll('.ace-tree-edge')).toHaveLength(1);
+    const orphanButton = screen.getByRole('button', { name: /Fictional Orphan, Little, pickup year unverified/i });
+    fireEvent.click(orphanButton);
+    expect(orphanButton).toHaveAttribute('aria-pressed', 'true');
+    const lineage = screen.getByRole('navigation', { name: 'Lineage of Fictional Orphan' });
+    expect(within(lineage).getAllByRole('listitem')).toHaveLength(1);
+    expect(container.textContent).not.toContain('unpublished-parent');
+  });
+
   it('has no serious accessibility violations in both chronological and all-unknown real DOM trees', async () => {
     const view = renderTree(golden);
     expect(await axe(view.container)).toHaveNoViolations();
