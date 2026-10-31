@@ -74,7 +74,9 @@ export function buildYearSetupGateway(userId: string | null): YearSetupGateway {
       return { created: result.created, positionsCopied: result.positionsCopied };
     },
     async createAceCycle(startYear) {
-      const cycle = await aceAssignmentsRepository.createCycle(startYear);
+      // The rollover wizard creates a private placeholder, never guesses Fall/Winter/Spring.
+      // The ACE Chair must choose the term on the assignment workspace before Lock.
+      const cycle = await aceAssignmentsRepository.createCycle(startYear, null);
       return { id: cycle.id };
     },
     async createInternCycle(input) {
