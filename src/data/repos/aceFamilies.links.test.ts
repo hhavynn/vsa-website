@@ -205,3 +205,93 @@ describe('complete admin family directory for private ACE preview (#665)', () =>
       .rejects.toMatchObject({ name: 'DatabaseError', message: 'Insufficient permissions' });
   });
 });
+
+describe('complete cross-family ACE member links (#850)', () => {
+  const row = (index: number) => ({
+    id: 'fictional-node-' + String(index).padStart(4, '0'),
+    name: 'Same Fictional Name',
+    member_id: 'fictional-member-' + String(index).padStart(4, '0'),
+    ace_families: { name: index % 2 === 0 ? 'Fictional Sun Fam' : 'Fictional Moon Fam' },
+  });
+
+  it('reads every linked node past 1,000 and keeps same-name identities separate', async () => {
+    supabaseMock.queueResult('ace_family_members', {
+      data: Array.from({ length: 1000 }, (_, i) => row(i)), error: null,
+    });
+    supabaseMock.queueResult('ace_family_members', {
+      data: [row(1000), row(1001)], error: null,
+    });
+
+    const links = await aceFamiliesRepository.getAllMemberLinks();
+    expect(links).toHaveLength(1002);
+    expect(links[0]).toEqual({
+      nodeId: 'fictional-node-0000', memberId: 'fictional-member-0000',
+      nodeName: 'Same Fictional Name', familyName: 'Fictional Sun Fam',
+    });
+    expect(links[1001]).toEqual({
+      nodeId: 'fictional-node-1001', memberId: 'fictional-member-1001',
+      nodeName: 'Same Fictional Name', familyName: 'Fictional Moon Fam',
+    });
+    expect(new Set(links.map(link => link.nodeId)).size).toBe(1002);
+    const queries = supabaseMock.queriesFor('ace_family_members');
+    expect(queries).toHaveLength(2);
+    expect(queries[0].calls).toContainEqual({ method: 'range', args: [0, 999] });
+    expect(queries[1].calls).toContainEqual({ method: 'range', args: [1000, 1999] });
+    for (const query of queries) {
+      expect(query.calls).toContainEqual({ method: 'not', args: ['member_id', 'is', null] });
+      expect(query.calls).toContainEqual({ method: 'order', args: ['id', { ascending: true }] });
+      expect(query.calls.find(call => call.method === 'select')?.args[0])
+        .toBe('id, name, member_id, ace_families(name)');
+    }
+    expect(supabaseMock.queriesFor('public_members')).toHaveLength(0);
+    expect(supabaseMock.queriesFor('published_ace_family_members')).toHaveLength(0);
+  });
+
+  it('continues after an exactly full 1,000-row page, then accepts an empty next page', async () => {
+    supabaseMock.queueResult('ace_family_members', {
+      data: Array.from({ length: 1000 }, (_, i) => row(i)), error: null,
+    });
+    supabaseMock.queueResult('ace_family_members', { data: [], error: null });
+    const links = await aceFamiliesRepository.getAllMemberLinks();
+    expect(links).toHaveLength(1000);
+    expect(supabaseMock.queriesFor('ace_family_members')).toHaveLength(2);
+  });
+
+  it('rejects a later-page denial instead of returning incomplete identity hints', async () => {
+    supabaseMock.queueResult('ace_family_members', {
+      data: Array.from({ length: 1000 }, (_, i) => row(i)), error: null,
+    });
+    supabaseMock.queueResult('ace_family_members', {
+      data: null, error: postgrestError('fictional later-page denied', '42501'),
+    });
+    await expect(aceFamiliesRepository.getAllMemberLinks()).rejects.toMatchObject({
+      name: 'DatabaseError', message: 'Insufficient permissions', code: '42501',
+    });
+    expect(supabaseMock.queriesFor('ace_family_members')).toHaveLength(2);
+  });
+
+  it('preserves both Supabase family join shapes and never invents a missing family name', async () => {
+    supabaseMock.queueResult('ace_family_members', {
+      data: [
+        { ...row(0), ace_families: [{ name: 'Array Fam' }] },
+        { ...row(1), ace_families: null },
+        { ...row(2), member_id: null },
+      ], error: null,
+    });
+    await expect(aceFamiliesRepository.getAllMemberLinks()).resolves.toEqual([
+      expect.objectContaining({ nodeId: 'fictional-node-0000', familyName: 'Array Fam' }),
+      expect.objectContaining({ nodeId: 'fictional-node-0001', familyName: null }),
+    ]);
+  });
+
+  it('distinguishes a genuinely empty linked roster from a denied first page', async () => {
+    supabaseMock.queueResult('ace_family_members', { data: [], error: null });
+    await expect(aceFamiliesRepository.getAllMemberLinks()).resolves.toEqual([]);
+    supabaseMock.queueResult('ace_family_members', {
+      data: null, error: postgrestError('fictional admin denied', '42501'),
+    });
+    await expect(aceFamiliesRepository.getAllMemberLinks()).rejects.toMatchObject({
+      name: 'DatabaseError', code: '42501',
+    });
+  });
+});

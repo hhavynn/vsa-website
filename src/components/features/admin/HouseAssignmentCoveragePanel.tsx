@@ -95,6 +95,7 @@ export function HouseAssignmentCoveragePanel({ selectedYear }: { selectedYear: n
     ['Unassigned', snapshot.population.results.filter((x) => x.state === 'unassigned').length],
     ['Ambiguous identity', snapshot.population.results.filter((x) =>
       x.state === 'ambiguous-identity' || x.state === 'duplicate-applicant').length],
+    ['Duplicate batch rows', snapshot.population.results.filter((x) => x.state === 'duplicate-batch-row').length],
     ['Conflicting', snapshot.population.results.filter((x) => x.state === 'conflicting-membership').length],
     ['Needs review', snapshot.population.results.filter((x) =>
       !['assigned', 'scheduled', 'unassigned'].includes(x.state)).length],
