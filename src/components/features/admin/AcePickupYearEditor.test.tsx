@@ -35,12 +35,12 @@ function mount(extra: {
 } = {}) {
   const onSaved = extra.onSaved ?? jest.fn().mockResolvedValue(undefined);
   const onConflict = extra.onConflict ?? jest.fn().mockResolvedValue(undefined);
-  const result = render(<AcePickupYearEditor member={extra.member ?? base} familyName="Fictional Fam"
+  const view = render(<AcePickupYearEditor member={extra.member ?? base} familyName="Fictional Fam"
     big={big} littles={[little]} familyYears={[2020, 2022, 2024]}
     evidence={extra.evidence ?? []} ready={extra.ready ?? true}
     onSaved={onSaved} onConflict={onConflict} />);
   fireEvent.click(screen.getByRole('button', { name: /Review pickup year/ }));
-  return { ...result, onSaved, onConflict };
+  return { ...view, onSaved, onConflict };
 }
 beforeEach(() => {
   jest.clearAllMocks();
