@@ -19,6 +19,7 @@ const member = (id: string, points: number, events = 1, first: string | null = i
 });
 
 const badge = (overrides: Partial<MemberHouseBadge> = {}): MemberHouseBadge => ({
+  academic_year_start: 2025,
   house: 'Bowser',
   house_profile_id: 'hp-1',
   display_name: 'House Bowser',
