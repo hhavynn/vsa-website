@@ -41,7 +41,7 @@ The production admin analytics page is expected to run on the production site or
 
 ## Service-role key in image-migration webhooks (2026-10-08)
 
-**Finding.** Both image-migration Database Webhooks in production embed the project's legacy `service_role` JWT in plain text. Status: **open**. Nothing in production has been changed yet; remediation waits on owner approval. The fix is prepared in `supabase/migrations/20261010120000_vault_backed_image_migration_triggers.sql`, and the owner's step-by-step procedure is [`image-migration-webhook-credential-rotation.md`](image-migration-webhook-credential-rotation.md).
+**Finding.** Both image-migration Database Webhooks in production embedded the project's legacy `service_role` JWT in plain text. Status: **partly resolved**. On 2026-10-30, `supabase/migrations/20261030235727_vault_backed_image_migration_triggers.sql` removed both webhooks and their credentials from the catalog. The webhook secret was rotated the same day. The exposed JWT stays valid until stage 2 revokes it. The step-by-step procedure and the stage 1 results are in [`image-migration-webhook-credential-rotation.md`](image-migration-webhook-credential-rotation.md).
 
 ### Evidence
 
@@ -115,7 +115,7 @@ Uploads that land between steps 3 and 4 get a 401 and stay on their Storage URL.
 
 Blast radius: steps 4 and 5 affect **every** consumer of the legacy keys at once, not only service-role users. That includes the production frontend, CI, scripts, and Edge Functions (`vsa-ai-assistant`, `member-photo-upload`, `analytics-proxy`), so every item in steps 2 and 3 must be done and verified first. Rollback: until step 5, re-enabling the legacy keys restores the old state. After step 5, a revoked key can be moved back to standby and rotated to, per Supabase's signing-keys docs.
 
-**Phase C — replace the Dashboard webhooks with tracked, Vault-backed triggers (prepared, not applied).** `supabase/migrations/20261010120000_vault_backed_image_migration_triggers.sql` does three things:
+**Phase C — replace the Dashboard webhooks with tracked, Vault-backed triggers (applied 2026-10-30).** `supabase/migrations/20261030235727_vault_backed_image_migration_triggers.sql` does three things:
 
 - It adds `private.request_image_migration()`. This `SECURITY DEFINER` trigger function, with `search_path = ''`, reads `image_migration_functions_url` and `image_migration_webhook_secret` from Vault at fire time and queues one `net.http_post` with only `Content-Type` and `x-image-migration-secret`.
 - It drops both Dashboard webhooks.
@@ -135,8 +135,10 @@ This replaces Phase A's Dashboard edit: Phase A steps 2–3 (new secret) still a
 
 ## Open Items
 
-- **2026-10-08, open:** both image-migration webhooks embed the `service_role` JWT (re-confirmed later the same day). As soon as the owner approves, run stage 1 of [`image-migration-webhook-credential-rotation.md`](image-migration-webhook-credential-rotation.md): Vault secrets, new webhook secret, then migration `20261010120000`. Then schedule stage 2 (Phase B) before the end-of-2026 legacy-key cutoff.
-- **2026-10-08, open:** confirm in the Dashboard that the Data API exposes only `public` and `graphql_public` (runbook stage 0, step 4).
+- **Open, from 2026-10-08:** the `service_role` JWT that both webhooks exposed is still valid. Run stage 2 (Phase B) of [`image-migration-webhook-credential-rotation.md`](image-migration-webhook-credential-rotation.md) before the end-of-2026 legacy-key cutoff.
+- **Closed 2026-10-30:** the exposed webhook secret was rotated in Vault and Edge Function secrets (runbook "Stage 1 status").
+- **Closed 2026-10-30:** both webhooks were replaced by tracked triggers (migration `20261030235727`).
+- **Closed 2026-10-30:** a live anon request with `Accept-Profile` confirmed the Data API exposes only `public` and `graphql_public`.
 - The live unauthenticated-call test against both `trigger-*` deployed functions has not been performed. Repository source shows the shared-secret check, but the issue criterion asks for live production requests.
 - `secure-ai`'s vestigial status is fully resolved. Source search found no callers, the directory was removed, and a direct production check on 2026-08-05 confirmed the function was never deployed. `OPENAI_API_KEY` has been unset from the project's secrets. The remaining incident-response steps for #353 are outside the repo and the Supabase project, and none should be skipped: revoke the exposed key in the OpenAI dashboard, review OpenAI usage for the exposure window, confirm the GitHub secret-scanning alert is closed as revoked (0 open alerts as of 2026-09-28), decide whether to rewrite git history, and scan history for other credentials.
 - This work should not close issue #229. It only resolves the repo-answerable CORS and response-body audit slice.

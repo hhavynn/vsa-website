@@ -1,5 +1,5 @@
 -- Synthetic stub of the Supabase pieces that
--- 20261010120000_vault_backed_image_migration_triggers.sql touches. Not a replay
+-- 20261030235727_vault_backed_image_migration_triggers.sql touches. Not a replay
 -- of the hosted schema. Privileges mirror production as read on 2026-10-08:
 -- anon/authenticated have no vault access and can execute net.http_post, and
 -- PUBLIC can read pg_trigger. net.http_post records requests instead of sending

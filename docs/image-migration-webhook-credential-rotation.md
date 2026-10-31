@@ -4,6 +4,24 @@
 
 **Why:** both image-migration Database Webhooks were created in the Dashboard with an `Authorization: Bearer <service_role JWT>` header and the `x-image-migration-secret` value. A Database Webhook stores its headers in its trigger definition. `pg_trigger` grants `SELECT` to `PUBLIC`, and `PUBLIC` can execute `pg_get_triggerdef()`, so any role that can run SQL can read both values, `anon` and `authenticated` included. Finding, evidence and exposure assessment: [`edge-function-security-audit.md`](edge-function-security-audit.md) § "Service-role key in image-migration webhooks".
 
+## Stage 1 status (2026-10-30)
+
+Applied to production as `20261030235727` by Claude, at the owner's explicit request in the session. The Dashboard webhooks are gone and the tracked triggers are live.
+
+**The webhook secret was rotated the same day, in two steps that differ from 1.2 to 1.4:**
+
+1. The first swap reused the old value, copied server-side into Vault, so the triggers went live with no outage.
+2. A new value was then generated inside Postgres (`extensions.gen_random_bytes(32)`) with `vault.update_secret`. The Supabase CLI read it through a pipe into a `0600` temp file for `supabase secrets set --env-file`.
+
+This way the value never appeared in SQL text, a process's arguments or any output. The old value is no longer valid. The new value exists only in Vault and Edge Function secrets, not in a password manager. To rotate again, repeat step 2.
+
+Results:
+
+- 1.6: only the two tracked triggers remain, with 0 credentials in trigger definitions or function bodies. `anon` and `authenticated` have no access to the function, the schema or Vault.
+- 1.7: both functions return 401 for a wrong secret and 200 for the Vault secret with a no-op payload, both before the swap and after the rotation.
+- Firing test: an admin-role write to one event and one House event queued exactly one request per table, with only the secret header. No-op writes queued nothing. The transaction was rolled back, so nothing was sent or saved.
+- **Not yet observed:** a real upload through the new trigger to a GitHub dispatch. No rows are on Storage URLs, and test events are not allowed. Check it on the next real upload (step 1.7).
+
 **Handling secrets during this runbook:**
 
 - Never paste a secret value into chat, an issue, a PR, a commit, a log, or a SQL statement that you save as a snippet.
@@ -15,10 +33,10 @@
 
 | Stage | What it does | What it does **not** do | When |
 | --- | --- | --- | --- |
-| 1. Replace the webhooks and rotate the webhook secret | Removes both credentials from the catalog. Image uploads then go through tracked triggers that read a **new** webhook secret from Vault (`supabase/migrations/20261010120000_vault_backed_image_migration_triggers.sql`). | Invalidate the exposed `service_role` JWT. Anyone who already copied it keeps a working key. | Now (about 20 minutes). |
+| 1. Replace the webhooks and rotate the webhook secret | Removes both credentials from the catalog. Image uploads then go through tracked triggers that read a **new** webhook secret from Vault (`supabase/migrations/20261030235727_vault_backed_image_migration_triggers.sql`). | Invalidate the exposed `service_role` JWT. Anyone who already copied it keeps a working key. | Now (about 20 minutes). |
 | 2. Retire the exposed `service_role` JWT | Moves every consumer to new API keys, disables the legacy keys, then revokes the legacy JWT secret. This is the step that makes the leaked key worthless. | | After its code prerequisites ship, and before Supabase's end-of-2026 legacy-key cutoff. Sooner if there is any sign of abuse. |
 
-The receiving Edge Functions do not change. They authorize only on `x-image-migration-secret`, run with `verify_jwt = false` (pinned in `supabase/config.toml` since #526), and never use the service-role key. The only privileged credential they hold is `GITHUB_DISPATCH_TOKEN`, and that never appeared in the trigger definitions.
+The receiving Edge Functions do not change. They authorize only on `x-image-migration-secret`, run with `verify_jwt = false` (pinned in `supabase/config.toml` since #526), and hold two privileged credentials: `GITHUB_DISPATCH_TOKEN`, which never appeared in the trigger definitions, and `SUPABASE_SERVICE_ROLE_KEY`, used server-side for the dispatch quota (`_shared/privileged-runtime.ts`).
 
 ---
 
@@ -57,7 +75,7 @@ The receiving Edge Functions do not change. They authorize only on `x-image-migr
 
 Do steps 1.3 to 1.5 back to back. Between 1.4 and 1.5, uploads get a 401 from the function. That is harmless: the row keeps its working Storage URL, and the daily `migrate-images.yml` run migrates it.
 
-**1.1 Merge the PR** that adds `20261010120000_vault_backed_image_migration_triggers.sql`. Merging applies nothing.
+**1.1 Merge the PR** that adds `20261030235727_vault_backed_image_migration_triggers.sql`. Merging applies nothing.
 
 **1.2 Generate the new webhook secret** locally and keep it in your password manager. Never reuse the old value.
 
@@ -220,8 +238,9 @@ Only that last step makes the leaked JWT cryptographically invalid. The full rea
 | --- | --- | --- |
 | `vsa-ai-assistant` | Admin client from `SUPABASE_SERVICE_ROLE_KEY` (`index.ts:96`). Gateway `verify_jwt` on. Ask VSA sends `Authorization: Bearer <anon key>` (`VsaAiAssistant.tsx`). | Read `SUPABASE_SECRET_KEYS`. Set `verify_jwt = false` and check the `apikey` and any user JWT in code. Frontend sends the publishable key on `apikey` only. |
 | `member-photo-upload` | `SUPABASE_SERVICE_ROLE_KEY` (`index.ts:5`) | Read `SUPABASE_SECRET_KEYS`. |
+| `submit-feedback` | `SUPABASE_SERVICE_ROLE_KEY` | Read `SUPABASE_SECRET_KEYS`. |
 | `analytics-proxy` | `SUPABASE_ANON_KEY` (`index.ts:127`-`:128`). Gateway `verify_jwt` on. | Read `SUPABASE_PUBLISHABLE_KEYS`. Set `verify_jwt = false` and verify the admin's JWT in code (`auth.getClaims()`). |
-| `trigger-*-image-migration` | No Supabase key. | Nothing. |
+| `trigger-*-image-migration` | `SUPABASE_SERVICE_ROLE_KEY` for the `reserve_privileged_edge_quota` RPC and the caller hash (`_shared/privileged-runtime.ts`). | Read `SUPABASE_SECRET_KEYS`. Without this, the functions answer 503 instead of dispatching once the legacy keys are disabled. |
 
 Supabase documents both variables (`SUPABASE_PUBLISHABLE_KEYS` and `SUPABASE_SECRET_KEYS`) as JSON maps keyed by key name, injected alongside the legacy ones. It also documents that the gateway's `verify_jwt` only understands legacy JWT keys.
 

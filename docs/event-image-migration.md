@@ -227,7 +227,7 @@ Set these in the Supabase Dashboard under **Project Settings → Edge Functions*
    - Permissions: **Contents → Read and write** (required for `repository_dispatch`)
    - Copy the token and set as `GITHUB_DISPATCH_TOKEN` in step 2
 
-4. **Create the Vault secrets, then apply the trigger migration.** The database side is tracked in `supabase/migrations/20261010120000_vault_backed_image_migration_triggers.sql`; it is not a Dashboard webhook. In **Vault** (Dashboard → Integrations → Vault), create:
+4. **Create the Vault secrets, then apply the trigger migration.** The database side is tracked in `supabase/migrations/20261030235727_vault_backed_image_migration_triggers.sql`; it is not a Dashboard webhook. In **Vault** (Dashboard → Integrations → Vault), create:
    - `image_migration_functions_url` — `https://<project-ref>.supabase.co/functions/v1`
    - `image_migration_webhook_secret` — the same value as `IMAGE_MIGRATION_WEBHOOK_SECRET`
 
