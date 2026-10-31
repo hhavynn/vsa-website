@@ -60,8 +60,9 @@ describe('admin-only ACE branch preview foundation (#665)', () => {
       'root', 'big', 'existing', 'draft:one', 'draft:two',
     ]);
     expect(result.fams[0].fullNodes.find((n) => n.id === 'big')).toMatchObject({
-      parent: 'root', role: 'Little', isDraft: undefined,
+      parent: 'root', role: 'Little',
     });
+    expect(result.fams[0].fullNodes.find((n) => n.id === 'big')?.isDraft).toBeUndefined();
     expect(result.fams[0].fullNodes.filter((n) => n.isDraft)).toEqual([
       expect.objectContaining({ id: 'draft:one', parent: 'big', pickup: {
         status: 'verified', academicYearStart: 2026, term: 'FA26',
