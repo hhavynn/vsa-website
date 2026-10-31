@@ -466,6 +466,56 @@ async function runTests() {
     // 42P17). Anon evaluates the same policies and must not hit it.
     reportResults(await checkUserProfilesNoRecursion(anon, { who: 'anon', mustRead: false }));
 
+    // House-event read-only anon checks (#640); never log row values.
+    {
+      const denied = (r) => r.error?.code === '42501' && [401, 403].includes(r.status);
+      const empty = (r) => !r.error && (r.data ?? []).length === 0;
+      const check = (label, outcome, r) => {
+        if (outcome) reportPass(label);
+        else reportFail(label + ': HTTP=' + String(r.status) +
+          ' code=' + String(r.error?.code ?? 'success') +
+          ' count=' + String(r.data?.length ?? 0));
+      };
+      const r1 = await anon.from('house_page_assets')
+        .select('id,internal_notes,source_doc_url').limit(1);
+      check('#640 R1 private House profiles are not readable', empty(r1) || denied(r1), r1);
+
+      for (const column of ['internal_notes', 'source_doc_url']) {
+        const r2 = await anon.from('published_house_page_assets').select(column).limit(1);
+        check('#640 R2 published view omits ' + column,
+          r2.status === 400 && r2.error?.code === '42703', r2);
+      }
+
+      const r4 = await anon.from('house_event_houses')
+        .select('house_event_id,house:house_page_assets(internal_notes)').limit(5);
+      check('#640 R4 nested private House profile invisible',
+        denied(r4) || (!r4.error && (r4.data ?? []).every((row) => row.house == null)), r4);
+
+      const r5 = await anon.from('house_events').select('id').eq('is_published', false).limit(1);
+      check('#640 R5 drafts hidden', empty(r5), r5);
+
+      // The inner-join variant was vacuous: parent RLS hid a draft even if
+      // association RLS regressed. A known, existing draft with a host must
+      // be supplied by an authorized operator in an ephemeral environment
+      // variable (never committed or printed) for a meaningful negative probe.
+      const draftId = process.env.RLS_HOUSE_DRAFT_EVENT_ID?.trim();
+      if (!draftId) {
+        reportSkip('#640 R6 direct draft association check NOT VERIFIED: requires an existing hosted draft event UUID with a host (RLS_HOUSE_DRAFT_EVENT_ID)');
+      } else if (!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(draftId)) {
+        reportFail('#640 R6 invalid fixture event ID shape; no query was made');
+      } else {
+        const r6 = await anon.from('house_event_houses')
+          .select('house_event_id').eq('house_event_id', draftId).limit(1);
+        check('#640 R6 direct draft association hidden', empty(r6) || denied(r6), r6);
+      }
+
+      const r7 = await anon.from('published_house_page_assets')
+        .select('id').eq('is_active', false).limit(1);
+      check('#640 R7 inactive profiles hidden', empty(r7), r7);
+    }
+
+
+
     // Incident #227, 20260619000000_emergency_security_hardening.sql (section B)
     // and 20260620020000_fix_user_profiles_rls_recursion.sql: neither function is
     // executable by anon. Nil UUID arguments, so a regressed grant finds nothing.
