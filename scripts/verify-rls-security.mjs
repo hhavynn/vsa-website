@@ -94,6 +94,16 @@ if (!RETIREMENT_PHASES.includes(lookupPhase)) {
   process.exit(1);
 }
 const lookupsRequired = lookupPhase === 'post-migration';
+ 
+// #623: until the owner applies the additive migration, a missing role RPC is
+// SKIP. Afterward it is a hard FAIL. The six-field and 200-ID contracts
+// are checked with nil, fictional IDs, never member names.
+const rolePhase = process.env.RLS_MEMBER_ROLES_PHASE || 'pre-migration';
+if (!RETIREMENT_PHASES.includes(rolePhase)) {
+  console.error('FAIL RLS_MEMBER_ROLES_PHASE must be one of ' + RETIREMENT_PHASES.join(', '));
+  process.exit(1);
+}
+const memberRolesRequired = rolePhase === 'post-migration';
 
 // House rollout phases, same two values: RLS_HOUSE_CACHE_PHASE for
 // 20261028083000_restrict_public_members_house_cache.sql (#704) and
@@ -475,6 +485,40 @@ async function runTests() {
     reportResults(await checkRpcDeniedAtGrant(anon, {
       fn: 'is_admin_user', args: { p_user_id: dummyUuid }, who: 'anon',
     }));
+
+
+    // #623: fail closed on a missing RPC after rollout; only the nil UUID is
+    // queried and only field names, counts, status codes and PASS/FAIL are logged.
+    {
+      const fields = ['member_id', 'kind', 'label', 'academic_year_start', 'source_type', 'related_key'];
+      const response = await anon.rpc('public_member_roles', {
+        p_year: 2026, p_member_ids: [dummyUuid],
+      });
+      if (['PGRST202', '42883'].includes(response.error?.code)) {
+        if (memberRolesRequired) reportFail('#623 role RPC absent after migration');
+        else reportSkip('#623 role RPC not yet applied; client cutover is blocked');
+      } else if (response.error || !Array.isArray(response.data)) {
+        reportFail('#623 anonymous role RPC read failed or response is not an array');
+      } else {
+        const exactFields = response.data.every((row) =>
+          row && Object.keys(row).length === fields.length &&
+          fields.every((key) => Object.prototype.hasOwnProperty.call(row, key)));
+        if (response.data.length === 0 && exactFields) {
+          reportPass('#623 anon nil member ID returns no roles');
+        } else {
+          reportFail('#623 anon nil member ID returned data or unexpected columns');
+        }
+        const oversized = await anon.rpc('public_member_roles', {
+          p_year: 2026, p_member_ids: Array(201).fill(dummyUuid),
+        });
+        if (oversized.error?.code === '22023') {
+          reportPass('#623 role RPC rejects 201 requested IDs');
+        } else {
+          reportFail('#623 role RPC missing 200-ID limit (status=' +
+            String(oversized.status) + ', code=' + String(oversized.error?.code ?? 'success') + ')');
+        }
+      }
+    }
 
     // Legacy archives before the retirement migration. Post-migration the strict
     // 42501 head reads in expectRetiredArchivesDenied replace these.
