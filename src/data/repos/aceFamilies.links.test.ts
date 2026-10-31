@@ -117,7 +117,7 @@ describe('complete admin ACE node references (#291)', () => {
       data: null, error: { message: 'fictional later-page denial', code: '42501' },
     });
     await expect(aceFamiliesRepository.getAllNodeRefs()).rejects.toMatchObject({
-      message: expect.stringContaining('fictional later-page denial'),
+      message: 'Insufficient permissions', code: '42501',
     });
     expect(supabaseMock.queriesFor('ace_family_members')).toHaveLength(2);
   });
