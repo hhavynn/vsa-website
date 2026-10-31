@@ -79,11 +79,11 @@ beforeEach(() => {
   });
 });
 
-async function openMoon() {
+async function openMoon(initialEntries: string[] = ['/admin/ace']) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
   render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={initialEntries}>
         <AdminAceFamilies />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -92,6 +92,21 @@ async function openMoon() {
   await screen.findByText('1 / 4 linked');
   await screen.findByRole('button', { name: 'Review 3 unlinked' });
 }
+
+it('clears an Unlinked URL filter in the same navigation that targets a linked year-review node', async () => {
+  await openMoon(['/admin/ace?filter=unlinked']);
+  const linked = nodes[0];
+  expect(screen.queryByDisplayValue(linked.name)).not.toBeInTheDocument();
+
+  const button = await screen.findByRole('button', {
+    name: `Review ACE node ${linked.name}, id ${linked.id}`,
+  });
+  fireEvent.click(button);
+
+  // The old two-setSearchParams sequence restored ?filter=unlinked and hid
+  // the requested editor, leaving the deep-link scroll target missing.
+  expect(await screen.findByDisplayValue(linked.name)).toBeInTheDocument();
+});
 
 const linkUpdates = () =>
   supabaseMock
