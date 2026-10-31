@@ -664,7 +664,9 @@
         "members",
         "public_members"
       ],
-      "rpcs": []
+      "rpcs": [
+        "admin_match_members_by_email"
+      ]
     },
     {
       "path": "src/data/repos/memberRoles.ts",

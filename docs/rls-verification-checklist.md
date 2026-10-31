@@ -212,6 +212,14 @@ Verify hosted Supabase **Allow new users to sign up** remains disabled. Existing
 - **Do NOT** paste environment files containing passwords, secret keys, or test credentials into screenshots, github issues, or PR comments.
 - **Do NOT** write the raw data-rights export payloads or private check-in codes to console outputs, debug logs, or files. Keep terminal logs clean of member data.
 
+### Admin ACE email matching by POST (#804)
+
+Migration `20261031070316_admin_match_members_by_email.sql` adds the read-only, SECURITY INVOKER `admin_match_members_by_email(p_emails text[])` function. It replaces `members?email=in.(...)` GET URL filters with POST RPC bodies, joins normalized `members.email` and confirmed `member_identity_emails.email`, returns only `{input_email,id,first_name,last_name,college,year}`, and preserves ambiguous shared-email matches. Admin guard, pinned search path, explicit GET/HEAD refusal, 1000-address server bound, PUBLIC/anon grant revocation, and authenticated-only EXECUTE apply.
+
+Applied to production 2026-10-31 as version 20261031070316, before the frontend RPC cutover. Offline proof: `bash scripts/test-admin-email-match.sh` in a disposable local PostgreSQL cluster, exercising anon denial, non-admin denial, admin POST alias resolution, ambiguous primary, HTTP GET refusal, 1001-address rejection. Hosted check: `node scripts/verify-rls-security.mjs` and approved anon/non-admin/admin PostgREST requests on production only after authorized migration; no service-role key, never a GET URL containing an email. Inspect the three ACE admin pages' Network requests at the same time. A failed RPC must fail the entire match, not return zero identities.
+
+`memberIdentity.ts` already reads confirmed aliases with keyset pagination using row ID, and scopes an individual alias read by canonical member ID. It does not filter GET URLs by email. Historical Supabase gateway logs may contain addresses from the old URL method; owner must determine retention/impact without copying actual email values into issues or PRs.
+
 ### Public role projection RPC migration phase (#623)
 
 Migration 20261031070305_public_member_roles.sql adds public_member_roles(p_year integer, p_member_ids uuid[]) with exactly six public-safe columns. It grants EXECUTE to anon and authenticated explicitly, not through PUBLIC, and adds no SELECT grant to private tables. The SQL contract test is bash scripts/test-public-member-roles.sh in a disposable, local-only PostgreSQL cluster.
