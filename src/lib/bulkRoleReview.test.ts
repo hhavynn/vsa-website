@@ -36,6 +36,22 @@ describe('Bulk Role Matcher name parser', () => {
     expect(() => parseRoleNames('Ada Example', 'last-first')).toThrow(/Last, First/);
   });
 
+  it('accepts a pasted spreadsheet name column with trailing empty tab cells', () => {
+    expect(parseRoleNames('Ada Example\t\nBéa Sample\t\nCai Example', 'first-last').map((r) => r.name))
+      .toEqual(['Ada Example', 'Béa Sample', 'Cai Example']);
+    expect(parseRoleNames('"Example, Ada"\t\n"Sample, Béa"\t', 'last-first').map((r) => r.name))
+      .toEqual(['Ada Example', 'Béa Sample']);
+  });
+
+  it('refuses multi-column TSV before treating an email, role or phone as another member', () => {
+    expect(() => parseRoleNames('Ada Example\tada@example.invalid\nBéa Sample\tEvents Chair', 'first-last'))
+      .toThrow(/Paste only the name column/);
+    expect(() => parseRoleNames('Example, Ada\tTreasurer', 'last-first'))
+      .toThrow(/Paste only the name column/);
+    expect(() => parseRoleNames('Ada Example\t123-456-7890', 'first-last'))
+      .toThrow(/Paste only the name column/);
+  });
+
   it('keeps duplicate rows visible but identifies the first occurrence', () => {
     const rows = parseRoleNames('- Ada Example; ada  example\n* Béa Sample', 'first-last');
     expect(rows.map((row) => row.duplicateOf)).toEqual([null, 1, null]);

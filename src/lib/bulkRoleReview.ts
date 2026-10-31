@@ -39,6 +39,13 @@ export function parseRoleNames(raw: string, format: NamePasteFormat): RoleReview
     throw new Error('The pasted batch is too large. Split it into smaller batches.');
   }
 
+  // A copied spreadsheet column is fine; multiple non-empty TSV cells per
+  // row are not. Otherwise a second column (email, role, phone, etc.) can
+  // silently become a new person's name in the admin matching queue.
+  if (raw.split(/\r?\n/).some((line) => line.split('\t').filter((cell) => cell.trim()).length > 1)) {
+    throw new Error('Paste only the name column from your spreadsheet. Remove other columns before parsing.');
+  }
+
   const tokens = format === 'last-first'
     ? raw.split(/[\n;]+/)
     : raw.split(/[\n;,]+/);
