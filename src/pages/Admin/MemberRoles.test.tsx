@@ -104,13 +104,13 @@ it('only chooses a single exact member and matching Cabinet row after separate a
   fireEvent.click(screen.getByRole('button', { name: 'Parse names' }));
 
   expect(screen.getByText(/1 inputs · 0 ready for editor/)).toBeInTheDocument();
-  const chooseMember = screen.getByRole('button', { name: 'Choose sole exact member candidate' });
-  expect(screen.queryByRole('button', { name: 'Choose sole matching Board record' })).not.toBeInTheDocument();
+  const chooseMember = screen.getByRole('button', { name: /Row 1: choose sole exact member candidate for Ada Example/ });
+  expect(screen.queryByRole('button', { name: /Row 1: choose sole matching Board record for Ada Example/ })).not.toBeInTheDocument();
   fireEvent.click(chooseMember);
   expect(screen.getByLabelText('Confirm canonical VSA member')).toHaveValue('member-a');
   expect(screen.queryByText('Ready to review in Cabinet')).not.toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Choose sole matching Board record' }));
+  fireEvent.click(screen.getByRole('button', { name: /Row 1: choose sole matching Board record for Ada Example/ }));
   expect(screen.getByLabelText('Select existing Board record')).toHaveValue('source-a');
   expect(screen.getByText('Ready to review in Cabinet')).toBeInTheDocument();
   expect(screen.getByText(/0 roles published by this tool/)).toBeInTheDocument();
@@ -124,8 +124,8 @@ it('never offers an identity shortcut when two canonical members share the exact
   });
   fireEvent.click(screen.getByRole('button', { name: 'Parse names' }));
   expect(screen.getByText(/Multiple exact candidates/)).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Choose sole exact member candidate' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: /Choose sole matching/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Row 1: choose sole exact member candidate for Ada Example/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /choose sole matching/ })).not.toBeInTheDocument();
 });
 
 it('never bypasses unavailable source reads using convenience buttons', () => {
@@ -135,7 +135,7 @@ it('never bypasses unavailable source reads using convenience buttons', () => {
     target: { value: 'Ada Example' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'Parse names' }));
-  expect(screen.queryByRole('button', { name: 'Choose sole exact member candidate' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: /Choose sole matching/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Row 1: choose sole exact member candidate for Ada Example/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /choose sole matching/ })).not.toBeInTheDocument();
   expect(screen.getByRole('alert')).toHaveTextContent('Identity or Cabinet source data is unavailable');
 });
