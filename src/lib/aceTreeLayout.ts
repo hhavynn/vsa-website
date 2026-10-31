@@ -11,7 +11,6 @@ export interface TreeNode {
   pickup?: AcePickupYear;
   parent?: string | null;
   photoUrl?: string | null;
-  displayOrder?: number;
 }
 
 export type BandKey = number | 'unknown';
@@ -106,9 +105,8 @@ export function layoutTree(rawNodes: TreeNode[]): LayoutResult {
     if (aYear === null && bYear !== null) return 1;
     if (bYear === null && aYear !== null) return -1;
     if (aYear !== null && bYear !== null && aYear !== bYear) return aYear - bYear;
-    const ao = a.displayOrder ?? Number.POSITIVE_INFINITY;
-    const bo = b.displayOrder ?? Number.POSITIVE_INFINITY;
-    return ao - bo || cmp(a.id, b.id);
+    // Name order, as the public tree reads today; id only breaks exact ties.
+    return a.label.localeCompare(b.label, 'en') || cmp(a.id, b.id);
   };
   const children = new Map<string, string[]>(nodes.map((n) => [n.id, []]));
   const roots: string[] = [];
@@ -240,8 +238,8 @@ export function edgeGeometry(a: Point, b: Point, nodeR: number, unitY: number, o
     let routeX = Math.max(a.x, b.x) + clearance;
     // Keep the detour column clear of *all* intervening nodes and labels.
     // In the worst case the SVG expands rightward instead of clipping paths.
-    for (let attempts = 0; attempts < corridor.length + 1; attempts++) {
-      if (!corridor.some((point) => Math.abs(point.x - routeX) < clearance)) break;
+    const blocked = (x: number) => corridor.some((point) => Math.abs(point.x - x) < clearance);
+    for (let attempts = 0; attempts < corridor.length + 1 && blocked(routeX); attempts++) {
       routeX += clearance;
     }
     const direction = endY >= startY ? 1 : -1;

@@ -141,7 +141,6 @@ export function membersToTreeNodes(
       cohort: formatPickupLabel(pickup),
       pickup,
       parent: m.parent_member_id ?? null,
-      displayOrder: m.display_order,
       photoUrl: resolveMemberPhoto(avatars, m.member_id, m.photo_url),
     };
   });

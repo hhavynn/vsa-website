@@ -131,6 +131,18 @@ describe('ACE chronological tree layout (#671 and #675)', () => {
     expect(a.parentById).toEqual(b.parentById);
   });
 
+  it('keeps name order for siblings and roots, as the public tree does today', () => {
+    const named = (id: string, label: string, parent: string | null) => ({
+      id, label, parent, initial: label.charAt(0), role: parent ? 'Little' : 'Big',
+    });
+    const { positions } = layoutTree([
+      named('z-root', 'Alpha', null), named('a-root', 'Beta', null),
+      named('z-kid', 'Ana', 'z-root'), named('a-kid', 'Zed', 'z-root'),
+    ]);
+    expect(positions['z-kid'].x).toBeLessThan(positions['a-kid'].x);
+    expect(positions['z-root'].x).toBeLessThan(positions['a-root'].x);
+  });
+
   it('places more than 150 nodes in three disjoint subtrees without overlap', () => {
     const r = layoutTree(large150);
     expect(r.mode).toBe('year');

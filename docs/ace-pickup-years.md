@@ -146,7 +146,7 @@ node scripts/verify-rls-security.mjs   # live anon probes (skips until applied)
 3. Rollback: `scripts/sql/ace-pickup-year.rollback.sql` (export approved years
    and evidence first).
 
-**Status:** not applied to production.
+**Status:** applied to production; 0 of 916 published nodes had a year on 2026-10-30.
 
 ## Chronological public tree layout (#671; #675 fixtures)
 
