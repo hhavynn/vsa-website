@@ -186,3 +186,33 @@ describe('FamilyTree malformed-graph rendering (#671)', () => {
   });
 });
 
+
+
+describe('visible year bands and node accessibility (#672)', () => {
+  const dated = [
+    { ...node('p', null), pickup: { status: 'verified' as const, academicYearStart: 2021, term: 'FA21' } },
+    { ...node('a', 'p', 'Little'), pickup: { status: 'verified' as const, academicYearStart: 2023, term: 'SP24' } },
+    { ...node('undated', 'p', 'Little') },
+  ];
+
+  it('renders one guide per band, including empty years and an Unknown band', () => {
+    const { container } = render(<FamilyTree nodes={dated} focusId="a" onSelect={() => {}} />);
+    const guides = container.querySelectorAll('[data-year-band]');
+    expect(Array.from(guides, (g) => g.getAttribute('data-year-band')))
+      .toEqual(['unknown', '2021', '2022', '2023']);
+    expect(container.querySelector('.ace-year-band.is-focus')).toHaveAttribute('data-year-band', '2023');
+    expect(container.querySelector('.ace-year-band.is-unknown')).toHaveAttribute('data-year-band', 'unknown');
+  });
+
+  it('includes the approved academic year in a selectable node accessible name', () => {
+    render(<FamilyTree nodes={dated} onSelect={() => {}} />);
+    expect(screen.getByRole('button', { name: 'a, Little, picked up 2023–24' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'undated, Little, pickup year unverified' })).toBeInTheDocument();
+  });
+
+  it('keeps the old accessible name and no fake year guides for all-unknown trees', () => {
+    const { container } = render(<FamilyTree nodes={family} onSelect={() => {}} />);
+    expect(container.querySelectorAll('[data-year-band]')).toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'cousin, Little' })).toBeInTheDocument();
+  });
+});

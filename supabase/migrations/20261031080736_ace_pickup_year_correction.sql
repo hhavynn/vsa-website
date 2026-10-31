@@ -1,4 +1,5 @@
 -- #673: reviewed ACE pickup-year corrections: expected-state CAS + atomic audit.
+-- Applied to production 2026-10-31 (schema_migrations version 20261031080736).
 -- Forward-only; apply manually to staging first, then owner-approved production.
 -- This adds no public grants, no lineage writes and no role/publish changes.
 -- Requires 20261027190000_ace_member_pickup_year.sql and admin_activity_log.

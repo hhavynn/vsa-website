@@ -1,8 +1,10 @@
 import React, { useMemo } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { FamAccent } from './FamCover';
-import { edgeGeometry, layoutTree, uniqueTreeNodes } from '../../../lib/aceTreeLayout';
-import type { TreeNode } from '../../../lib/aceTreeLayout';
+import { cn } from '../../../lib/utils';
+import { bandRect, edgeGeometry, layoutTree, treeMetrics, uniqueTreeNodes } from '../../../lib/aceTreeLayout';
+import type { LayoutResult, TreeNode } from '../../../lib/aceTreeLayout';
+import { formatPickupAcademicYear } from '../../../lib/acePickupYear';
 
 export { layoutTree } from '../../../lib/aceTreeLayout';
 export type { TreeNode } from '../../../lib/aceTreeLayout';
@@ -93,6 +95,7 @@ function lineageStyle(vars: Record<string, string>): React.CSSProperties {
 
 interface FamilyTreeProps {
   nodes: TreeNode[];
+  layout?: LayoutResult;
   accent?: FamAccent;
   focusId?: string | null;
   onSelect?: (id: string) => void;
@@ -102,6 +105,7 @@ interface FamilyTreeProps {
 
 export function FamilyTree({
   nodes,
+  layout: layoutProp,
   accent = 'teal',
   focusId,
   onSelect,
@@ -109,18 +113,15 @@ export function FamilyTree({
   dark = false,
 }: FamilyTreeProps) {
   const uniqueNodes = useMemo(() => uniqueTreeNodes(nodes), [nodes]);
-  const layout = useMemo(() => layoutTree(uniqueNodes), [uniqueNodes]);
+  const layout = useMemo(() => layoutProp ?? layoutTree(uniqueNodes), [layoutProp, uniqueNodes]);
   const safeNodes = useMemo(
     () => uniqueNodes.map((node) => ({ ...node, parent: layout.parentById[node.id] ?? null })),
     [uniqueNodes, layout],
   );
   const reduceMotion = !!useReducedMotion();
 
-  const unitX = compact ? 96 : 132;
-  const unitY = compact ? 118 : 148;
-  const padX = compact ? 24 : 48;
-  const padY = compact ? 24 : 48;
-  const nodeR = compact ? 22 : 28;
+  const metrics = treeMetrics(compact);
+  const { unitX, unitY, padX, padY, nodeR } = metrics;
 
   const h = layout.rowCount * unitY + padY * 2;
 
@@ -176,6 +177,23 @@ export function FamilyTree({
         </clipPath>
       </defs>
       <rect width={w} height={h} fill={`url(#${patternId})`} opacity="0.7" />
+
+      {layout.mode === 'year' && layout.yearBands.map((band, i) => {
+        const rect = bandRect(band, metrics);
+        return (
+          <rect
+            key={String(band.key)}
+            data-year-band={String(band.key)}
+            className={cn('ace-year-band', i % 2 === 1 && 'is-alt', band.key === 'unknown' && 'is-unknown', !!focusId && layout.bandKeyById[focusId] === band.key && 'is-focus')}
+            x={0}
+            y={rect.top}
+            width={w}
+            height={rect.height}
+            pointerEvents="none"
+          />
+        );
+      })}
+
 
       {edges.map((e) => (
         <path
@@ -301,7 +319,10 @@ export function FamilyTree({
             onClick={() => onSelect && onSelect(n.id)}
             role={onSelect ? 'button' : undefined}
             tabIndex={onSelect ? 0 : undefined}
-            aria-label={onSelect ? `${n.label}, ${n.role || 'Member'}` : undefined}
+            aria-label={onSelect ? `${n.label}, ${n.role || 'Member'}` +
+              (n.pickup?.status === 'verified'
+                ? ', picked up ' + formatPickupAcademicYear(n.pickup.academicYearStart)
+                : layout.mode === 'year' ? ', pickup year unverified' : '') : undefined}
             aria-pressed={onSelect ? isFocus : undefined}
             onKeyDown={onSelect ? (e) => {
               if (e.key !== 'Enter' && e.key !== ' ') return;

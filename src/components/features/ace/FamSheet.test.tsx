@@ -1,3 +1,4 @@
+/* eslint-disable testing-library/no-container, testing-library/no-node-access */
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { FamSheet } from './FamSheet';
@@ -302,5 +303,92 @@ describe('FamSheet published node deep links (#666)', () => {
     );
     expect(screen.getByText(/Tap a member to trace their lineage/)).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: /^Lineage of/ })).not.toBeInTheDocument();
+  });
+});
+
+
+describe('chronological academic-year rail in real family sheet (#672)', () => {
+  const dated = [
+    member({ id: 'p', name: 'Fictional P', role_label: 'Big',
+      pickup_academic_year_start: 2021, pickup_term: 'FA21' }),
+    member({ id: 'a', name: 'Fictional A', role_label: 'Big', parent_member_id: 'p',
+      pickup_academic_year_start: 2022, pickup_term: 'FA22' }),
+    member({ id: 'b', name: 'Fictional B', role_label: 'Little', parent_member_id: 'p',
+      pickup_academic_year_start: 2023, pickup_term: 'FA23' }),
+    member({ id: 'c', name: 'Fictional C', role_label: 'Little', parent_member_id: 'a',
+      pickup_academic_year_start: 2023, pickup_term: 'SP24' }),
+    member({ id: 'unknown', name: 'Fictional Unknown', role_label: 'Little',
+      parent_member_id: 'p', pickup_academic_year_start: null, pickup_term: null }),
+  ];
+
+  beforeEach(() => {
+    supabaseMock.reset();
+    supabaseMock.setDefault('public_member_avatars', { data: [], error: null });
+  });
+
+  it('shows one rail label per ordered year band and a separate Unknown band', () => {
+    const { container } = renderSheet(() => {}, dated);
+    expect(screen.getByText('Rows show the year each person was picked up.')).toBeInTheDocument();
+    const rail = container.querySelector('.ace-year-rail');
+    expect(rail).not.toBeNull();
+    const keys = Array.from(rail!.querySelectorAll('[data-band-key]'), (el) => el.getAttribute('data-band-key'));
+    expect(keys).toEqual(['unknown', '2021', '2022', '2023']);
+    expect(rail).toHaveAttribute('aria-hidden', 'true');
+    expect(rail!.querySelectorAll('[data-band-key]')).toHaveLength(
+      container.querySelectorAll('[data-year-band]').length,
+    );
+    expect(screen.getByText('2023–24', { selector: '.ace-year-full' })).toBeInTheDocument();
+    expect(screen.getByText('Unknown pickup year', { selector: '.ace-year-full' })).toBeInTheDocument();
+  });
+
+  it('focuses one real year band without changing the generations metadata', () => {
+    const { container } = renderSheet(() => {}, dated);
+    expect(screen.getByText(/5 members · 3 generations/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Fictional B, Little, picked up 2023–24' }));
+    expect(container.querySelector('.ace-year-band.is-focus')).toHaveAttribute('data-year-band', '2023');
+    expect(container.querySelector('.ace-year-label.is-focus')).toHaveAttribute('data-band-key', '2023');
+    expect(screen.getByText('Picked up: Fall 2023 · 2023–24')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Fictional C, Little, picked up 2023–24' }));
+    expect(screen.getByText('Picked up: Spring 2024 · 2023–24')).toBeInTheDocument();
+  });
+
+  it('shows year-only and unknown descriptions, without leaking evidence confidence', () => {
+    const yearOnly = dated.map((m) => m.id === 'c' ? { ...m, pickup_term: null } : m);
+    renderSheet(() => {}, yearOnly);
+    fireEvent.click(screen.getByRole('button', { name: 'Fictional C, Little, picked up 2023–24' }));
+    expect(screen.getByText('Picked up: 2023–24 (term unknown)')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Fictional Unknown, Little, pickup year unverified' }));
+    expect(screen.getByText('Pickup year unverified')).toBeInTheDocument();
+    expect(screen.queryByText(/unreviewed|candidate evidence|source confidence/i)).not.toBeInTheDocument();
+  });
+
+  it('does not invent a chronological rail for an entirely undated family', () => {
+    const { container } = renderSheet();
+    expect(container.querySelector('.ace-year-rail')).toBeNull();
+    expect(screen.getByText('Rows show generations. Pickup years are still being verified.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Lynna On, Little' })).toBeInTheDocument();
+  });
+
+  it('pins the rail against horizontal panning and scales its labels inversely', () => {
+    const { container } = renderSheet(() => {}, dated);
+    const viewport = container.querySelector('.ace-tree-panviewport') as HTMLDivElement;
+    const canvas = container.querySelector('.ace-tree-canvas') as HTMLDivElement;
+    Object.defineProperties(viewport, {
+      clientWidth: { configurable: true, value: 400 },
+      clientHeight: { configurable: true, value: 300 },
+    });
+    Object.defineProperties(canvas, {
+      offsetWidth: { configurable: true, value: 800 },
+      offsetHeight: { configurable: true, value: 640 },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Reset family tree view' }));
+    const rail = container.querySelector('.ace-year-rail') as HTMLElement;
+    expect(canvas.style.transform).toContain('translate3d(116px');
+    expect(rail.style.transform).toContain('translateX(-116px)');
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in family tree' }));
+    const updated = container.querySelector('.ace-year-rail') as HTMLElement;
+    expect(updated.style.transform).toContain('translateX(');
+    const year = updated.querySelector('.ace-year-label') as HTMLElement;
+    expect(year.style.transform).toContain('scale(0.8333333333333334)');
   });
 });

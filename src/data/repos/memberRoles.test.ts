@@ -2,93 +2,67 @@ import { getPublicMemberRoles, getPublishedBoardMemberIds } from './memberRoles'
 import { supabaseMock, postgrestError } from '../../test-utils/supabaseMock';
 
 jest.mock('../../lib/supabase', () => ({
-  get supabase() {
-    return require('../../test-utils/supabaseMock').supabaseMock.client;
-  },
+  get supabase() { return require('../../test-utils/supabaseMock').supabaseMock.client; },
 }));
-
 beforeEach(() => supabaseMock.reset());
 
 const year = { id: 'cabinet-year-2026' };
-const roles = [
-  { id: 'role-1', member_id: 'verified-1', role: 'Events Chair', category: 'General Board' },
-  { id: 'role-2', member_id: 'verified-2', role: 'Intern', category: 'Interns' },
-  { id: 'role-3', member_id: null, role: 'President', category: 'Executive Board' },
-];
+const row = (member_id: string, kind: string, label: string) => ({
+  member_id, kind, label, academic_year_start: 2026,
+  source_type: 'cabinet_members', related_key: null,
+});
 
-describe('bounded public role-source reads (#623/#627)', () => {
-  it('reads exactly one year and one batched Cabinet query with minimal public fields', async () => {
-    supabaseMock.queueResult('cabinet_years', { data: [year], error: null });
-    supabaseMock.queueResult('cabinet_members', { data: roles, error: null });
-    const result = await getPublicMemberRoles(2026, ['verified-2', 'verified-1', 'verified-2']);
-
-    expect(result.get('verified-1')?.map((role) => role.label)).toEqual(['Board Member', 'Events Chair']);
-    expect(result.get('verified-2')?.map((role) => role.label)).toEqual(['Intern']);
-    expect(supabaseMock.queries().map((q) => q.table)).toEqual(['cabinet_years', 'cabinet_members']);
-    expect(supabaseMock.filtersFor('cabinet_years')).toEqual([['start_year', 2026]]);
-    expect(supabaseMock.filtersFor('cabinet_members')).toEqual([['cabinet_year_id', year.id]]);
-
-    const members = supabaseMock.queriesFor('cabinet_members')[0].calls;
-    expect(members.find((call) => call.method === 'select')?.args[0]).toBe('id, member_id, role, category');
-    expect(members.find((call) => call.method === 'in')?.args).toEqual([
-      'member_id', ['verified-1', 'verified-2'],
-    ]);
-    expect(members.some((call) => call.method === 'limit' && call.args[0] === 501)).toBe(true);
-    expect(JSON.stringify(members)).not.toMatch(/email|draft|review_note|house_member_yearly_points|\*/);
+describe('bounded public member role RPC (#623)', () => {
+  it('reads exactly one bounded RPC, not private Cabinet or member tables', async () => {
+    supabaseMock.queueResult('rpc:public_member_roles', { data: [
+      row('one','board','Board Member'),row('one','cabinet_position','Events Chair'),
+      row('two','intern','Intern'),
+    ],error:null });
+    const map=await getPublicMemberRoles(2026,['two','one','two']);
+    expect(map.get('one')?.map(r=>r.label)).toEqual(['Board Member','Events Chair']);
+    expect(map.get('two')?.map(r=>r.label)).toEqual(['Intern']);
+    expect(supabaseMock.queries().map(q=>q.table)).toEqual(['rpc:public_member_roles']);
+    expect(supabaseMock.queries()[0].calls[0]).toEqual({
+      method:'rpc',args:[{p_year:2026,p_member_ids:['one','two']}],
+    });
   });
 
-  it('returns no roles without a Cabinet year or selected IDs; never guesses from legacy yearless Cabinet entries', async () => {
-    expect(await getPublicMemberRoles(2026, [])).toEqual(new Map());
+  it('short-circuits empty member IDs without a network read', async () => {
+    expect(await getPublicMemberRoles(2026,[])).toEqual(new Map());
     expect(supabaseMock.queries()).toHaveLength(0);
-    supabaseMock.queueResult('cabinet_years', { data: [], error: null });
-    expect(await getPublicMemberRoles(2026, ['verified-1'])).toEqual(new Map());
+  });
+
+  it('sends 450 visible IDs in exactly 200/200/50 member batches', async () => {
+    const ids=Array.from({length:450},(_,i)=>'id-'+String(i).padStart(4,'0'));
+    for(let i=0;i<3;i++) supabaseMock.queueResult('rpc:public_member_roles',{data:[],error:null});
+    expect(await getPublicMemberRoles(2026,ids)).toEqual(new Map());
+    const calls=supabaseMock.queriesFor('rpc:public_member_roles');
+    expect(calls).toHaveLength(3);
+    expect(calls.map(c=>(c.calls[0].args[0] as {p_member_ids:string[]}).p_member_ids.length))
+      .toEqual([200,200,50]);
+    expect(calls.every(c=>(c.calls[0].args[0] as {p_year:number}).p_year===2026)).toBe(true);
+  });
+
+  it('propagates a missing or denied role RPC instead of hiding the failed read', async () => {
+    supabaseMock.queueResult('rpc:public_member_roles', {data:null,error:postgrestError('permission denied','42501')});
+    await expect(getPublicMemberRoles(2026,['one'])).rejects.toThrow(/Insufficient permissions/);
     expect(supabaseMock.queriesFor('cabinet_members')).toHaveLength(0);
   });
 
-  it('fails closed on an ambiguous Cabinet year instead of presenting mismatched historical roles', async () => {
-    supabaseMock.queueResult('cabinet_years', { data: [year, { id: 'duplicate' }], error: null });
-    await expect(getPublicMemberRoles(2026, ['verified-1'])).rejects.toThrow();
-    expect(supabaseMock.queriesFor('cabinet_members')).toHaveLength(0);
+  it('rejects a foreign member returned by the RPC', async () => {
+    supabaseMock.queueResult('rpc:public_member_roles', {data:[row('other','board','Board Member')],error:null});
+    await expect(getPublicMemberRoles(2026,['one'])).rejects.toThrow(/foreign year or member/);
   });
 
-  it('propagates public permission failures without suppressing the independently fetched leaderboard', async () => {
-    supabaseMock.queueResult('cabinet_years', { data: [year], error: null });
-    supabaseMock.queueResult('cabinet_members', {
-      data: null, error: postgrestError('permission denied', '42501'),
-    });
-    await expect(getPublicMemberRoles(2026, ['verified-1'])).rejects.toThrow();
-    expect(supabaseMock.queriesFor('member_yearly_points')).toHaveLength(0);
-    expect(supabaseMock.queriesFor('members')).toHaveLength(0);
-  });
-
-  it('supports the existing 100-row and Show All pagination with bounded batches rather than N+1', async () => {
-    const visibleIds = Array.from({ length: 153 }, (_, i) => `member-${String(i).padStart(3, '0')}`);
-    supabaseMock.queueResult('cabinet_years', { data: [year], error: null });
-    for (let chunk = 0; chunk < 4; chunk += 1) {
-      supabaseMock.queueResult('cabinet_members', {
-        data: [roles[0]], error: null,
-      });
-    }
-    const result = await getPublicMemberRoles(2026, visibleIds);
-    expect(result.get('verified-1')).toBeUndefined();
-    const queryBatches = supabaseMock.queriesFor('cabinet_members');
-    expect(queryBatches).toHaveLength(4);
-    queryBatches.forEach((query, index) => {
-      const batch = query.calls.find((call) => call.method === 'in')?.args[1] as string[];
-      expect(batch).toEqual(visibleIds.slice(index * 50, (index + 1) * 50));
-      expect(batch.length).toBeLessThanOrEqual(50);
-      expect(query.calls.find((call) => call.method === 'select')?.args[0]).toBe('id, member_id, role, category');
-    });
-    expect(supabaseMock.queriesFor('cabinet_years')).toHaveLength(1);
-  });
-
-  it('rejects unbounded enumeration rather than querying all member roles', async () => {
-    const beyondVisible = Array.from({ length: 2001 }, (_, i) => `member-${i}`);
-    await expect(getPublicMemberRoles(2026, beyondVisible)).rejects.toThrow(/visible-member limit/);
+  it('rejects unbounded result arrays and 2,001-member requests', async () => {
+    supabaseMock.queueResult('rpc:public_member_roles', {data:Array.from({length:26},()=>row('one','board','Board Member')),error:null});
+    await expect(getPublicMemberRoles(2026,['one'])).rejects.toThrow(/response budget/);
+    supabaseMock.reset();
+    await expect(getPublicMemberRoles(2026,Array.from({length:2001},(_,i)=>'id-'+i)))
+      .rejects.toThrow(/visible-member limit/);
     expect(supabaseMock.queries()).toHaveLength(0);
   });
 });
-
 
 describe('published Board cohort read (#628)', () => {
   it('reads only canonical linked Board IDs and excludes intern-only rows', async () => {

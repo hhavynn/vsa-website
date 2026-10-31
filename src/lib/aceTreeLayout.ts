@@ -14,6 +14,25 @@ export interface TreeNode {
 }
 
 export type BandKey = number | 'unknown';
+/** Shared canvas metrics for year bands, guides, node markers and the rail. */
+export function treeMetrics(compact: boolean) {
+  return {
+    unitX: compact ? 96 : 132,
+    unitY: compact ? 118 : 148,
+    padX: compact ? 24 : 48,
+    padY: compact ? 24 : 48,
+    nodeR: compact ? 22 : 28,
+  };
+}
+
+export function bandRect(band: YearBand, m: ReturnType<typeof treeMetrics>) {
+  return {
+    top: m.padY + band.startRow * m.unitY - (m.nodeR + 18),
+    height: band.rowCount * m.unitY,
+  };
+}
+
+
 export interface YearBand {
   key: BandKey;
   academicYearStart: number | null;

@@ -127,8 +127,7 @@ published-fam filter. It never joins evidence. Grants stay SELECT-only for
 `anon` and `authenticated`.
 
 `membersToTreeNodes()` sets `TreeNode.pickup` (typed) and `cohort` (the label:
-`FA23`, or `2021–22` for a year-only value, else nothing). Layout still uses
-generation depth until #671.
+`FA23`, or `2021–22` for a year-only value, else nothing). Approved years use the chronological year-row layout from #671, with a synchronized left year rail from #672. Undated legacy families still use honest generation-depth layout and explicitly state the years are being verified.
 
 ## Verification
 
@@ -155,6 +154,14 @@ Published ACE year bands use only verified member pickup academic-year values, n
 Cycle/self-parent/duplicate links are repaired only in the layout graph, never written back to ACE lineage. The admin preview alerts the reviewer; the public tree renders the repaired edges and retains interactions. Reverse-time edges are dashed; long forward edges include a straight drop for lineage animation. The separate year rail, focus insets and accessible labels are scoped to #672. No historical year is manufactured and no production migration is part of this change.
 
 Offline fictional golden fixtures and large-tree tests live in src/lib/__fixtures__/aceTreeFixtures.ts and src/lib/aceTreeLayout.test.ts. The #675 real-device, screenshot, historical coverage and rollout preflight work remain separately tracked. Until browser and live-data checks pass, visual acceptance remains unverified.
+
+## Public academic-year rail (#672)
+
+Year-mode family sheets show one left-hand `2023–24` rail label and horizontal row guide per actual academic year, including empty years, with an explicit `Unknown pickup year` band. The label and SVG guide both derive their Y position from `bandRect` in `src/lib/aceTreeLayout.ts`, so a 2023–24 Little appears in the same band as a cousin picked up in the same year even at different lineage depths. Undated-only families have **no** academic-year labels; their note is `Rows show generations. Pickup years are still being verified.`
+
+The label rail stays inside the same transformed canvas as the tree, but cancels horizontal panning and inverse-scales the text to keep it readable at 50/100/200% zoom. Responsive rail width reserves space in pan limits and keyboard focus. Node accessible names include their **own approved pickup year**, not their Big's year. The selected-member card says `Picked up: Fall 2023 · 2023–24`, `Picked up: 2023–24 (term unknown)` or `Pickup year unverified`. No source, evidence status, reviewer, pending application or private year guess reaches the public rail.
+
+**Manual validation still required:** 320px iPhone and Android, 768px tablet, desktop, both themes, browser zoom and touch pinch/pan, reduced motion, keyboard navigation and VoiceOver/TalkBack. The #675 browser measurement/screenshot work stays separate. No database migration or publish action is part of the rail.
 
 ## Historical pickup-year coverage preflight (#675, no database writes)
 
@@ -188,6 +195,8 @@ One database transaction locks that node, validates the expected year/term, crea
 
 **No admin editor is wired in this PR.** #673 follow-up PR2 will implement the per-node form, explicit overwrite/Unknown confirmation, family/year review queue, evidence status and accessible controls. Do not use the old setter for that new UI.
 
-Migration `20261031090000_ace_pickup_year_correction.sql` must be applied **after** `20261002040000_admin_activity_log_and_review_marks.sql` and `20261027190000_ace_member_pickup_year.sql`. Owner first confirms both prerequisites exist on staging, then manually applies the correction migration. Never run `supabase db push` or apply production SQL from an agent. If an RPC is absent, the client correction must fail closed; never fall back to the unaudited setter.
+**Status:** applied to production 2026-10-31 as version 20261031080736, with no staging run because no staging project exists. The admin correction UI is not built yet.
+
+Migration `20261031080736_ace_pickup_year_correction.sql` must be applied **after** `20261002040000_admin_activity_log_and_review_marks.sql` and `20261027190000_ace_member_pickup_year.sql`. Owner first confirms both prerequisites exist on staging, then manually applies the correction migration. Never run `supabase db push` or apply production SQL from an agent. If an RPC is absent, the client correction must fail closed; never fall back to the unaudited setter.
 
 Verification: run `bash scripts/test-ace-pickup-year.sh` for the existing rollback suite and new `ace-year-correction.test.sql` section in a disposable local cluster. On authorized staging, validate a conflict between two admin browser tabs, approved and Unknown values, evidence review history, activity entry, and anon/nonadmin EXECUTE denial; compare node identity, Big, children, role, avatar, publication before/after. These hosted checks and production application have **not been performed**.

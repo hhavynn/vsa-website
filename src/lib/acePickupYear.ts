@@ -212,3 +212,21 @@ export function formatPickupLabel(pickup: AcePickupYear): string | null {
   if (pickup.status !== 'verified') return null;
   return pickup.term ?? formatPickupAcademicYear(pickup.academicYearStart);
 }
+
+
+/** Compact rail label: 2023–24 → 23–24 (2099–00 remains 99–00). */
+export function formatPickupAcademicYearShort(year: number): string {
+  return String(year % 100).padStart(2, '0') + '–' +
+    String((year + 1) % 100).padStart(2, '0');
+}
+
+/** Public-safe, human-readable pickup description; never source confidence. */
+export function describePickup(pickup: AcePickupYear): string {
+  if (pickup.status !== 'verified') return 'Pickup year unverified';
+  const year = formatPickupAcademicYear(pickup.academicYearStart);
+  if (!pickup.term) return 'Picked up: ' + year + ' (term unknown)';
+  const season = pickup.term.slice(0, 2);
+  const seasonName = season === 'FA' ? 'Fall' : season === 'WI' ? 'Winter' : 'Spring';
+  const calendarYear = pickup.academicYearStart + (season === 'FA' ? 0 : 1);
+  return 'Picked up: ' + seasonName + ' ' + calendarYear + ' · ' + year;
+}

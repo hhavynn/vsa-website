@@ -256,16 +256,17 @@ describe('Leaderboard member profile on phones', () => {
 
   it('shows the House as text, and nothing when the member has none', async () => {
     let dialog = await openProfile('Cam Solo');
-    expect(within(dialog).queryByText('Bowser')).not.toBeInTheDocument();
+    expect(within(dialog).queryByText(/Bowser/)).not.toBeInTheDocument();
     fireEvent.click(within(dialog).getAllByRole('button', { name: /^Close/ })[0]);
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
     jest.spyOn(leaderboardRepository, 'getMemberHouseBadge').mockResolvedValue({
-      house: 'Bowser', display_name: 'Bowser', accent_color: '#c0392b',
-    } as never);
+      academic_year_start: 2025, house: 'Bowser', house_profile_id: 'hp-bowser',
+      display_name: 'Bowser', accent_color: '#c0392b',
+    });
     fireEvent.click(screen.getAllByRole('button', { name: 'Open profile for Cam Solo' })[0]);
     dialog = await screen.findByRole('dialog', { name: 'Cam Solo member profile' });
-    expect(await within(dialog).findByText('Bowser')).toBeInTheDocument();
+    expect(await within(dialog).findByText(/^House · Bowser/)).toBeInTheDocument();
   });
 });
 

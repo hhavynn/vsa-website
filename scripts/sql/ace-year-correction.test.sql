@@ -20,7 +20,7 @@ begin
   return outcome;
 end $$;
 select pg_temp.check_673('SECURITY INVOKER and pinned empty search_path',
-  (select not prosecdef and proconfig @> array['search_path='] from pg_proc
+  (select not prosecdef and proconfig @> array['search_path=""'] from pg_proc
    where oid='public.correct_ace_member_pickup_year(uuid,integer,text,integer,text,text,uuid)'::regprocedure));
 select pg_temp.check_673('anon EXECUTE revoked and authenticated allowed',
   not has_function_privilege('anon','public.correct_ace_member_pickup_year(uuid,integer,text,integer,text,text,uuid)','execute')

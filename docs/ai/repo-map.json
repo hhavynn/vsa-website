@@ -665,7 +665,9 @@
         "members",
         "public_members"
       ],
-      "rpcs": []
+      "rpcs": [
+        "admin_match_members_by_email"
+      ]
     },
     {
       "path": "src/data/repos/memberRoles.ts",
@@ -673,7 +675,9 @@
         "cabinet_members",
         "cabinet_years"
       ],
-      "rpcs": []
+      "rpcs": [
+        "public_member_roles"
+      ]
     },
     {
       "path": "src/data/repos/photoRequests.ts",

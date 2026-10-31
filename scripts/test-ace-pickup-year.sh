@@ -60,8 +60,8 @@ psql "${psql_args[@]}" -d pickup_full -q -f "$script_dir/sql/ace-pickup-year.ass
 # it never alters rollback's separate database. Apply twice for idempotency.
 psql "${psql_args[@]}" -d pickup_full -q -c 'set client_min_messages = warning' \
   -f "$repo_dir/supabase/migrations/20261002040000_admin_activity_log_and_review_marks.sql" \
-  -f "$repo_dir/supabase/migrations/20261031090000_ace_pickup_year_correction.sql" \
-  -f "$repo_dir/supabase/migrations/20261031090000_ace_pickup_year_correction.sql"
+  -f "$repo_dir/supabase/migrations/20261031080736_ace_pickup_year_correction.sql" \
+  -f "$repo_dir/supabase/migrations/20261031080736_ace_pickup_year_correction.sql"
 psql "${psql_args[@]}" -d pickup_full -q -f "$script_dir/sql/ace-year-correction.test.sql" 2>&1 \
   | sed -n -e 's/^.*NOTICE:  //p' -e '/ERROR/p'
 printf 'PASS: #673 CAS/audit fixture on disposable PostgreSQL.\n'

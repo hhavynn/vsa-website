@@ -710,6 +710,52 @@
 .ace-app .ace-tree-panviewport.is-dragging .ace-tree-canvas {
   transition: none;
 }
+
+/* Pickup-year rail and SVG row guides share bandRect() with FamilyTree. */
+.ace-app .ace-tree-canvas { position: relative; }
+.ace-app .ace-year-band { fill: var(--bg-2); opacity: 0.22; }
+.ace-app .ace-year-band.is-alt { fill: var(--brand-soft); opacity: 0.35; }
+.ace-app .ace-year-band.is-unknown { fill: var(--bg); opacity: 0.6; stroke: var(--border-soft); stroke-dasharray: 4 7; }
+.ace-app .ace-year-band.is-focus { fill: var(--brand-soft); opacity: 0.8; stroke: var(--brand); stroke-width: 1; }
+.ace-app .ace-year-rail {
+  position: absolute; left: 0; top: 12px; z-index: 1;
+  background: var(--bg); border-right: 1px solid var(--border-soft);
+  box-sizing: border-box; pointer-events: none;
+  font-family: "JetBrains Mono", monospace;
+}
+.ace-app .ace-year-label {
+  display: block; position: absolute; z-index: 1; white-space: nowrap;
+  font-size: 11px; font-weight: 600; letter-spacing: -0.03em;
+  color: var(--text-2);
+  padding: 4px 2px; border-left: 2px solid transparent;
+}
+.ace-app .ace-year-label.is-alt { color: var(--text); }
+.ace-app .ace-year-label.is-focus {
+  color: var(--brand-text); border-left-color: var(--brand);
+  font-weight: 800;
+}
+.ace-app .ace-year-label.is-unknown {
+  font-style: italic; border-left-style: dashed;
+  color: var(--text-2);
+}
+.ace-app .ace-year-short { display: none; }
+.ace-app .ace-year-legend-note {
+  font-family: "DM Sans", sans-serif;
+  color: var(--text-2);
+}
+.ace-app .ace-rail-pickup {
+  margin-top: 5px; font-family: "DM Sans", sans-serif;
+  font-size: 12px; color: var(--text-2); line-height: 1.4;
+}
+@media (max-width: 520px) {
+  .ace-app .ace-year-full { display: none; }
+  .ace-app .ace-year-short { display: inline; }
+  .ace-app .ace-year-label { font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ace-app .ace-year-label, .ace-app .ace-year-rail { transition: none; }
+}
+
 .ace-app .ace-tree-controls {
   position: absolute;
   z-index: 2;

@@ -184,14 +184,20 @@ describe('application answers while sorting', () => {
     for (const query of writes()) expectNoPrivateValues(query.calls);
     expectNoPrivateValues((logAdminActivity as jest.Mock).mock.calls);
     expectNoPrivateValues(setItem.mock.calls);
-    // No RPC was called with answer data, and the only read that sees
-    // application data is the existing member email lookup.
-    const reads = supabaseMock.queries().filter((query) => query.table !== 'members');
+    // Only the admin-gated POST RPC may receive normalized applicant emails.
+    // No application answers, contact fields or emails reach GET query URLs,
+    // writes, audit activity, browser storage or unrelated repositories.
+    const emailRpcs = supabaseMock.queriesFor('rpc:admin_match_members_by_email');
+    expect(emailRpcs).toHaveLength(1);
+    expect(emailRpcs[0].calls).toEqual([{
+      method: 'rpc',
+      args: [{ p_emails: ['bho@ucsd.edu', 'cdo@ucsd.edu', 'zed@ucsd.edu'] }],
+    }]);
+    const reads = supabaseMock.queries().filter(
+      (query) => query.table !== 'rpc:admin_match_members_by_email',
+    );
     expectNoPrivateValues(reads);
-    expect(supabaseMock.queriesFor('members').flatMap((q) => q.calls).find((c) => c.method === 'in')?.args).toEqual([
-      'email',
-      ['bho@ucsd.edu', 'cdo@ucsd.edu', 'zed@ucsd.edu'],
-    ]);
+    expect(supabaseMock.queriesFor('members')).toHaveLength(0);
   });
 
   it('clearing the answers removes every chip', async () => {

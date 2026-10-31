@@ -195,3 +195,15 @@ bash scripts/test-house-points-reconciliation.sh
 ```
 
 Production baseline (read-only, 2026-10-28): 2025–26 has 2,281 credits and **0** `house_memberships` rows, so the views show no 2025–26 House points and the public 2025–26 standings come from the static public overrides. 2026–27 has no memberships yet (no Reveal). Every House view check is 0.
+
+## Public role projection — #623 Cabinet/Intern foundation
+
+The public role source is a single bounded POST RPC, public_member_roles(p_year, p_member_ids), created by additive migration 20261031070305_public_member_roles.sql. It returns only member_id, kind, label, academic_year_start, source_type and related_key. It reads only the already-public Cabinet/Intern roster with a stored member_id. Board plus all distinct Cabinet positions, Intern alone, co-chairs and simultaneous Intern/Board roles are preserved. Unlinked, draft-category, invalid-year and preloaded future-year roles never qualify.
+
+The RPC enforces 200 IDs per call, one Cabinet-year record and the active academic year. A missing active term produces no roles. The client bounds selection to 2,000 canonical IDs, batches in 200s, and rejects any returned year or member that was not requested. The public React Query cache key includes visibility, selected year and sorted IDs. All-Time deliberately has no dated leadership titles; a hidden badge is not evidence of no role.
+
+**Rollout status:** applied to production 2026-10-31 as version 20261031070305. **Mandatory rollout order for later arms:** the owner applies the migration manually before frontend cutover. Do not merge or deploy the client first, since missing RPC access would show 'Member roles are temporarily unavailable'. The owner runs the read-only hosted anon verifier with RLS_MEMBER_ROLES_PHASE=post-migration, checks actual field names, records the applied migration version, and then flips the repository variable. Never use a service-role key or automatic production migration. The offline fixture is bash scripts/test-public-member-roles.sh. Full manual browser QA is pending.
+
+House Parent (#624), ACE Fam Head (#625) and VCN production (#683) require separately reviewed forward migrations that extend the SAME function, and #627 owns the remaining badges and UI. Cabinet canonical links remain owned by #626. House affiliation stays a separate Reveal-gated source and cannot imply a House Parent title. No House points, attendance, leaderboards' ranking logic or Reveal workflow changes here.
+
+**Manual signoff:** after the authorized migration and client deployment, inspect /leaderboard rank 4+, phone and desktop podium, opened modal, year switch and All-Time at 320px/light/dark. Confirm on the network that RPC JSON contains exactly the six allowlisted fields and no names/notes. Real member badges require canonical-link review, not display-name matching.
