@@ -1,0 +1,62 @@
+name: ACE Pickup-Year Disposable PostgreSQL
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/ace-pickup-year-postgres.yml'
+      - 'scripts/test-ace-pickup-year.sh'
+      - 'scripts/sql/ace-*.sql'
+      - 'supabase/migrations/20260514000000_create_ace_families.sql'
+      - 'supabase/migrations/20260514000001_make_ace_fams_timeless.sql'
+      - 'supabase/migrations/20260929071851_link_ace_cabinet_members_to_members.sql'
+      - 'supabase/migrations/20261001213356_ace_assignment_workspace.sql'
+      - 'supabase/migrations/20261002040000_admin_activity_log_and_review_marks.sql'
+      - 'supabase/migrations/20261027190000_ace_member_pickup_year.sql'
+      - 'supabase/migrations/20261031080736_ace_pickup_year_correction.sql'
+      - 'supabase/migrations/20261031235959_ace_cycle_pickup_term.sql'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-postgres:
+    name: Isolated ACE migration/permissions/publish proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      LC_ALL: C.UTF-8
+    steps:
+      - name: Checkout branch under test
+        uses: actions/checkout@v7
+
+      - name: Make local PostgreSQL binaries available
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v pg_config >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql postgresql-client
+          fi
+          pg_bin="$(pg_config --bindir)"
+          if [[ ! -x "$pg_bin/initdb" ]]; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql postgresql-client
+            pg_bin="$(pg_config --bindir)"
+          fi
+          for executable in initdb pg_ctl psql; do
+            test -x "$pg_bin/$executable"
+          done
+          echo "$pg_bin" >> "$GITHUB_PATH"
+
+      - name: Verify full ACE pickup schema and publish on disposable socket-only database
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/test-ace-pickup-year.sh
+
+      - name: Confirm SQL harness did not require hosted Supabase secrets
+        shell: bash
+        run: |
+          echo 'Local disposable PostgreSQL verified. No hosted credentials or network database were used.'
