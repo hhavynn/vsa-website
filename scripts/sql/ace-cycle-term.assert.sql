@@ -73,6 +73,29 @@ begin
 end;
 $test$;
 
+-- SECURITY DEFINER must still verify the caller. Authenticated non-admin
+-- cannot publish even a valid locked cycle or read the private evidence.
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000b2';
+do $test$
+begin
+  begin
+    perform public.publish_ace_assignment_cycle('40000000-0000-0000-0000-000000000001');
+    raise exception 'FAIL non-admin could publish approved Littles';
+  exception when insufficient_privilege then
+    raise notice 'PASS: non-admin cannot invoke the privileged publisher';
+  end;
+  if (select count(*) from public.ace_member_pickup_evidence) <> 0 then
+    raise exception 'FAIL: non-admin can view private provenance';
+  end if;
+  if exists (select 1 from public.ace_family_members
+             where name in ('Synthetic Autumn Little', 'Synthetic Spring Little')) then
+    raise exception 'FAIL: denied publish wrote a tree node';
+  end if;
+  raise notice 'PASS: denied publishing did not create a Little or private provenance';
+end;
+$test$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000a1';
+
 -- The existing SECURITY DEFINER publisher is the sole tree writer.
 select public.publish_ace_assignment_cycle('40000000-0000-0000-0000-000000000001');
 select public.publish_ace_assignment_cycle('40000000-0000-0000-0000-000000000002');
@@ -118,9 +141,24 @@ end;
 $test$;
 
 reset role;
+-- The function ACL must not silently retain PUBLIC EXECUTE.
+do $test$
+begin
+  if has_function_privilege('anon', 'public.publish_ace_assignment_cycle(uuid)', 'EXECUTE') then
+    raise exception 'FAIL: anon can execute the ACE publisher through PUBLIC';
+  end if;
+  raise notice 'PASS: anonymous EXECUTE on publisher is revoked';
+end;
+$test$;
 set local role anon;
 do $test$
 begin
+  begin
+    perform public.publish_ace_assignment_cycle('40000000-0000-0000-0000-000000000001');
+    raise exception 'FAIL: anonymous caller can invoke publish';
+  exception when insufficient_privilege then
+    raise notice 'PASS: anonymous caller cannot invoke publish RPC';
+  end;
   begin
     perform 1 from public.ace_member_pickup_evidence limit 1;
     raise exception 'FAIL: anon read private evidence';
