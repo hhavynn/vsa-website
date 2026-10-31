@@ -115,6 +115,48 @@ describe('admin-only ACE branch preview foundation (#665)', () => {
     expect(result.fams[0].fullNodes.filter((n) => n.isDraft)).toHaveLength(1);
   });
 
+  it('flags a cross-family parent instead of traversing into a different private family', () => {
+    const ns = [
+      node('foreign-grand', null, {
+        familyId: 'family-b', familyName: 'Other Fam',
+        isPublished: false, name: 'Other Fam Private Ancestor',
+      }),
+      node('big', 'foreign-grand', { pickupAcademicYearStart: 2021, pickupTerm: 'FA21' }),
+      node('existing', 'big', { pickupAcademicYearStart: 2022, pickupTerm: 'FA22' }),
+    ];
+    const before = JSON.stringify(ns);
+    const result = build([draft('one')], ns, {
+      term: 'FA26', families: [family('family-a'), family('family-b')],
+    });
+    const [fam] = result.fams;
+    expect(JSON.stringify(ns)).toBe(before);
+    expect(result.skipped).toEqual([]);
+    expect(fam.fullNodes.map((n) => n.id)).toEqual(['big', 'existing', 'draft:one']);
+    expect(fam.newOnlyNodes.map((n) => n.id)).toEqual(['big', 'existing', 'draft:one']);
+    const wrong = result.checks.filter((c) => c.code === 'parent_wrong_family');
+    expect(wrong.some((c) => c.nodeIds.includes('big') && c.draftIds.includes('one'))).toBe(true);
+    expect(result.checks.some((c) => c.code === 'parent_missing')).toBe(false);
+    expect(JSON.stringify(fam)).not.toContain('Other Fam Private Ancestor');
+  });
+
+  it('never represents an unpublished family as publicly visible, even with published member flags', () => {
+    const result = build([draft('one')], [
+      node('big', null, { isPublished: true }),
+      node('existing', 'big', { isPublished: true }),
+    ], { families: [family('family-a', false)], term: 'FA26' });
+    expect(result.fams[0].fullNodes).toEqual([
+      expect.objectContaining({ id: 'draft:one', isDraft: true, parent: null }),
+    ]);
+    expect(result.fams[0].newOnlyNodes).toHaveLength(1);
+    expect(result.fams[0].byBig[0]).toMatchObject({ existing: 1, incoming: 1 });
+    expect(result.checks.map((c) => c.code)).toContain('family_unpublished');
+  });
+
+  it('does not flag valid same-family multigeneration ancestry as a cross-family link', () => {
+    const result = build([draft('one')], [node('root'), node('big', 'root')], { term: 'FA26' });
+    expect(result.checks.map((c) => c.code)).not.toContain('parent_wrong_family');
+  });
+
   it('detects a draft pickup earlier than its verified Big and does not change that year', () => {
     const ns = [node('big', null, { pickupAcademicYearStart: 2027, pickupTerm: 'FA27' })];
     const result = build([draft('one')], ns, { term: 'FA26' });
