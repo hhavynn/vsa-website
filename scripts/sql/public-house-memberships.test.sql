@@ -27,8 +27,8 @@ set client_min_messages = warning;
 -- then prove the #802 forward migration replaces that signature.
 create function public.public_member_house_badge(p_member_id uuid, p_year integer default null)
 returns jsonb language sql stable as $$select null::jsonb$$;
-\ir ../../supabase/migrations/20261031093000_public_member_house_badge_matches_view.sql
-\ir ../../supabase/migrations/20261031093000_public_member_house_badge_matches_view.sql
+\ir ../../supabase/migrations/20261031164611_public_member_house_badge_matches_view.sql
+\ir ../../supabase/migrations/20261031164611_public_member_house_badge_matches_view.sql
 set client_min_messages = notice;
 
 insert into academic_terms (academic_year_start, is_active) values (2026, true);

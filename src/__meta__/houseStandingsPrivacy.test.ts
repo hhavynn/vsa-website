@@ -3,7 +3,7 @@ import { resolve } from 'path';
 
 const read = (file: string) => readFileSync(resolve(__dirname, '../..', file), 'utf8');
 const migration = read('supabase/migrations/20261028073000_embargo_public_house_scores.sql');
-const revealBadgeFix = read('supabase/migrations/20261031093000_public_member_house_badge_matches_view.sql');
+const revealBadgeFix = read('supabase/migrations/20261031164611_public_member_house_badge_matches_view.sql');
 const privateViews = [
   'house_yearly_points',
   'house_all_time_points',
