@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from 'react-query';
+import { useTheme } from '../../../context/ThemeContext';
 import { aceFamiliesRepository } from '../../../data/repos/aceFamilies';
 import type { AceAssignmentCycle, AceAssignmentDraft, AceFamily } from '../../../types';
 import type { AceNodeRef } from '../../../lib/aceAssignments';
@@ -22,6 +23,8 @@ interface AceBranchPreviewPanelProps {
  * The full family list is fetched only after an admin opens this panel.
  */
 export function AceBranchPreviewPanel({ cycle, drafts, nodes, ready }: AceBranchPreviewPanelProps) {
+  const { theme } = useTheme();
+  const dark = theme === 'dark';
   const [open, setOpen] = useState(false);
   const [selectedFamily, setSelectedFamily] = useState('');
   const [fullAncestry, setFullAncestry] = useState(true);
@@ -129,9 +132,9 @@ export function AceBranchPreviewPanel({ cycle, drafts, nodes, ready }: AceBranch
                     {!selected.isPublished && ' This family is not published; the new branches will not be public.'}
                     {' '}Draft nodes are visibly marked DRAFT · NOT PUBLISHED.
                   </p>
-                  <div className="ace-app overflow-x-auto rounded border border-[var(--color-border)] bg-[var(--color-surface2)] p-2"
+                  <div className={`ace-app ${dark ? 'is-dark' : ''} overflow-x-auto rounded border border-[var(--color-border)] bg-[var(--color-surface2)] p-2`}
                     tabIndex={0} role="region" aria-label={`Private ${selected.familyName} family tree preview`}>
-                    <FamilyTree nodes={visibleNodes} focusId={focusId} onSelect={setFocusId} />
+                    <FamilyTree nodes={visibleNodes} dark={dark} focusId={focusId} onSelect={setFocusId} />
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {selected.byBig.map((group) => (
