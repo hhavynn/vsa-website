@@ -1,6 +1,8 @@
 import { LiveNode, LiveSnapshot, reconcilePickupYears } from './aceHistoricalYears';
 import {
   buildBackfillPlan,
+  EVIDENCE_SOURCE_KIND,
+  validatePickupBatchLabel,
   parseReviewSheet,
   PICKUP_COLUMNS,
   planSqlPreview,
@@ -210,7 +212,7 @@ describe('planSqlPreview', () => {
     liveNodes({ [ROOT]: { pickup_academic_year_start: 2016 } }),
     OPTS
   );
-  const preview = planSqlPreview(plan);
+  const preview = planSqlPreview(plan, { batchLabel: 'FA26-reviewed-batch' });
 
   it('sets only the pickup columns, guarded on fam, Big and previous values, and rolls back', () => {
     expect(preview.trim().endsWith('rollback;')).toBe(true);
@@ -220,7 +222,15 @@ describe('planSqlPreview', () => {
       .filter((line) => !line.startsWith('--'))
       .join('\n');
     const withoutScratch = executable.replace(/insert into ace_pickup_plan_failures values[^\n]*/g, '');
-    expect(withoutScratch).not.toMatch(/\b(delete|insert|upsert|truncate|drop|alter|grant|revoke)\b/i);
+    expect(withoutScratch).not.toMatch(/\b(delete|upsert|truncate|drop|alter|grant|revoke)\b/i);
+    expect(executable.match(/insert into public.ace_member_pickup_evidence/g)).toHaveLength(2);
+    expect(executable.match(/insert into public.admin_activity_log/g)).toHaveLength(1);
+    expect(executable).toContain("'ace.pickup_backfill'");
+    expect(executable).toContain("'batch_label', 'FA26-reviewed-batch'");
+    expect(executable).toContain("'overwrites', 1");
+    expect(executable).toContain("if changed = 1 then");
+    expect(executable).toContain("on conflict (ace_member_id, source_kind, source_label, raw_value) do nothing;");
+    expect(executable.match(/do \$\$/g)).toHaveLength(3);
     expect(executable.match(/update [\w.]+/g)).toEqual(['update public.ace_family_members', 'update public.ace_family_members']);
     const sets = preview.match(/set [^\n]+/g) ?? [];
     expect(sets).toHaveLength(2);
@@ -235,8 +245,38 @@ describe('planSqlPreview', () => {
     expect(preview).not.toMatch(/Lio|Rowan|Bree/);
   });
 
+  it('maps each source classification only to an allowed evidence source kind', () => {
+    expect(EVIDENCE_SOURCE_KIND).toEqual({
+      official_pairing: 'official_pairing',
+      explicit_term_or_official_loose: 'import_json',
+      master_year_row: 'workbook_year_row',
+      reviewer_resolved_conflict: 'admin_entry',
+      reviewer_supplied: 'admin_entry',
+    });
+  });
+
+  it('requires a short URL-free audit batch label for a current-schema plan', () => {
+    expect(() => planSqlPreview(plan)).toThrow(/Batch label/);
+    expect(() => planSqlPreview(plan, { batchLabel: 'https://docs.google.com/private' })).toThrow(/Batch label/);
+    expect(() => planSqlPreview(plan, { batchLabel: 'a'.repeat(201) })).toThrow(/Batch label/);
+    expect(validatePickupBatchLabel("  FA26's review  ")).toBe("FA26's review");
+    expect(planSqlPreview(plan, { batchLabel: "FA26's review" })).toContain("'FA26''s review'");
+  });
+
+  it('omits evidence and audit for unchanged replay and unsupported pre-schema previews', () => {
+    const unchanged = buildBackfillPlan([review({ approved_for_backfill: 'no' })], liveNodes(), OPTS);
+    const sql = planSqlPreview(unchanged, { batchLabel: 'checked-batch' });
+    expect(sql).not.toContain('insert into public.ace_member_pickup_evidence');
+    expect(sql).not.toContain('insert into public.admin_activity_log');
+    const legacy = { ...plan, snapshot_has_pickup_columns: false };
+    const legacySql = planSqlPreview(legacy);
+    expect(legacySql).not.toContain('insert into public.ace_member_pickup_evidence');
+    expect(legacySql).not.toContain('insert into public.admin_activity_log');
+    expect(legacySql.trim().endsWith('rollback;')).toBe(true);
+  });
+
   it('refuses to render a non-UUID id', () => {
     const bad = { ...plan, updates: [{ ...plan.updates[0], ace_node_id: "x'; drop table members; --" }] };
-    expect(() => planSqlPreview(bad)).toThrow(/non-UUID/);
+    expect(() => planSqlPreview(bad, { batchLabel: 'FA26-reviewed-batch' })).toThrow(/non-UUID/);
   });
 });
