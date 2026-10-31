@@ -1,6 +1,6 @@
 /** Read-only House points diagnostic: server owns ALL point arithmetic. */
 import { housePointsCheckRepository, POINTS_CHECK_UNAVAILABLE } from './housePointsCheck';
-import { DatabaseError, ValidationError } from '../errors';
+import { ValidationError } from '../errors';
 import { postgrestError, supabaseMock } from '../../test-utils/supabaseMock';
 
 jest.mock('../../lib/supabase', () => ({
