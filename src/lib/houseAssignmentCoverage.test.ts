@@ -1,6 +1,6 @@
 import type { CoverageDraft } from '../data/repos/houseAssignmentCoverage';
 import type { MemberYearMembership } from './houseMembershipIntervals';
-import { reviewPublishedHouseBatchCoverage, countHouseCoverage } from './houseAssignmentCoverage';
+import { reviewPublishedHouseBatchCoverage, countHouseCoverage, reviewHouseBatchPopulation } from './houseAssignmentCoverage';
 
 const row = (id: string, memberId: string | null, houseId: string | null = 'hp1', status = 'match'): CoverageDraft => ({
   id, member_id: memberId, house_profile_id: houseId, source_name: id, source_order: Number(id.replace(/\D/g,'') || '0'), match_status: status,
@@ -17,7 +17,7 @@ it('recognizes published current-year membership, future start and intentional u
   const items=reviewPublishedHouseBatchCoverage([row('1','one'),row('2','two'),row('3',null)],
     profiles,memberIds,new Map([['one',[interval('hp1')]],['two',[interval('hp1','2026-11-01')]]]),date);
   expect(items.map(i=>i.state)).toEqual(['linked','scheduled','unconfirmed']);
-  expect(countHouseCoverage(items)).toEqual({linked:1,scheduled:1,needsReview:1,total:3});
+  expect(countHouseCoverage(items)).toEqual({linked:1,scheduled:1,unassigned:0,needsReview:1,total:3});
 });
 it('flags duplicate canonical IDs and wrong, inactive or missing House records', () => {
   const rows=[row('1','one'),row('2','one'),row('3','two','hp2'),row('4','three',null),row('5','deleted')];
@@ -38,4 +38,68 @@ it('detects overlapping intervals and different effective House, not just a cach
 it('never counts an ambiguous review match as published even when the ID looks valid',()=>{
   expect(reviewPublishedHouseBatchCoverage([row('1','one','hp1','review')],profiles,memberIds,
     new Map([['one',[interval('hp1')]]]),date)[0].state).toBe('unconfirmed');
+});
+
+
+describe('eligible House population read-only review (#621)', () => {
+  const approved = (id: string, member: string | null, status = 'paid') => ({
+    id, source_name: 'Fictional Applicant ' + id, member_id: member,
+    match_status: member ? 'match' : 'review', payment_status: status,
+    withdrawn_reason: null as string | null,
+  });
+  const linked = (id: string, member: string, house: string | null = 'hp1', applicantId = id): CoverageDraft =>
+    ({ ...row(id, member, house), applicant_id: applicantId, source_house: house ? 'fictional' : null } as CoverageDraft);
+  const review = (
+    applicants: ReturnType<typeof approved>[], rows: CoverageDraft[],
+    memberships: ReadonlyMap<string, MemberYearMembership[]> = new Map(),
+    revealed = false,
+  ) => reviewHouseBatchPopulation({
+    applicants, rows, profiles, memberIds,
+    memberships, effectiveStartDate: '2026-10-29', onDate: date, revealed,
+  });
+
+  it('marks a confirmed no-House row as intentional unassigned, not an invalid House', () => {
+    const r = { ...linked('1', 'one', null), source_house: null };
+    expect(reviewPublishedHouseBatchCoverage([r], profiles, memberIds, new Map(), date)[0].state).toBe('unassigned');
+    const tally = countHouseCoverage(reviewPublishedHouseBatchCoverage([r], profiles, memberIds, new Map(), date));
+    expect(tally).toMatchObject({ unassigned: 1, needsReview: 0 });
+  });
+
+  it('excludes withdrawn and unpaid applicants without reporting them as unassigned', () => {
+    const a = approved('A', 'one');
+    const b = { ...approved('B', 'two'), withdrawn_reason: 'synthetic withdrawal' };
+    const c = approved('C', 'three', 'unpaid');
+    const d = approved('D', 'four', 'pending');
+    const r = review([a,b,c,d], [linked('1','one','hp1','A')]);
+    expect(r.results).toHaveLength(1);
+    expect(r.excluded).toEqual({ withdrawn: 1, unpaid: 1, unresolved: 1 });
+  });
+
+  it('detects an eligible applicant missing from the batch and an unconfirmed canonical link', () => {
+    const r = review([approved('A','one'),approved('B','two')],
+      [linked('1','one','hp1','A'),{ ...linked('2','two','hp1','B'), match_status: 'review' }]);
+    expect(r.results.map(x => x.state)).toEqual(['assigned','ambiguous-identity']);
+    expect(review([approved('A','one')],[]).results[0].state).toBe('not-in-batch');
+  });
+
+  it('rejects two distinct eligible applicants linked to the same member even when names differ', () => {
+    const r = review([approved('A','one'),approved('B','one')],
+      [linked('1','one','hp1','A'),linked('2','one','hp1','B')]);
+    expect(r.results.map(x => x.state)).toEqual(['duplicate-applicant','duplicate-applicant']);
+  });
+
+  it('flags conflicting future interval before Reveal and outside-batch membership', () => {
+    const r = review([approved('A','one')], [linked('1','one','hp1','A')],
+      new Map([['one',[interval('hp2','2026-10-29')]],['two',[interval('hp1')]]]));
+    expect(r.results[0].state).toBe('conflicting-membership');
+    expect(r.membershipsOutsideBatch).toEqual(['two']);
+  });
+
+  it('reads published status from dated membership rather than cached House', () => {
+    const r = review([approved('A','one')],[linked('1','one','hp1','A')],
+      new Map([['one',[interval('hp1','2026-11-01')]]]),true);
+    expect(r.results[0].state).toBe('scheduled');
+    expect(r.rowsNotEligible).toHaveLength(0);
+    expect(review([approved('A','one')],[linked('1','two','hp1','B')]).rowsNotEligible).toHaveLength(1);
+  });
 });
