@@ -198,6 +198,15 @@ export default function AdminMemberRoles() {
               {visibleReviews.map(({ row, status, source }) => {
                 const exact = directory.nameIndex.get(normalizeMemberName(row.name)) ?? [];
                 const selected = directory.byId.get(memberIds[row.index]);
+                const soleExactMember = exact.length === 1 ? exact[0] : null;
+                const soleMatchingSource = roleSources.filter((item) =>
+                  normalizeMemberName(item.name) === normalizeMemberName(row.name)
+                );
+                const safeSource = soleMatchingSource.length === 1 ? soleMatchingSource[0] : null;
+                const canChooseSource = !!selected && !!safeSource && !source && row.duplicateOf === null &&
+                  normalizeMemberName(selected.fullName) === normalizeMemberName(row.name) &&
+                  (!safeSource.member_id || safeSource.member_id === selected.id) &&
+                  !selectedSources.includes(safeSource.id) && !readsPending && !readsFailed;
                 const candidates = memberChoices(memberSearch[row.index] ?? '', directory.members, exact, selected);
                 const sourceTerm = normalizeMemberName(sourceSearch[row.index] ?? '');
                 const sourceChoices = roleSources.filter((item) =>
@@ -228,6 +237,12 @@ export default function AdminMemberRoles() {
                           <option value="">Unresolved — choose person</option>
                           {candidates.map((item) => <option value={item.id} key={item.id}>{item.displayName} · {item.id.slice(0, 8)}</option>)}
                         </select>
+                        {!selected && soleExactMember && row.duplicateOf === null && !readsPending && !readsFailed && (
+                          <button type="button" className={actionCls}
+                            onClick={() => setMemberIds((prev) => ({ ...prev, [row.index]: soleExactMember.id }))}>
+                            Choose sole exact member candidate
+                          </button>
+                        )}
                         {candidates.length === 0 && <p className="text-xs text-text-muted">No displayed candidates. Try a shorter search or review the full Members directory.</p>}
                       </div>
                       <div className="space-y-2">
@@ -238,6 +253,12 @@ export default function AdminMemberRoles() {
                           <option value="">Needs source selection</option>
                           {sourceChoices.map((item) => <option value={item.id} key={item.id}>{item.name} · {item.role} · {item.member_id ? 'Linked' : 'Unlinked'}</option>)}
                         </select>
+                        {canChooseSource && safeSource && (
+                          <button type="button" className={actionCls}
+                            onClick={() => setSourceIds((prev) => ({ ...prev, [row.index]: safeSource.id }))}>
+                            Choose sole matching {role === 'board' ? 'Board' : 'Intern'} record
+                          </button>
+                        )}
                         {source && <p className="text-xs text-text-muted">Source: {source.role} · {source.category} · {source.member_id ? 'An existing member link must be checked' : 'Currently unlinked'}</p>}
                       </div>
                     </div>
