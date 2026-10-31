@@ -46,16 +46,23 @@ export class AceFamiliesRepository {
 
   async getAllPublishedMembers(options?: { strict?: boolean }): Promise<AceFamilyMember[]> {
     try {
-      const { data, error } = await supabase
-        .from('published_ace_family_members')
-        .select('*')
-        .order('name', { ascending: true });
-      if (error) {
-        if (options?.strict) throw error;
-        console.warn('Using fallback published ace members (all):', error.message);
-        return [];
+      const pageSize = 1000;
+      const members: AceFamilyMember[] = [];
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+          .from('published_ace_family_members')
+          .select('*')
+          .order('name', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) {
+          if (options?.strict) throw error;
+          console.warn('Using fallback published ace members (all):', error.message);
+          return [];
+        }
+        members.push(...(data ?? []).map((row) => ({ ...(row as AceFamilyMember), is_published: true })));
+        if (!data || data.length < pageSize) return members;
       }
-      return (data ?? []).map((row) => ({ ...(row as AceFamilyMember), is_published: true }));
     } catch (error) {
       if (options?.strict) throw error;
       console.warn('Using fallback published ace members (all):', error);
