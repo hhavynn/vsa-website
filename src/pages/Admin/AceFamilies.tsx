@@ -31,6 +31,7 @@ import { MemberLinkPicker, MemberLinkSuggestion } from '../../components/feature
 import { AceLinkReviewPanel } from '../../components/features/admin/AceLinkReviewPanel';
 import { AceFamHeadReview } from '../../components/features/admin/AceFamHeadReview';
 import { AceYearReviewPanel } from '../../components/features/admin/AceYearReviewPanel';
+import { AcePickupYearEditor } from '../../components/features/admin/AcePickupYearEditor';
 import { EmptyState, FilterChips, NextStepBanner, SaveBar, YearContextBadge } from '../../components/features/admin/ops';
 import { logAdminActivity } from '../../data/repos/adminActivity';
 import { useOperatingYear } from '../../hooks/useOperatingYear';
@@ -192,6 +193,12 @@ function MemberRow({
   review,
   matchingReady,
   saving,
+  familyName,
+  familyYears,
+  evidence,
+  yearReviewReady,
+  onPickupSaved,
+  onPickupConflict,
 }: {
   member: AceFamilyMember;
   membersById: Map<string, AceFamilyMember>;
@@ -203,6 +210,12 @@ function MemberRow({
   review: AceLinkReviewItem | undefined;
   matchingReady: boolean;
   saving: boolean;
+  familyName: string;
+  familyYears: readonly number[];
+  evidence: readonly import('../../data/repos/aceFamilies').AcePickupEvidenceRow[];
+  yearReviewReady: boolean;
+  onPickupSaved: () => Promise<void>;
+  onPickupConflict: () => Promise<void>;
 }) {
   const [name, setName] = useState(member.name);
   const [role, setRole] = useState(member.role_label ?? '');
@@ -408,6 +421,17 @@ function MemberRow({
           />
         </div>
       </div>
+      <AcePickupYearEditor
+        member={member}
+        familyName={familyName}
+        big={member.parent_member_id ? membersById.get(member.parent_member_id) ?? null : null}
+        littles={Array.from(membersById.values()).filter(node => node.parent_member_id === member.id)}
+        familyYears={familyYears}
+        evidence={evidence}
+        ready={yearReviewReady && !saving}
+        onSaved={onPickupSaved}
+        onConflict={onPickupConflict}
+      />
     </div>
   );
 }
@@ -533,7 +557,7 @@ export default function AdminAceFamilies() {
   const [autoSlug, setAutoSlug] = useState(true);
 
   const { members, loading: membersLoading, error: membersError, refetch: refetchMembers } = useAdminAceFamilyMembers(selectedFamilyId);
-  const { evidence: pickupEvidence, ready: evidenceReady, loading: evidenceLoading, error: evidenceError } = useAcePickupEvidence(selectedFamilyId);
+  const { evidence: pickupEvidence, ready: evidenceReady, loading: evidenceLoading, error: evidenceError, refetch: refetchPickupEvidence } = useAcePickupEvidence(selectedFamilyId);
   const [savingMemberId, setSavingMemberId] = useState<string | null>(null);
   const [newMemberName, setNewMemberName] = useState('');
   const [deleteFamilyOpen, setDeleteFamilyOpen] = useState(false);
@@ -638,6 +662,20 @@ export default function AdminAceFamilies() {
   const effectiveNodeFilter = availableNodeFilters.some(filter => filter.key === nodeFilter) ? nodeFilter : 'all';
   const nodeCounts = useMemo(() => countByFilter(nodeFacts, availableNodeFilters), [nodeFacts, availableNodeFilters]);
   const visibleNodes = useMemo(() => applyQuickFilter(nodeFacts, availableNodeFilters, effectiveNodeFilter), [nodeFacts, availableNodeFilters, effectiveNodeFilter]);
+  const pickupFamilyYears = useMemo(() => Array.from(new Set(members
+    .map(node => node.pickup_academic_year_start)
+    .filter((year): year is number => typeof year === 'number')))
+    .sort((a, b) => a - b), [members]);
+  const onPickupSaved = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries(['ace-family-members']),
+      queryClient.invalidateQueries(['ace-pickup-evidence', 'admin']),
+    ]);
+    await Promise.all([refetchMembers(), refetchPickupEvidence()]);
+  };
+  const onPickupConflict = async () => {
+    await Promise.all([refetchMembers(), refetchPickupEvidence()]);
+  };
   const openReviewNode = (nodeId: string) => {
     if (!selectedFamilyId) return;
     // The filter and target must move in one URL update. Calling setNodeFilter
@@ -1626,6 +1664,12 @@ export default function AdminAceFamilies() {
                         review={reviewByNodeId.get(m.id)}
                         matchingReady={matchingReady}
                         saving={savingMemberId === m.id || bulkLinking}
+                        familyName={selectedFamily.name}
+                        familyYears={pickupFamilyYears}
+                        evidence={yearReviewReady ? pickupEvidence.filter(row => row.ace_member_id === m.id) : []}
+                        yearReviewReady={yearReviewReady}
+                        onPickupSaved={onPickupSaved}
+                        onPickupConflict={onPickupConflict}
                       />
                     </div>
                   ))}
