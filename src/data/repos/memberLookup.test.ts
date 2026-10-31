@@ -49,23 +49,78 @@ it('suggests a unique exact match and refuses to choose between duplicates', asy
   });
 });
 
-it('matches import emails against members without returning the address', async () => {
-  supabaseMock.setDefault('members', {
-    data: [{ ...row('m1', 'Amy', 'Tran'), email: 'Amy@UCSD.edu' }, { ...row('m2', 'Kevin', 'Le'), email: null }],
-    error: null,
-  });
-  const matches = await memberLookupRepository.matchMembersByEmail([' amy@ucsd.edu ', 'AMY@ucsd.edu', 'kevin@ucsd.edu']);
-  expect(Array.from(matches.keys())).toEqual(['amy@ucsd.edu']);
-  expect(matches.get('amy@ucsd.edu')).toEqual([expect.objectContaining({ id: 'm1' })]);
-  expect(JSON.stringify(Array.from(matches.values()))).not.toMatch(/@/);
-  const [query] = supabaseMock.queriesFor('members');
-  expect(query.calls).toContainEqual({ method: 'in', args: ['email', ['amy@ucsd.edu', 'kevin@ucsd.edu']] });
+it('matches primary and confirmed alternate emails via POST RPC without returning email fields', async () => {
+  supabaseMock.queueResult('rpc:admin_match_members_by_email', { data: [
+    { ...row('m1', 'Amy', 'Tran'), input_email: 'amy@ucsd.edu' },
+    { ...row('m1', 'Amy', 'Tran'), input_email: 'amy.alias@example.edu' },
+  ], error: null });
+  const matches = await memberLookupRepository.matchMembersByEmail([
+    ' amy@ucsd.edu ', 'AMY@ucsd.edu', 'amy.alias@example.edu',
+  ]);
+  expect(Array.from(matches.keys())).toEqual(['amy@ucsd.edu', 'amy.alias@example.edu']);
+  expect(matches.get('amy.alias@example.edu')).toEqual([expect.objectContaining({ id: 'm1' })]);
+  expect(JSON.stringify(Array.from(matches.values()))).not.toMatch(/@|input_email|email/);
+  expect(supabaseMock.queries().map((q) => q.table)).toEqual(['rpc:admin_match_members_by_email']);
+  expect(supabaseMock.queries()[0].calls).toEqual([
+    { method: 'rpc', args: [{ p_emails: ['amy@ucsd.edu', 'amy.alias@example.edu'] }] },
+  ]);
+  expect(supabaseMock.queriesFor('members')).toHaveLength(0);
+  expect(supabaseMock.queriesFor('member_identity_emails')).toHaveLength(0);
 });
 
-it('does not query members when there are no emails to match', async () => {
-  await expect(memberLookupRepository.matchMembersByEmail(['', '  '])).resolves.toEqual(new Map());
+it('accepts existing member records with a null first or last name', async () => {
+  supabaseMock.queueResult('rpc:admin_match_members_by_email', { data: [
+    { id: 'm-blank', first_name: null, last_name: 'Example', college: null,
+      year: null, input_email: 'blank@example.edu' },
+  ], error: null });
+  const matches = await memberLookupRepository.matchMembersByEmail(['blank@example.edu']);
+  expect(matches.get('blank@example.edu')).toEqual([
+    expect.objectContaining({ id: 'm-blank', fullName: 'Example' }),
+  ]);
+});
+
+it('keeps distinct members with shared input primary email as ambiguous options', async () => {
+  supabaseMock.queueResult('rpc:admin_match_members_by_email', { data: [
+    { ...row('m1', 'Ari', 'Example'), input_email: 'shared@example.edu' },
+    { ...row('m2', 'Bea', 'Example'), input_email: 'shared@example.edu' },
+    { ...row('m1', 'Ari', 'Example'), input_email: 'shared@example.edu' },
+  ], error: null });
+  const matches = await memberLookupRepository.matchMembersByEmail(['shared@example.edu']);
+  expect(matches.get('shared@example.edu')?.map((m) => m.id)).toEqual(['m1','m2']);
+});
+
+it('splits large input sets into bounded POST requests with no URL filters', async () => {
+  const emails = Array.from({length: 201},(_,i) => 'fictional-' + i + '@example.edu');
+  for (let i=0;i<3;i++) supabaseMock.queueResult('rpc:admin_match_members_by_email',{data:[],error:null});
+  expect(await memberLookupRepository.matchMembersByEmail(emails)).toEqual(new Map());
+  const calls = supabaseMock.queriesFor('rpc:admin_match_members_by_email');
+  expect(calls).toHaveLength(3);
+  expect(calls.map((q) => (q.calls[0].args[0] as {p_emails:string[]}).p_emails.length)).toEqual([100,100,1]);
   expect(supabaseMock.queriesFor('members')).toHaveLength(0);
 });
+
+it('fails the entire match when a later page is unreadable, rather than silently omitting people', async () => {
+  supabaseMock.queueResult('rpc:admin_match_members_by_email', { data: [], error: null });
+  supabaseMock.queueResult('rpc:admin_match_members_by_email', {
+    data: null, error: { code: 'P0001', message: 'synthetic backend failure', details: 'fixture' },
+  });
+  const emails = Array.from({length: 101},(_,i) => 'test-' + i + '@example.edu');
+  await expect(memberLookupRepository.matchMembersByEmail(emails)).rejects.toThrow();
+});
+
+it('rejects an RPC response containing an unrequested email, never presenting unrelated members', async () => {
+  supabaseMock.queueResult('rpc:admin_match_members_by_email', { data: [
+    { ...row('m', 'Unrelated', 'Member'), input_email: 'not-requested@example.edu' },
+  ], error: null });
+  await expect(memberLookupRepository.matchMembersByEmail(['real@example.edu']))
+    .rejects.toThrow(/unrequested address/);
+});
+
+it('does not call the RPC when there are no emails to match', async () => {
+  await expect(memberLookupRepository.matchMembersByEmail(['', '  '])).resolves.toEqual(new Map());
+  expect(supabaseMock.queries()).toHaveLength(0);
+});
+
 
 it('reads every canonical member past the 1,000-row public directory limit for bulk role review', async () => {
   const person = (index: number) => row(`id-${String(index).padStart(5, '0')}`, `First${index}`, 'Example');

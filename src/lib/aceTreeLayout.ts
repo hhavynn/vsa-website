@@ -11,6 +11,8 @@ export interface TreeNode {
   pickup?: AcePickupYear;
   parent?: string | null;
   photoUrl?: string | null;
+  /** Only set in the private ACE pre-Reveal family preview. */
+  isDraft?: boolean;
 }
 
 export type BandKey = number | 'unknown';

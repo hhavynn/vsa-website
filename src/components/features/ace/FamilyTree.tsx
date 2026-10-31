@@ -312,7 +312,7 @@ export function FamilyTree({
         return (
           <g
             key={n.id}
-            className={`ace-tree-node${lineageIds.has(n.id) ? ' is-lineage' : ''}`}
+            className={`ace-tree-node${lineageIds.has(n.id) ? ' is-lineage' : ''}${n.isDraft ? ' is-draft' : ''}`}
             data-node-id={n.id}
             transform={`translate(${p.x}, ${p.y})`}
             style={{ cursor: onSelect ? 'pointer' : 'default' }}
@@ -333,6 +333,7 @@ export function FamilyTree({
             {isFocus && !lineageIds.has(n.id) && <circle r={nodeR + 8} fill={A.ring} />}
             <circle
               r={nodeR}
+              strokeDasharray={n.isDraft ? '4 3' : undefined}
               fill={isLittle ? A.node2bg : A.fill}
               stroke={isLittle ? A.fill : A.dark}
               strokeWidth={isLittle ? 2 : 0}
@@ -381,7 +382,7 @@ export function FamilyTree({
               fontSize={compact ? 9 : 10}
               letterSpacing="0.04em"
             >
-              {(n.role || 'Member').toUpperCase()}{n.cohort ? ` · ${n.cohort}` : ''}
+              {n.isDraft ? 'DRAFT · NOT PUBLISHED' : (n.role || 'Member').toUpperCase()}{!n.isDraft && n.cohort ? ` · ${n.cohort}` : ''}
             </text>
           </g>
         );
