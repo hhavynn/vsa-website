@@ -57,13 +57,13 @@ it('shows approved year-only and read-only Fam, Big, Littles context', () => {
   expect(screen.getByText(/Fam: Fictional Fam/)).toBeInTheDocument();
   expect(screen.getByText(/Big: Fictional big/)).toBeInTheDocument();
   expect(screen.getByText(/Littles: Fictional little/)).toBeInTheDocument();
-  expect(screen.getByRole('textbox', { name: 'Pickup academic year' })).toHaveValue('2022–23');
+  expect(screen.getByRole('combobox', { name: 'Pickup academic year' })).toHaveValue('2022–23');
   expect(screen.getByRole('combobox', { name: 'Exact pickup term (optional)' })).toHaveValue('');
 });
 
 it('validates 2023–24 + Fall into exact FA23 and sends only CAS RPC after confirmation', async () => {
   const { onSaved } = mount();
-  fireEvent.change(screen.getByRole('textbox', { name: 'Pickup academic year' }), { target: { value: '2023–24' } });
+  fireEvent.change(screen.getByRole('combobox', { name: 'Pickup academic year' }), { target: { value: '2023–24' } });
   fireEvent.change(screen.getByRole('combobox', { name: 'Exact pickup term (optional)' }), { target: { value: 'FA' } });
   fireEvent.click(screen.getByRole('button', { name: 'Review and save year' }));
   const dialog = await screen.findByRole('alertdialog', { name: 'Confirm pickup-year correction' });
@@ -83,7 +83,7 @@ it('validates 2023–24 + Fall into exact FA23 and sends only CAS RPC after conf
 
 it('never accepts bare calendar years, legacy or blank as an academic year', async () => {
   mount({ member: node('unknown', { pickup_academic_year_start: null }) });
-  const input = screen.getByRole('textbox', { name: 'Pickup academic year' });
+  const input = screen.getByRole('combobox', { name: 'Pickup academic year' });
   const submit = screen.getByRole('button', { name: 'Review and save year' });
   for (const invalid of ['2021', 'legacy', '']) {
     fireEvent.change(input, { target: { value: invalid } });
@@ -108,7 +108,7 @@ it('requires explicit confirmation before clearing an approved year to Unknown',
 it('uses a pending source candidate exactly and never approves a changed candidate', async () => {
   mount({ evidence: [example('fictional-evidence', 2023, 'FA23')] });
   fireEvent.click(screen.getByRole('button', { name: 'Use candidate' }));
-  expect(screen.getByRole('textbox', { name: 'Pickup academic year' })).toHaveValue('2023–24');
+  expect(screen.getByRole('combobox', { name: 'Pickup academic year' })).toHaveValue('2023–24');
   expect(screen.getByRole('combobox', { name: 'Exact pickup term (optional)' })).toHaveValue('FA');
   expect(screen.getByRole('combobox', { name: 'Evidence/source category' })).toHaveValue('official_pairing');
   fireEvent.click(screen.getByRole('button', { name: 'Review and save year' }));
@@ -137,7 +137,7 @@ it('never includes a selected evidence id after the proposed source has been edi
 it('refetches on compare-and-swap conflicts and never retries last-write-wins', async () => {
   correction.mockRejectedValueOnce(new DatabaseError('Someone else changed this pickup year. Refresh and try again.', 'P0001'));
   const { onConflict, onSaved } = mount();
-  fireEvent.change(screen.getByRole('textbox', { name: 'Pickup academic year' }), { target: { value: '2023–24' } });
+  fireEvent.change(screen.getByRole('combobox', { name: 'Pickup academic year' }), { target: { value: '2023–24' } });
   fireEvent.click(screen.getByRole('button', { name: 'Review and save year' }));
   const dialog = screen.getByRole('alertdialog', { name: 'Confirm pickup-year correction' });
   fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm audited correction' }));
@@ -173,7 +173,7 @@ it('schema accepts explicit year-only and exact-term choices without guessing a 
 it('does not resubmit an already-committed RPC if the post-save view refresh fails', async () => {
   const onSaved = jest.fn().mockRejectedValue(new Error('synthetic refetch outage'));
   mount({ onSaved });
-  fireEvent.change(screen.getByRole('textbox', { name: 'Pickup academic year' }), { target: { value: '2023–24' } });
+  fireEvent.change(screen.getByRole('combobox', { name: 'Pickup academic year' }), { target: { value: '2023–24' } });
   fireEvent.click(screen.getByRole('button', { name: 'Review and save year' }));
   const dialog = screen.getByRole('alertdialog', { name: 'Confirm pickup-year correction' });
   fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm audited correction' }));
@@ -185,7 +185,7 @@ it('does not resubmit an already-committed RPC if the post-save view refresh fai
 
 it('warns when the proposed Little date precedes the Big without changing lineage', () => {
   mount();
-  fireEvent.change(screen.getByRole('textbox', { name: 'Pickup academic year' }), {
+  fireEvent.change(screen.getByRole('combobox', { name: 'Pickup academic year' }), {
     target: { value: '2019–20' },
   });
   expect(screen.getByRole('list', { name: 'Pickup-year warnings' }))
