@@ -1,4 +1,4 @@
-import { HouseEvent, HousePageAsset } from '../../../types';
+import { PublicHouseEvent, HousePageAsset } from '../../../types';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../../../constants/houses';
 import { formatDateOnly } from '../../../lib/dateOnly';
 import { buildGcalTimedDates, formatEventTimeRange } from '../../../lib/eventTime';
@@ -18,7 +18,7 @@ function datePart(dateOnly: string): string {
   return dateOnly.replace(/-/g, '');
 }
 
-function buildHouseEventCalendarUrl(event: HouseEvent, houseLabel: string) {
+function buildHouseEventCalendarUrl(event: PublicHouseEvent, houseLabel: string) {
   const url = new URL('https://calendar.google.com/calendar/render');
   url.searchParams.set('action', 'TEMPLATE');
   url.searchParams.set('text', `${houseLabel}: ${event.title}`);
@@ -46,7 +46,7 @@ function CalendarIcon() {
 }
 
 interface HouseEventCardProps {
-  event: HouseEvent;
+  event: PublicHouseEvent;
   house: HousePageAsset;
   isUpcoming: boolean;
 }

@@ -26,3 +26,11 @@ The right side of Admin → Houses → House Events is the year's event dashboar
 Offline proof: `bash scripts/test-house-event-save.sh`.
 
 **Migration status:** `20261028080000_house_event_atomic_save.sql` is verified applied to production (2026-10-28).
+
+## Public projection (#640)
+
+All public House-event methods select published parent fields and association IDs, and resolve hosts from published_house_page_assets with exactly id,house,house_key,display_name,accent_color,is_active. PublicHouseEvent is separate from admin HouseEvent; failed host/association reads throw and inactive hosts are omitted.
+
+Once an event is published, rsvp_url, recap_url and gallery_url are public. Only publication-approved links belong there. The readable client_request_id UUID is accepted as a non-authorizing idempotency key; restricting it needs owner-reviewed forward SQL.
+
+The offline synthetic fixture does not prove deployed RLS. Before closing #640, run S1-S5, R1-R9 and browser response-key inspection per issue #640, using only field names/statuses/counts, never row values. Verifier covers R1/R2/R4/R5/R7 by default; R6 uses a direct association query only with an authorized existing draft event ID containing at least one host, passed ephemerally as RLS_HOUSE_DRAFT_EVENT_ID. Without that fixture it reports SKIP (unverified), never PASS. R3 (explicit FK), R8 and R9 also need separate hosted checks. Any failure blocks House Reveal.

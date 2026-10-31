@@ -340,6 +340,14 @@ export interface HouseEvent {
   houses?: HousePageAsset[];
 }
 
+/** Public House-event hosts never expose unpublished profile or admin fields. */
+export type PublicHouseEventHost = Pick<HousePageAsset, 'id' | 'house' | 'house_key' | 'display_name' | 'accent_color' | 'is_active'>;
+
+export type PublicHouseEvent = Omit<HouseEvent, 'house' | 'houses'> & {
+  house?: PublicHouseEventHost;
+  houses?: PublicHouseEventHost[];
+};
+
 export interface HouseMembership {
   id: string;
   member_id: string;
