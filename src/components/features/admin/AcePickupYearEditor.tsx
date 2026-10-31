@@ -88,7 +88,13 @@ export function AcePickupYearEditor({
   } = useForm<AcePickupYearFormData>({ resolver: zodResolver(acePickupYearSchema), defaultValues: asForm(member) });
 
   useEffect(() => {
-    reset(asForm(member));
+    const approvedYear = member.pickup_academic_year_start;
+    const storedTerm = member.pickup_term;
+    reset({
+      year: approvedYear == null ? '' : formatPickupAcademicYear(approvedYear),
+      season: (storedTerm?.slice(0, 2) as PickupSeason | '') || '',
+      sourceKind: 'admin_entry',
+    });
     setEvidenceId(null);
     setConfirm(null);
   }, [member.id, member.pickup_academic_year_start, member.pickup_term, reset]);
@@ -131,7 +137,7 @@ export function AcePickupYearEditor({
     });
   };
 
-  const useEvidence = (row: AcePickupEvidenceRow) => {
+  const selectEvidenceCandidate = (row: AcePickupEvidenceRow) => {
     if (!approvedEvidenceSource(row.source_kind) || row.candidate_academic_year_start == null) return;
     const canonicalTerm = row.candidate_term;
     const seasonValue = canonicalTerm ? canonicalTerm.slice(0, 2) : '';
@@ -269,7 +275,7 @@ export function AcePickupYearEditor({
                         academicYearStart: row.candidate_academic_year_start, term: row.candidate_term,
                       })} · Pending
                       {row.candidate_academic_year_start !== null && approvedEvidenceSource(row.source_kind) &&
-                        <button type="button" className="vsa-btn-secondary ml-2 min-h-11 text-xs" onClick={() => useEvidence(row)}>
+                        <button type="button" className="vsa-btn-secondary ml-2 min-h-11 text-xs" onClick={() => selectEvidenceCandidate(row)}>
                           Use candidate
                         </button>}
                     </li>)}
