@@ -122,7 +122,6 @@ export function FamilyTree({
   const padY = compact ? 24 : 48;
   const nodeR = compact ? 22 : 28;
 
-  const w = layout.totalWidth * unitX + padX * 2;
   const h = layout.rowCount * unitY + padY * 2;
 
   const A = ACCENTS[dark ? 'dark' : 'light'][accent] ?? ACCENTS.light.teal;
@@ -132,12 +131,18 @@ export function FamilyTree({
     return { x: p.x * unitX + padX, y: p.y * unitY + padY };
   };
 
-  const edges: Array<{ id: string; d: string; length: number; upward: boolean }> = [];
+  const edges: Array<{ id: string; d: string; length: number; upward: boolean; maxX: number }> = [];
   safeNodes.forEach((n) => {
     if (!n.parent || !layout.positions[n.parent]) return;
-    const geometry = edgeGeometry(xy(n.parent), xy(n.id), nodeR, unitY);
+    const obstacles = safeNodes.filter((other) => other.id !== n.id && other.id !== n.parent)
+      .map((other) => xy(other.id));
+    const geometry = edgeGeometry(xy(n.parent), xy(n.id), nodeR, unitY, obstacles);
     edges.push({ id: n.parent + '-' + n.id, ...geometry });
   });
+  // Keep detoured connections inside the SVG viewBox even for a single-column
+  // family in compact mode; never clip a lineage trace at the right edge.
+  const w = Math.max(layout.totalWidth * unitX + padX * 2,
+    ...edges.map((edge) => edge.maxX + padX));
   const edgeById = new Map(edges.map((e) => [e.id, e]));
 
   const lineage = focusId ? lineagePath(safeNodes, focusId) : [];

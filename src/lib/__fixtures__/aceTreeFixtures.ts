@@ -64,3 +64,10 @@ export const large150: TreeNode[] = Array.from({ length: 153 }, (_, i) => {
   const parent = within === 0 ? null : 'N' + String(i - 1).padStart(3, '0');
   return member(id, parent, 2017 + root + Math.floor(within / 5));
 });
+
+/** Undated ancestor → verified Big → undated Little (Unknown band split). */
+export const unknownSandwich: TreeNode[] = [
+  member('Ancestor', null), member('Big', 'Ancestor', 2021),
+  member('Little', 'Big'),
+];
+

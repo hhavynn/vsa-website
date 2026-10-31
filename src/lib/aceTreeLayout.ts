@@ -220,10 +220,53 @@ export function cubicLength(p0: Point, p1: Point, p2: Point, p3: Point): number 
   return length;
 }
 
-export function edgeGeometry(a: Point, b: Point, nodeR: number, unitY: number) {
+export function edgeGeometry(a: Point, b: Point, nodeR: number, unitY: number, obstacles: readonly Point[] = []) {
   const upward = b.y <= a.y;
   const startY = a.y + (upward ? -nodeR : nodeR);
   const endY = b.y + (upward ? nodeR + 40 : -nodeR);
+  // Long edges can pass through unrelated/undated nodes in an intervening
+  // band. Route those edges around the obstructing lane, rather than tracing
+  // through another node and implying an incorrect parent/child link.
+  const low = Math.min(a.y, b.y) + nodeR;
+  const high = Math.max(a.y, b.y) - nodeR;
+  const obstructed = Math.abs(a.y - b.y) > unitY * 1.5 && obstacles.some(
+    (point) => point.y > low && point.y < high &&
+      Math.abs(point.x - a.x) <= nodeR + 20 &&
+      Math.abs(point.x - b.x) <= nodeR + 20,
+  );
+  if (obstructed) {
+    const clearance = Math.max(nodeR + 75, unitY * 0.65);
+    const corridor = obstacles.filter((point) => point.y > low && point.y < high);
+    let routeX = Math.max(a.x, b.x) + clearance;
+    // Keep the detour column clear of *all* intervening nodes and labels.
+    // In the worst case the SVG expands rightward instead of clipping paths.
+    for (let attempts = 0; attempts < corridor.length + 1; attempts++) {
+      if (!corridor.some((point) => Math.abs(point.x - routeX) < clearance)) break;
+      routeX += clearance;
+    }
+    const direction = endY >= startY ? 1 : -1;
+    const bend = Math.min(unitY * 0.43, Math.abs(endY - startY) / 3);
+    const firstY = startY + direction * bend;
+    const secondY = endY - direction * bend;
+    const a0 = { x: a.x, y: startY };
+    const a1 = { x: a.x, y: firstY };
+    const a2 = { x: routeX, y: firstY };
+    const a3 = { x: routeX, y: firstY };
+    const b0 = { x: routeX, y: secondY };
+    const b1 = { x: routeX, y: secondY };
+    const b2 = { x: b.x, y: secondY };
+    const b3 = { x: b.x, y: endY };
+    return {
+      d: 'M ' + a.x + ' ' + startY +
+        ' C ' + a1.x + ' ' + a1.y + ', ' + a2.x + ' ' + a2.y + ', ' + a3.x + ' ' + a3.y +
+        ' L ' + b0.x + ' ' + b0.y +
+        ' C ' + b1.x + ' ' + b1.y + ', ' + b2.x + ' ' + b2.y + ', ' + b3.x + ' ' + b3.y,
+      length: cubicLength(a0, a1, a2, a3) + Math.abs(secondY - firstY) +
+        cubicLength(b0, b1, b2, b3),
+      upward,
+      maxX: Math.max(a.x, b.x, routeX),
+    };
+  }
   const kneeY = upward ? endY : Math.min(endY, a.y + unitY - nodeR);
   const my = (startY + kneeY) / 2;
   const p0 = { x: a.x, y: startY }, p1 = { x: a.x, y: my };
@@ -234,5 +277,6 @@ export function edgeGeometry(a: Point, b: Point, nodeR: number, unitY: number) {
       ', ' + b.x + ' ' + kneeY + (straight ? ' L ' + b.x + ' ' + endY : ''),
     length: cubicLength(p0, p1, p2, p3) + straight,
     upward,
+    maxX: Math.max(a.x, b.x),
   };
 }

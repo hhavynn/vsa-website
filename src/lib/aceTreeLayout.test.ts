@@ -4,7 +4,7 @@ import {
   bigAcrossYears, childBeforeParent, cycle2, cycle3, duplicateNames, eightYearGap,
   fa23AndSp24, goldenPABC, graveyardFam, large150, legacyAllUnknown,
   missingParent, orphanAndDisconnected, sameYearCousins, sameYearParentChild,
-  selfParent, threeRoots, unknownMix,
+  selfParent, threeRoots, unknownMix, unknownSandwich,
 } from './__fixtures__/aceTreeFixtures';
 
 const noOverlapOnARow = (positions: Record<string, { x: number; y: number }>) => {
@@ -147,6 +147,24 @@ describe('ACE chronological tree layout (#671 and #675)', () => {
     expect(comparePickup(year(2021, 'SP22'), year(2022, 'FA22'))).toBe(-1);
     expect(comparePickup(year(2021, null), year(2021, 'SP22'))).toBeNull();
     expect(comparePickup({ status: 'unknown' }, year(2021, 'FA21'))).toBeNull();
+  });
+
+  it('routes a long edge outside an intervening Unknown-year Little (#807 review)', () => {
+    const positioned = layoutTree(unknownSandwich);
+    expect(positioned.mode).toBe('year');
+    expect(positioned.positions.Ancestor.y).toBe(0);
+    expect(positioned.positions.Little.y).toBe(1);
+    expect(positioned.positions.Big.y).toBe(2);
+    const point = (id: string) => ({
+      x: positioned.positions[id].x * 132, y: positioned.positions[id].y * 148,
+    });
+    const parent = point('Ancestor'), child = point('Big'), intervening = point('Little');
+    const unsafe = edgeGeometry(parent, child, 28, 148);
+    const safe = edgeGeometry(parent, child, 28, 148, [intervening]);
+    expect(safe.d).not.toBe(unsafe.d);
+    expect(safe.d.match(/ C /g)).toHaveLength(2);
+    expect(safe.maxX - intervening.x).toBeGreaterThanOrEqual(100);
+    expect(safe.length).toBeGreaterThan(unsafe.length);
   });
 
   it('uses legacy adjacent-row cubic geometry and includes long straight drops', () => {
