@@ -55,7 +55,7 @@ begin
    raise exception 'FAIL: badge RPC disclosed a House before any batch was revealed';
  end if;
  if public.public_member_house_badge('22222222-0000-0000-0000-000000000003', 2024)
-      ->> 'display_name' <> 'Toad' then
+      ->> 'display_name' is distinct from 'Toad' then
    raise exception 'FAIL: historical published House should remain visible by selected year';
  end if;
  if public.public_member_house_badge(null::uuid, 2026) is not null
@@ -125,8 +125,8 @@ begin
     raise exception 'FAIL: later locked Winter batch leaked because Fall was revealed';
   end if;
   v_visible := public.public_member_house_badge('22222222-0000-0000-0000-000000000001', 2026);
-  if v_visible->>'display_name' <> 'Twilight Sparkle'
-    or v_visible->>'academic_year_start' <> '2026' then
+  if v_visible->>'display_name' is distinct from 'Twilight Sparkle'
+    or v_visible->>'academic_year_start' is distinct from '2026' then
     raise exception 'FAIL: published Fall House not visible immediately before its effective start';
   end if;
   if (v_visible ?| array['total_points','events_attended','review_note',
@@ -137,7 +137,7 @@ begin
     raise exception 'FAIL: public badge response keys changed';
   end if;
   if public.public_member_house_badge('22222222-0000-0000-0000-000000000005', 2026)
-      ->> 'display_name' <> 'Twilight Sparkle' then
+      ->> 'display_name' is distinct from 'Twilight Sparkle' then
     raise exception 'FAIL: revealed hand-added upcoming membership not visible';
   end if;
   raise notice 'PASS: badge reveals Fall only, blocks later partial Winter, shows upcoming and returns only six safe fields.';
@@ -192,14 +192,14 @@ set role anon;
 do $$
 begin
  if public.public_member_house_badge('22222222-0000-0000-0000-000000000001',2026)
-     ->> 'display_name' <> 'Twilight Sparkle' then
+     ->> 'display_name' is distinct from 'Twilight Sparkle' then
    raise exception 'FAIL: archiving an already revealed Fall batch hid its public House';
  end if;
  if public.public_member_house_badge('22222222-0000-0000-0000-000000000004',2026) is not null then
    raise exception 'FAIL: Winter batch is still not published';
  end if;
  if public.public_member_house_badge('22222222-0000-0000-0000-000000000006',2026)
-     ->> 'display_name' <> 'Toad' then
+     ->> 'display_name' is distinct from 'Toad' then
    raise exception 'FAIL: member transfer did not select currently active House';
  end if;
  if public.public_member_house_badge('22222222-0000-0000-0000-000000000007',2026) is not null then
