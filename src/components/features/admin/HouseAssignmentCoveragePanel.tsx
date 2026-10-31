@@ -74,10 +74,21 @@ export function HouseAssignmentCoveragePanel({ selectedYear }: { selectedYear: n
 
   const exceptions = useMemo(() => {
     const items = snapshot?.population
-      ? snapshot.population.results.map((item) => ({
-          id: item.applicantId, rowId: item.rowId, sourceName: item.sourceName,
-          state: item.state, reason: item.reason,
-        }))
+      ? [
+          ...snapshot.population.results.map((item) => ({
+            id: item.applicantId, rowId: item.rowId, sourceName: item.sourceName,
+            state: item.state, reason: item.reason,
+          })),
+          // These linked rows have no final Paid/Waived non-withdrawn applicant.
+          // Never hide them behind a count while showing Needs review = 0.
+          ...snapshot.population.rowsNotEligible.map((row) => ({
+            id: 'outside-eligible:' + row.id,
+            rowId: row.id,
+            sourceName: row.source_name,
+            state: 'outside-eligible-roster',
+            reason: 'This linked draft row is outside the final Paid/Waived non-withdrawn roster. Verify payment eligibility and the canonical member in the original batch.',
+          })),
+        ]
       : (snapshot?.reviewed ?? []).map((item) => ({
           id: item.row.id, rowId: item.row.id, sourceName: item.row.source_name,
           state: item.state, reason: item.reason,
@@ -96,9 +107,11 @@ export function HouseAssignmentCoveragePanel({ selectedYear }: { selectedYear: n
     ['Ambiguous identity', snapshot.population.results.filter((x) =>
       x.state === 'ambiguous-identity' || x.state === 'duplicate-applicant').length],
     ['Duplicate batch rows', snapshot.population.results.filter((x) => x.state === 'duplicate-batch-row').length],
+    ['Outside eligible roster', snapshot.population.rowsNotEligible.length],
     ['Conflicting', snapshot.population.results.filter((x) => x.state === 'conflicting-membership').length],
-    ['Needs review', snapshot.population.results.filter((x) =>
-      !['assigned', 'scheduled', 'unassigned'].includes(x.state)).length],
+    ['Needs review', snapshot.population.rowsNotEligible.length +
+      snapshot.population.results.filter((x) =>
+        !['assigned', 'scheduled', 'unassigned'].includes(x.state)).length],
     ['Excluded', Object.values(snapshot.population.excluded).reduce((a, b) => a + b, 0)],
   ] : snapshot?.revealed ? [
     ['Batch rows', snapshot.counts.total],
@@ -164,14 +177,15 @@ export function HouseAssignmentCoveragePanel({ selectedYear }: { selectedYear: n
                   {snapshot.revealed ? ' published rows only were reviewed.' : ' no population review is available.'}
                 </p>}
                 {snapshot.population && <p className="mb-3 text-xs text-text-secondary">
-                  {snapshot.population.rowsNotEligible.length} assigned row(s) outside the eligible roster;
+                  {snapshot.population.rowsNotEligible.length} linked row(s) outside the final Paid/Waived roster;
                   {' '}{snapshot.population.membershipsOutsideBatch.length} dated membership(s) outside this batch.
+                  An outside-batch membership may belong to another approved release — verify its source before treating it as an error.
                 </p>}
                 <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {counters.map(([label, value]) => (
                     <div key={label} className="rounded border border-[var(--color-border)] p-3">
                       <dt className="text-xs text-text-secondary">{label}</dt>
-                      <dd className="mt-1 text-xl font-bold text-text-primary">{value}</dd>
+                      <dd aria-label={`${label} count`} className="mt-1 text-xl font-bold text-text-primary">{value}</dd>
                     </div>
                   ))}
                 </dl>
