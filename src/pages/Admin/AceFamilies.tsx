@@ -12,6 +12,7 @@ import {
   useAceMemberLinks,
   useAdminAceFamilies,
   useAdminAceFamilyMembers,
+  useAcePickupEvidence,
 } from '../../hooks/useAceFamilies';
 import { useMemberDirectory } from '../../hooks/useMemberDirectory';
 import {
@@ -29,6 +30,8 @@ import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader
 import { MemberLinkPicker, MemberLinkSuggestion } from '../../components/features/admin/MemberLinkPicker';
 import { AceLinkReviewPanel } from '../../components/features/admin/AceLinkReviewPanel';
 import { AceFamHeadReview } from '../../components/features/admin/AceFamHeadReview';
+import { AceYearReviewPanel } from '../../components/features/admin/AceYearReviewPanel';
+import { AcePickupYearEditor } from '../../components/features/admin/AcePickupYearEditor';
 import { EmptyState, FilterChips, NextStepBanner, SaveBar, YearContextBadge } from '../../components/features/admin/ops';
 import { logAdminActivity } from '../../data/repos/adminActivity';
 import { useOperatingYear } from '../../hooks/useOperatingYear';
@@ -39,6 +42,7 @@ import { isDirty, saveStatus } from '../../lib/adminDirty';
 import { applyQuickFilter, countByFilter } from '../../lib/adminFilters';
 import { NextStep, nextStepFor } from '../../lib/adminNextSteps';
 import { ACE_NODE_FILTERS, ACE_NODE_FILTER_KEYS, AceNodeFacts } from '../../lib/adminQueues';
+import { reviewFamilyYears, type YearReview } from '../../lib/aceYearReview';
 import { describeYearContext } from '../../lib/adminYearContext';
 import { AceAssignmentsWorkspace } from '../../components/features/admin/AceAssignmentsWorkspace';
 import {
@@ -189,6 +193,12 @@ function MemberRow({
   review,
   matchingReady,
   saving,
+  familyName,
+  familyYears,
+  evidence,
+  yearReviewReady,
+  onPickupSaved,
+  onPickupConflict,
 }: {
   member: AceFamilyMember;
   membersById: Map<string, AceFamilyMember>;
@@ -200,6 +210,12 @@ function MemberRow({
   review: AceLinkReviewItem | undefined;
   matchingReady: boolean;
   saving: boolean;
+  familyName: string;
+  familyYears: readonly number[];
+  evidence: readonly import('../../data/repos/aceFamilies').AcePickupEvidenceRow[];
+  yearReviewReady: boolean;
+  onPickupSaved: () => Promise<void>;
+  onPickupConflict: () => Promise<void>;
 }) {
   const [name, setName] = useState(member.name);
   const [role, setRole] = useState(member.role_label ?? '');
@@ -405,6 +421,17 @@ function MemberRow({
           />
         </div>
       </div>
+      <AcePickupYearEditor
+        member={member}
+        familyName={familyName}
+        big={member.parent_member_id ? membersById.get(member.parent_member_id) ?? null : null}
+        littles={Array.from(membersById.values()).filter(node => node.parent_member_id === member.id)}
+        familyYears={familyYears}
+        evidence={evidence}
+        ready={yearReviewReady && !saving}
+        onSaved={onPickupSaved}
+        onConflict={onPickupConflict}
+      />
     </div>
   );
 }
@@ -529,7 +556,8 @@ export default function AdminAceFamilies() {
   const [savingFamily, setSavingFamily] = useState(false);
   const [autoSlug, setAutoSlug] = useState(true);
 
-  const { members, refetch: refetchMembers } = useAdminAceFamilyMembers(selectedFamilyId);
+  const { members, loading: membersLoading, error: membersError, refetch: refetchMembers } = useAdminAceFamilyMembers(selectedFamilyId);
+  const { evidence: pickupEvidence, ready: evidenceReady, loading: evidenceLoading, error: evidenceError, refetch: refetchPickupEvidence } = useAcePickupEvidence(selectedFamilyId);
   const [savingMemberId, setSavingMemberId] = useState<string | null>(null);
   const [newMemberName, setNewMemberName] = useState('');
   const [deleteFamilyOpen, setDeleteFamilyOpen] = useState(false);
@@ -609,12 +637,62 @@ export default function AdminAceFamilies() {
   const linkSummary = summarizeLinks(members);
   const unlinkedCount = linkSummary.total - linkSummary.linked;
   const obviousMatchCount = reviewItems.filter((item) => item.status === 'recommended').length;
-  const nodeFacts = useMemo<AceNodeFacts[]>(
-    () => members.map((node) => ({ node, review: reviewByNodeId.get(node.id) })),
-    [members, reviewByNodeId],
+  // Both reads must complete before showing advisory year counts or applying
+  // the year filter. An empty fallback must never mean "no problems".
+  const yearReviewReady = !!selectedFamilyId && !membersLoading && !membersError && evidenceReady && !evidenceError;
+  const yearReviews = useMemo<ReadonlyMap<string, YearReview>>(
+    () => yearReviewReady ? reviewFamilyYears(members, pickupEvidence) : new Map(),
+    [yearReviewReady, members, pickupEvidence],
   );
-  const nodeCounts = useMemo(() => countByFilter(nodeFacts, ACE_NODE_FILTERS), [nodeFacts]);
-  const visibleNodes = useMemo(() => applyQuickFilter(nodeFacts, ACE_NODE_FILTERS, nodeFilter), [nodeFacts, nodeFilter]);
+  const nodeFacts = useMemo<AceNodeFacts[]>(
+    () => members.map((node) => ({
+      node,
+      review: reviewByNodeId.get(node.id),
+      yearFlags: yearReviewReady ? yearReviews.get(node.id)?.flags : undefined,
+    })),
+    [members, reviewByNodeId, yearReviewReady, yearReviews],
+  );
+  const availableNodeFilters = useMemo(
+    () => ACE_NODE_FILTERS.filter((filter) =>
+      (yearReviewReady || filter.key !== 'year_review') &&
+      (matchingReady || (filter.key !== 'possible_match' && filter.key !== 'no_match'))
+    ),
+    [yearReviewReady, matchingReady],
+  );
+  const effectiveNodeFilter = availableNodeFilters.some(filter => filter.key === nodeFilter) ? nodeFilter : 'all';
+  const nodeCounts = useMemo(() => countByFilter(nodeFacts, availableNodeFilters), [nodeFacts, availableNodeFilters]);
+  const visibleNodes = useMemo(() => applyQuickFilter(nodeFacts, availableNodeFilters, effectiveNodeFilter), [nodeFacts, availableNodeFilters, effectiveNodeFilter]);
+  const pickupFamilyYears = useMemo(() => Array.from(new Set(members
+    .map(node => node.pickup_academic_year_start)
+    .filter((year): year is number => typeof year === 'number')))
+    .sort((a, b) => a - b), [members]);
+  const refreshPickupSources = async () => {
+    const [membersResult, evidenceResult] = await Promise.all([
+      refetchMembers(), refetchPickupEvidence(),
+    ]);
+    // React Query v3 resolves refetch() with an error result by default.
+    // A successful DB write + failed refresh must never be reported as a retryable write failure.
+    if (membersResult.isError || evidenceResult.isError) {
+      throw new Error('ACE family data could not refresh after the correction.');
+    }
+  };
+  const onPickupSaved = async () => {
+    await refreshPickupSources();
+    await queryClient.invalidateQueries(['ace-family-members', 'published']);
+  };
+  const onPickupConflict = refreshPickupSources;
+  const openReviewNode = (nodeId: string) => {
+    if (!selectedFamilyId) return;
+    // The filter and target must move in one URL update. Calling setNodeFilter
+    // first would be overwritten by the next stale searchParams snapshot.
+    setSearchParams(current => {
+      const nextParams = new URLSearchParams(current);
+      nextParams.delete('filter');
+      nextParams.set('family', selectedFamilyId);
+      nextParams.set('node', nodeId);
+      return nextParams;
+    }, { replace: true });
+  };
   useEffect(() => {
     if (nodeParam && members.some((node) => node.id === nodeParam)) {
       document.getElementById(`ace-node-${nodeParam}`)?.scrollIntoView?.({ block: 'center' });
@@ -1479,13 +1557,17 @@ export default function AdminAceFamilies() {
                 directoryById={directoryById}
                 allLinks={allMemberLinks}
                 evidenceReady={matchingReady}
-                onReviewNode={(nodeId) => {
-                  setNodeFilter('all');
-                  const nextParams = new URLSearchParams(searchParams);
-                  nextParams.set('family', selectedFamily.id);
-                  nextParams.set('node', nodeId);
-                  setSearchParams(nextParams);
-                }}
+                onReviewNode={openReviewNode}
+              />
+
+              <AceYearReviewPanel
+                familyName={selectedFamily.name}
+                nodes={members}
+                reviews={yearReviews}
+                ready={yearReviewReady}
+                loading={membersLoading || evidenceLoading}
+                failed={Boolean(membersError || evidenceError)}
+                onReviewNode={openReviewNode}
               />
 
               <NextStepBanner step={nextStep} onDismiss={() => setNextStep(null)} />
@@ -1557,9 +1639,9 @@ export default function AdminAceFamilies() {
                 </button>
               </div>
 
-              {members.length > 0 && matchingReady && (
+              {members.length > 0 && (matchingReady || yearReviewReady) && (
                 <div className="mb-3">
-                  <FilterChips filters={ACE_NODE_FILTERS} counts={nodeCounts} active={nodeFilter} onChange={setNodeFilter} label="Filter people" />
+                  <FilterChips filters={availableNodeFilters} counts={nodeCounts} active={effectiveNodeFilter} onChange={setNodeFilter} label="Filter people" />
                 </div>
               )}
 
@@ -1587,6 +1669,12 @@ export default function AdminAceFamilies() {
                         review={reviewByNodeId.get(m.id)}
                         matchingReady={matchingReady}
                         saving={savingMemberId === m.id || bulkLinking}
+                        familyName={selectedFamily.name}
+                        familyYears={pickupFamilyYears}
+                        evidence={yearReviewReady ? pickupEvidence.filter(row => row.ace_member_id === m.id) : []}
+                        yearReviewReady={yearReviewReady}
+                        onPickupSaved={onPickupSaved}
+                        onPickupConflict={onPickupConflict}
                       />
                     </div>
                   ))}
