@@ -188,8 +188,9 @@ function HouseLegacyPreview() {
   );
 }
 
-function HouseAnchorNav() {
+function HouseAnchorNav({ showFindMyHouse }: { showFindMyHouse: boolean }) {
   const items = [
+    ...(showFindMyHouse ? [{ href: '#find-my-house', label: 'Find My House' }] : []),
     { href: '#houses', label: 'Houses' },
     { href: '#standings', label: 'Standings' },
     { href: '#archive', label: 'Archive' },
@@ -337,7 +338,7 @@ export function House() {
   // that the Houses are unannounced; only say so once the query has succeeded.
   // An anonymous, bounded read from the already Reveal-gated score-free view.
   // Never show the identity search before public House memberships exist.
-  const { data: hasPublishedHouseMembers = false } = useQuery<boolean>({
+  const { data: hasPublishedHouseMembers = false, isError: houseRevealCheckError } = useQuery<boolean>({
     queryKey: ['house', 'find-my-house-revealed', activeYear],
     queryFn: () => hasRevealedHouseMemberships(activeYear as number),
     enabled: !!activeYear && !isArchive && !isFutureYear && houseAssets.length > 0,
@@ -496,7 +497,17 @@ export function House() {
           </section>
         )}
 
-        {!isArchive && hasPublishedHouseMembers && activeYear !== null && (
+        {!isArchive && !isFutureYear && houseRevealCheckError && activeYear !== null && (
+          <section className="program-section" aria-label="Find My House availability">
+            <div className="program-section-inner">
+              <p role="status" className="rounded border border-[var(--color-border)] bg-[var(--color-surface2)] p-4 text-sm text-[var(--color-text2)]">
+                Find My House is temporarily unavailable. This does not mean Houses have not been revealed.
+              </p>
+            </div>
+          </section>
+        )}
+
+        {!isArchive && !isFutureYear && !houseRevealCheckError && hasPublishedHouseMembers && activeYear !== null && (
           <section className="program-section">
             <div className="program-section-inner">
               <FindMyHouse academicYearStart={activeYear} />
@@ -504,7 +515,7 @@ export function House() {
           </section>
         )}
 
-        {!isArchive && <HouseAnchorNav />}
+        {!isArchive && <HouseAnchorNav showFindMyHouse={!isFutureYear && !houseRevealCheckError && hasPublishedHouseMembers} />}
 
         {/* ── About ── */}
         <section id="houses" className="program-section scroll-mt-24">
