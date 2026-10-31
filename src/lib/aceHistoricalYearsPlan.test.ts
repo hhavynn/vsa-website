@@ -230,6 +230,8 @@ describe('planSqlPreview', () => {
     expect(executable).toContain("'overwrites', 1");
     expect(executable).toContain("if changed = 1 then");
     expect(executable).toContain("on conflict (ace_member_id, source_kind, source_label, raw_value) do nothing;");
+    expect(executable).toContain("and review_status = 'approved' and reviewed_at is not null");
+    expect(executable).toContain('ACE pickup evidence conflict');
     expect(executable.match(/do \$\$/g)).toHaveLength(3);
     expect(executable.match(/update [\w.]+/g)).toEqual(['update public.ace_family_members', 'update public.ace_family_members']);
     const sets = preview.match(/set [^\n]+/g) ?? [];
@@ -258,6 +260,7 @@ describe('planSqlPreview', () => {
   it('requires a short URL-free audit batch label for a current-schema plan', () => {
     expect(() => planSqlPreview(plan)).toThrow(/Batch label/);
     expect(() => planSqlPreview(plan, { batchLabel: 'https://docs.google.com/private' })).toThrow(/Batch label/);
+    expect(() => planSqlPreview(plan, { batchLabel: 'FA26-$-review' })).toThrow(/Batch label/);
     expect(() => planSqlPreview(plan, { batchLabel: 'a'.repeat(201) })).toThrow(/Batch label/);
     expect(validatePickupBatchLabel("  FA26's review  ")).toBe("FA26's review");
     expect(planSqlPreview(plan, { batchLabel: "FA26's review" })).toContain("'FA26''s review'");
