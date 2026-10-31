@@ -91,6 +91,40 @@ describe('complete admin ACE node references (#291)', () => {
     expect(supabaseMock.queriesFor('published_ace_family_members')).toHaveLength(0);
   });
 
+  it('reads approved pickup fields and unpublished nodes only into admin references (#665)', async () => {
+    supabaseMock.queueResult('ace_family_members', { data: [
+      { ...row(0), is_published: true, pickup_academic_year_start: 2021, pickup_term: 'FA21' },
+      { ...row(1), is_published: false, pickup_academic_year_start: null, pickup_term: null },
+    ], error: null });
+    const refs = await aceFamiliesRepository.getAllNodeRefs();
+    expect(refs).toEqual([
+      expect.objectContaining({
+        id: 'fictional-node-0000', isPublished: true,
+        pickupAcademicYearStart: 2021, pickupTerm: 'FA21',
+        parentId: null, roleLabel: 'OG Founder',
+      }),
+      expect.objectContaining({
+        id: 'fictional-node-0001', isPublished: false,
+        pickupAcademicYearStart: null, pickupTerm: null,
+        parentId: 'fictional-node-0000',
+      }),
+    ]);
+    const [query] = supabaseMock.queriesFor('ace_family_members');
+    const selected = query.calls.find((call) => call.method === 'select')?.args[0];
+    expect(selected).toBe('id, name, family_id, member_id, parent_member_id, role_label, is_published, pickup_academic_year_start, pickup_term, ace_families(name)');
+    expect(supabaseMock.queriesFor('ace_member_pickup_evidence')).toHaveLength(0);
+    expect(supabaseMock.queriesFor('members')).toHaveLength(0);
+  });
+
+  it('does not infer publication or a year from legacy admin rows missing the new columns', async () => {
+    supabaseMock.queueResult('ace_family_members', { data: [row(0)], error: null });
+    const refs = await aceFamiliesRepository.getAllNodeRefs();
+    expect(refs).toHaveLength(1);
+    expect(refs[0].isPublished).toBe(false);
+    expect(refs[0].pickupAcademicYearStart).toBeUndefined();
+    expect(refs[0].pickupTerm).toBeUndefined();
+  });
+
   it('preserves the two existing PostgREST family-join shapes', async () => {
     supabaseMock.queueResult('ace_family_members', {
       data: [{ ...row(1), ace_families: [{ name: 'Array Family' }] }, {
