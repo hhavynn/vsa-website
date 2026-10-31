@@ -28,8 +28,8 @@ export function createQueryClient() {
         staleTime: 5 * 60 * 1000, // 5 minutes default
         gcTime: 10 * 60 * 1000,
         // Retries never pause for navigator.onLine. A paused query is neither
-        // loading nor failed, so pages read it as settled and empty (House
-        // would say "not announced"); an error reaches degraded mode instead.
+        // loading nor failed, so a page can read it as settled and empty; an
+        // error reaches degraded mode instead.
         networkMode: 'always',
         // Render on every result change rather than only for properties read
         // during render.
