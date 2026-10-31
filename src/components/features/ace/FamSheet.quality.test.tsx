@@ -142,6 +142,6 @@ describe('ACE chronological tree acceptance (#675)', () => {
     ]);
     expect(undatedContainer.querySelector('.ace-year-rail')).toBeNull();
     expect(screen.getByText('Rows show generations. Pickup years are still being verified.')).toBeInTheDocument();
-    expect(await axe(undated.container)).toHaveNoViolations();
+    expect(await axe(undatedContainer)).toHaveNoViolations();
   });
 });
