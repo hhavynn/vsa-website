@@ -3,6 +3,7 @@
 // Pure predicates over the same rows the pages already hold.
 import type { AceFamilyMember, AceAssignmentDraft } from '../types';
 import type { AceLinkReviewItem } from './aceMemberLinks';
+import type { YearFlag } from './aceYearReview';
 import type { AssignmentIssue, LittleLinkReviewItem } from './aceAssignments';
 import type { HouseAssignmentDraft, HouseProfileLite } from './houseAssignmentDraft';
 import { readPreferences } from './houseAssignmentDraft';
@@ -37,15 +38,17 @@ export const ACE_DRAFT_FILTERS: ReadonlyArray<QuickFilter<AceDraftFacts>> = [
 export interface AceNodeFacts {
   node: AceFamilyMember;
   review?: AceLinkReviewItem;
+  yearFlags?: readonly YearFlag[];
 }
 
-export const ACE_NODE_FILTER_KEYS = ['all', 'unlinked', 'possible_match', 'no_match'] as const;
+export const ACE_NODE_FILTER_KEYS = ['all', 'unlinked', 'possible_match', 'no_match', 'year_review'] as const;
 
 export const ACE_NODE_FILTERS: ReadonlyArray<QuickFilter<AceNodeFacts>> = [
   allFilter(),
   { key: 'unlinked', label: 'Unlinked', predicate: (row) => !row.node.member_id },
   { key: 'possible_match', label: 'Possible match', predicate: (row) => !!row.review && row.review.status !== 'none' },
   { key: 'no_match', label: 'No match', predicate: (row) => row.review?.status === 'none' },
+  { key: 'year_review', label: 'Needs year review', hint: 'Unknown years or source and chronology warnings.', predicate: (row) => (row.yearFlags?.length ?? 0) > 0 },
 ];
 
 // ─── House draft rows ────────────────────────────────────────────────────────
