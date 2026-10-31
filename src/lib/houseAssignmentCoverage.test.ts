@@ -22,7 +22,7 @@ it('recognizes published current-year membership, future start and intentional u
 it('flags duplicate canonical IDs and wrong, inactive or missing House records', () => {
   const rows=[row('1','one'),row('2','one'),row('3','two','hp2'),row('4','three',null),row('5','deleted')];
   expect(reviewPublishedHouseBatchCoverage(rows,profiles,memberIds,new Map(),date).map(i=>i.state))
-    .toEqual(['duplicate-member','duplicate-member','invalid-house','invalid-house','missing-member']);
+    .toEqual(['duplicate-member','duplicate-member','invalid-house','unassigned','missing-member']);
 });
 it('detects overlapping intervals and different effective House, not just a cached members.house label', () => {
   const rows=[row('1','one'),row('2','two'),row('3','three'),row('4','four')];
