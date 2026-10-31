@@ -3,7 +3,7 @@
 // keeps its own id and record (a House event is never turned into an `events`
 // row), and a collab House event is one item listing every host House. Times
 // are Los Angeles wall-clock, through the same lifecycle rules for both kinds.
-import type { Event, PublicPublicHouseEvent } from '../types';
+import type { Event, PublicHouseEvent } from '../types';
 import { houseEventToCalendarItem } from '../utils/calendar';
 import { EventLifecycleCandidate, getEventLifecycleBounds, isEventUpcomingOrOngoing } from './eventLifecycle';
 
@@ -28,7 +28,7 @@ export function houseCandidate(event: Pick<PublicHouseEvent, 'event_date' | 'sta
 }
 
 /** Not over yet (Los Angeles time): upcoming, or still going on. */
-export function isPublicHouseEventUpcomingOrOngoing(event: PublicHouseEvent, now: Date): boolean {
+export function isHouseEventUpcomingOrOngoing(event: PublicHouseEvent, now: Date): boolean {
   return isEventUpcomingOrOngoing(houseCandidate(event), now);
 }
 
@@ -51,7 +51,7 @@ export function mergeUpcoming(vsaEvents: readonly Event[], houseEvents: readonly
   const items: UpcomingItem[] = vsaEvents.map((event) => ({ kind: 'vsa', key: `vsa:${event.id}`, sortMs: upcomingSortMs(event), event }));
   const seen = new Set<string>();
   for (const event of houseEvents) {
-    if (!event.is_published || seen.has(event.id) || !isPublicHouseEventUpcomingOrOngoing(event, now)) continue;
+    if (!event.is_published || seen.has(event.id) || !isHouseEventUpcomingOrOngoing(event, now)) continue;
     seen.add(event.id);
     items.push({ kind: 'house', key: `house:${event.id}`, sortMs: upcomingSortMs(houseCandidate(event)), event, detailPath: houseEventDetailPath(event) });
   }

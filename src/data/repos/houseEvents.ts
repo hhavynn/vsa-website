@@ -337,10 +337,12 @@ export class HouseEventsRepository {
    * host first. Profiles the embed could not return (anon cannot read
    * house_page_assets) are read from published_house_page_assets in one query.
    */
-  private async mapPublicRelations(data: PublicHouseEventRow[] | null): Promise<PublicHouseEvent[]> {
-    if (!data) return [];
+  private async mapPublicRelations(data: unknown): Promise<PublicHouseEvent[]> {
+    if (data === null) return [];
+    if (!Array.isArray(data)) throw new Error('Unexpected public House event response');
+    const rows = data as PublicHouseEventRow[];
     const hostIds = new Set<string>();
-    for (const item of data) {
+    for (const item of rows) {
       for (const link of item.houses ?? []) {
         if (link.house_page_asset_id) hostIds.add(link.house_page_asset_id);
       }
@@ -357,7 +359,7 @@ export class HouseEventsRepository {
         published.set(id, { id, house, house_key, display_name, accent_color, is_active });
       }
     }
-    return data.map((item) => {
+    return rows.map((item) => {
       const hosts = (item.houses ?? [])
         .map((link) => published.get(link.house_page_asset_id))
         .filter((house): house is PublicHouseEventHost => !!house && house.is_active)
