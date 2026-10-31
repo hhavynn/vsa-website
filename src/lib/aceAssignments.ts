@@ -16,6 +16,10 @@ export interface AceNodeRef {
   memberId: string | null;
   parentId: string | null;
   roleLabel: string | null;
+  /** Admin-only: false never becomes a public node in pre-Reveal previews. */
+  isPublished?: boolean;
+  pickupAcademicYearStart?: number | null;
+  pickupTerm?: string | null;
 }
 
 export const LITTLE_ROLE_LABEL = 'Little';

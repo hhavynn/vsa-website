@@ -1,6 +1,7 @@
 import { AceFamily, AceFamilyMember } from '../types';
 import { FamAccent, FamPattern } from '../components/features/ace/FamCover';
 import { TreeNode } from '../components/features/ace/FamilyTree';
+import type { AceNodeRef } from './aceAssignments';
 import { MemberAvatarMap, NO_MEMBER_AVATARS, resolveMemberPhoto } from './memberPhotos';
 import { formatPickupLabel, pickupYearOf } from './acePickupYear';
 
@@ -107,7 +108,7 @@ function firstInitial(name: string): string {
   return trimmed.charAt(0).toUpperCase();
 }
 
-function classifyRole(rawRole: string | null): string {
+export function classifyRole(rawRole: string | null): string {
   if (!rawRole) return 'Member';
   const lower = rawRole.toLowerCase();
   if (lower.includes('og') || lower.includes('founder') || lower.includes('grand')) {
@@ -119,6 +120,19 @@ function classifyRole(rawRole: string | null): string {
   if (lower.includes('little')) return 'Little';
   if (lower.includes('big')) return 'Big';
   return rawRole;
+}
+
+/** Read-only, admin preview mapping. No avatar fetches or private metadata. */
+export function nodeRefToTreeNode(ref: AceNodeRef): TreeNode {
+  const pickup = pickupYearOf({
+    pickup_academic_year_start: ref.pickupAcademicYearStart,
+    pickup_term: ref.pickupTerm,
+  });
+  return {
+    id: ref.id, initial: firstInitial(ref.name), label: ref.name,
+    role: classifyRole(ref.roleLabel), cohort: formatPickupLabel(pickup), pickup,
+    parent: ref.parentId ?? null, photoUrl: null,
+  };
 }
 
 /**
