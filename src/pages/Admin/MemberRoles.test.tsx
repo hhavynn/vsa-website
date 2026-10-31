@@ -124,7 +124,7 @@ it('never offers an identity shortcut when two canonical members share the exact
   });
   fireEvent.click(screen.getByRole('button', { name: 'Parse names' }));
   expect(screen.getByText(/Multiple exact candidates/)).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: /Row 1: choose sole exact member candidate for Ada Example/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /choose sole exact member candidate/ })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /choose sole matching/ })).not.toBeInTheDocument();
 });
 
