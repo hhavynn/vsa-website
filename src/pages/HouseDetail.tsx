@@ -111,7 +111,7 @@ export function HouseDetail() {
   const backHref = isArchive ? `/house/year/${activeYearLabel}` : '/house';
   const today = getLosAngelesDateOnly();
 
-  const { data: houses = [], isLoading: housesLoading } = useQuery({
+  const { data: houses = [], isLoading: housesLoading, error: housesError } = useQuery({
     queryKey: ['house-detail', 'published-assets', activeYear],
     queryFn: () => activeYear ? houseAssetsRepository.getPublishedAssets(activeYear) : Promise.resolve([]),
     enabled: activeYear !== null,
@@ -130,7 +130,7 @@ export function HouseDetail() {
   // year starts, older Houses only exist in earlier years, so fall back to
   // the most recent year that published a House with this slug.
   const needsYearFallback = !yearSlug && !housesLoading && activeYear !== null && !house;
-  const { data: allPublishedHouses = [], isLoading: fallbackLoading } = useQuery({
+  const { data: allPublishedHouses = [], isLoading: fallbackLoading, error: fallbackError } = useQuery({
     queryKey: ['house-detail', 'all-published-assets'],
     queryFn: () => houseAssetsRepository.getAllPublishedAssets(),
     enabled: needsYearFallback,
@@ -145,6 +145,9 @@ export function HouseDetail() {
       matchesHouseSlug(asset.display_name, houseSlug)
     ) ?? null
     : null;
+  // The fallback reads every year, so once it succeeds a missing House is a real
+  // 404 even if the year read failed. Otherwise the lookup never finished.
+  const houseLookupError = needsYearFallback ? fallbackError : housesError;
 
   // Competition totals are private: public House detail pages never query score views.
 
@@ -206,7 +209,7 @@ export function HouseDetail() {
     }
   }, [targetEventId, upcomingLoading, pastLoading, shownPast, shownUpcoming, showAllPastEvents]);
 
-  const isDegraded = isSupabaseUnavailable(pastError);
+  const isDegraded = isSupabaseUnavailable(pastError) || isSupabaseUnavailable(houseLookupError);
 
   if (termsLoading || housesLoading || (needsYearFallback && fallbackLoading)) {
     return <HouseDetailSkeleton />;
@@ -234,6 +237,27 @@ export function HouseDetail() {
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link to="/house" className="vsa-btn-primary">Current Houses</Link>
             <Link to="/house/archive" className="vsa-btn-ghost">House Archive</Link>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (!house && houseLookupError) {
+    return (
+      <>
+        <PageTitle title="House Temporarily Unavailable" />
+        {isDegraded && <DegradedModeBanner sourceName="house" />}
+        <div className="vsa-container py-24 text-center">
+          <span className="scrapbook-sticker scrapbook-sticker-gold mb-6">Temporarily unavailable</span>
+          <h1 className="font-serif text-[42px] leading-tight" style={{ color: 'var(--color-text)' }}>House details are temporarily unavailable</h1>
+          <p className="mx-auto mt-4 max-w-md font-sans text-[15px] leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+            This does not mean this House is missing. Please check back soon.
+          </p>
+          <div className="mt-8">
+            <Link to={backHref} className="vsa-btn-primary">
+              Back to House Program
+            </Link>
           </div>
         </div>
       </>

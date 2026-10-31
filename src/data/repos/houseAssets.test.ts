@@ -1,5 +1,6 @@
 import { houseAssetsRepository, type HousePageAssetFormData } from './houseAssets';
 import { postgrestError, supabaseMock } from '../../test-utils/supabaseMock';
+import { isSupabaseUnavailable } from '../../utils/isSupabaseUnavailable';
 
 jest.mock('../../lib/supabase', () => ({
   get supabase() {
@@ -42,20 +43,31 @@ describe('houseAssetsRepository existing public/admin behavior (#291)', () => {
     ]);
   });
 
-  it('returns [] for missing published rows and when the public backend errors', async () => {
+  it('returns [] only for a successful read with no published rows', async () => {
     supabaseMock.queueResult('published_house_page_assets', { data: null, error: null });
     await expect(houseAssetsRepository.getPublishedAssets(2026)).resolves.toEqual([]);
 
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    try {
-      supabaseMock.queueResult('published_house_page_assets', {
-        data: null, error: postgrestError('permission denied', '42501'),
-      });
-      await expect(houseAssetsRepository.getPublishedAssets(2026)).resolves.toEqual([]);
-      expect(warn).toHaveBeenCalled();
-    } finally {
-      warn.mockRestore();
-    }
+    supabaseMock.queueResult('published_house_page_assets', { data: [], error: null });
+    await expect(houseAssetsRepository.getAllPublishedAssets()).resolves.toEqual([]);
+  });
+
+  it.each([
+    ['getPublishedAssets', () => houseAssetsRepository.getPublishedAssets(2026)],
+    ['getAllPublishedAssets', () => houseAssetsRepository.getAllPublishedAssets()],
+  ])('%s rejects a failed read so it cannot pass for "nothing published"', async (_name, read) => {
+    supabaseMock.queueResult('published_house_page_assets', {
+      data: null, error: postgrestError('TypeError: Failed to fetch', ''),
+    });
+    const outage = await read().catch((error: unknown) => error);
+    expect(outage).toMatchObject({ name: 'NetworkError' });
+    expect(isSupabaseUnavailable(outage)).toBe(true);
+
+    supabaseMock.queueResult('published_house_page_assets', {
+      data: null, error: postgrestError('permission denied', '42501'),
+    });
+    const denied = await read().catch((error: unknown) => error);
+    expect(denied).toMatchObject({ name: 'DatabaseError', code: '42501' });
+    expect(isSupabaseUnavailable(denied)).toBe(false);
   });
 
   it('loads all years from the published view without reading the private base table', async () => {

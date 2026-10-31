@@ -12,7 +12,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { HouseDetail } from './HouseDetail';
 import { House } from './House';
-import { supabaseMock } from '../test-utils/supabaseMock';
+import { postgrestError, supabaseMock } from '../test-utils/supabaseMock';
 
 // Framer Motion's whileInView needs IntersectionObserver, which jsdom lacks.
 beforeAll(() => {
@@ -83,6 +83,7 @@ function renderAt(path: string) {
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/house" element={<House />} />
+          <Route path="/house/year/:yearSlug" element={<House />} />
           <Route path="/house/year/:yearSlug/:houseSlug" element={<HouseDetail />} />
           <Route path="/house/:houseSlug" element={<HouseDetail />} />
         </Routes>
@@ -117,6 +118,77 @@ describe('House pages before the new year\'s House Reveal', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: /bowser/i })).toBeInTheDocument();
     expect(screen.queryByText(/house page not found/i)).not.toBeInTheDocument();
+  }, 15000);
+});
+
+describe('House pages when the published read fails', () => {
+  const OUTAGE = { data: null, error: postgrestError('TypeError: Failed to fetch', '') };
+  const DENIED = { data: null, error: postgrestError('permission denied', '42501') };
+  const unavailableNotice = /House details are temporarily unavailable/i;
+
+  beforeEach(() => {
+    supabaseMock.reset();
+    supabaseMock.setDefault('academic_terms', { data: [ACTIVE_2026_TERM], error: null });
+  });
+
+  it('/house shows the degraded state in an outage and never says the Houses are unannounced', async () => {
+    supabaseMock.setDefault('published_house_page_assets', OUTAGE);
+    renderAt('/house');
+
+    expect(await screen.findByText(/Some live VSA website content is temporarily unavailable/i)).toBeInTheDocument();
+    expect(screen.getByText(unavailableNotice)).toBeInTheDocument();
+    expect(screen.queryByText(/Houses have not been announced yet/i)).not.toBeInTheDocument();
+  }, 15000);
+
+  it('/house shows the notice for a failure that is not an outage', async () => {
+    supabaseMock.setDefault('published_house_page_assets', DENIED);
+    renderAt('/house');
+
+    expect(await screen.findByText(unavailableNotice)).toBeInTheDocument();
+    expect(screen.queryByText(/Some live VSA website content/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Houses have not been announced yet/i)).not.toBeInTheDocument();
+  }, 15000);
+
+  it('an archive gap year does not claim its Houses are unconfirmed when the read failed', async () => {
+    supabaseMock.setDefault('published_house_page_assets', OUTAGE);
+    renderAt('/house/year/2020-2021');
+
+    expect(await screen.findByText(unavailableNotice)).toBeInTheDocument();
+    expect(screen.queryByText(/No confirmed Houses yet/i)).not.toBeInTheDocument();
+  }, 15000);
+
+  it('a dated House page shows the unavailable state instead of a 404', async () => {
+    supabaseMock.setDefault('published_house_page_assets', OUTAGE);
+    renderAt('/house/year/2026-2027/rarity');
+
+    expect(await screen.findByRole('heading', { level: 1, name: unavailableNotice })).toBeInTheDocument();
+    expect(screen.getByText(/Some live VSA website content is temporarily unavailable/i)).toBeInTheDocument();
+    expect(screen.queryByText(/House page not found/i)).not.toBeInTheDocument();
+  }, 15000);
+
+  it('a year-less House link shows the unavailable state when both lookups fail', async () => {
+    supabaseMock.setDefault('published_house_page_assets', OUTAGE);
+    renderAt('/house/rarity');
+
+    expect(await screen.findByRole('heading', { level: 1, name: unavailableNotice })).toBeInTheDocument();
+    expect(screen.queryByText(/House page not found/i)).not.toBeInTheDocument();
+  }, 15000);
+
+  it('a year-less House link still 404s when the year read failed but no year published that slug', async () => {
+    supabaseMock
+      .queueResult('published_house_page_assets', OUTAGE)
+      .queueResult('published_house_page_assets', { data: [BOWSER_2025], error: null });
+    renderAt('/house/not-a-real-house');
+
+    expect(await screen.findByRole('heading', { level: 1, name: /House page not found/i })).toBeInTheDocument();
+  }, 15000);
+
+  it('a successful read of a slug nobody published is still a real 404', async () => {
+    supabaseMock.setDefault('published_house_page_assets', { data: [BOWSER_2025], error: null });
+    renderAt('/house/year/2025-2026/not-a-real-house');
+
+    expect(await screen.findByRole('heading', { level: 1, name: /House page not found/i })).toBeInTheDocument();
+    expect(screen.queryByText(unavailableNotice)).not.toBeInTheDocument();
   }, 15000);
 });
 
