@@ -9,6 +9,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { Events } from './Events';
+import { houseAssetsRepository } from '../data/repos/houseAssets';
 import { supabaseMock } from '../test-utils/supabaseMock';
 import { Event } from '../types';
 import { losAngelesDateTimeToIso } from '../utils/losAngelesDate';
@@ -153,4 +154,17 @@ it('still lists regular events when House events fail to load', async () => {
   const nextUp = screen.getAllByText('Fictional GBM');
   expect(nextUp.length).toBeGreaterThan(0);
   expect(within(document.body).queryByText('Fictional Pony Picnic')).not.toBeInTheDocument();
+});
+
+it('still lists every event when the House host fallback lookup fails', async () => {
+  const lookup = jest.spyOn(houseAssetsRepository, 'getPublishedAssets').mockRejectedValue(new Error('synthetic read failure'));
+  try {
+    renderAt('/events');
+    expect(await screen.findByRole('link', { name: /House event.*Rarity.*Applejack.*Fictional Pony Picnic/ })).toBeInTheDocument();
+    expect(lookup).toHaveBeenCalledWith(2026);
+    expect(screen.getAllByText('Fictional GBM').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/House events could not be loaded right now/)).not.toBeInTheDocument();
+  } finally {
+    lookup.mockRestore();
+  }
 });

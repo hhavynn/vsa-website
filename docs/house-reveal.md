@@ -68,6 +68,10 @@ No score, attendance, contact, review note, private roster, batch ID, or raw `ho
 
 **Do not change `effective_start_date` or manually publish a batch as a workaround.** Partial Reveal rows must remain inaccessible even after a prior batch is published, and no public leaderboard modal / Find My House / Top 3 story should depend on legacy year-wide status checks. #815's House-linked leaderboard modal is gated on this fix.
 
+### House page read failures
+
+`/house` may only say Houses have not been announced after `published_house_page_assets` returns successfully with no rows. If that read fails, `houseAssetsRepository` rejects, so `/house` shows a temporarily-unavailable state (plus the degraded-mode banner in an outage) and a House detail page shows the same state instead of its 404. A rejected read is never treated as "nothing published".
+
 ### Find My House availability and navigation (#641)
 
 The current-year House section displays a **Find My House** anchor in the House navigation only after the Reveal-gated `public_house_memberships` existence read confirms at least one published House membership. If the existence read errors, the lookup and anchor remain hidden and a nonrevealing status message explicitly says availability could not be checked; it must never claim House assignments have not been announced. Archives and future years have no current-year lookup. The results RPC is #802's exact-batch badge function, deployed 2026-10-31; its post-Reveal anonymous checks are still outstanding.
