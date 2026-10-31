@@ -234,26 +234,36 @@ export class AceFamiliesRepository {
     }, 'Failed to link ACE members');
   }
 
-  /** Every linked node across all fams, so one member is not linked twice. */
+  /** Every linked node across all fams, so one member is not linked twice.
+   * This must be complete: silently losing links at the PostgREST row cap can
+   * make an already-linked canonical member appear available to link again.
+   */
   async getAllMemberLinks(): Promise<AceMemberLinkRef[]> {
     return withErrorHandling(async () => {
-      const { data, error } = await supabase
-        .from('ace_family_members')
-        .select('id, name, member_id, ace_families(name)')
-        .not('member_id', 'is', null);
-      if (error) throw error;
-      return (data ?? []).flatMap((row) => {
-        if (!row.member_id) return [];
-        const family = Array.isArray(row.ace_families) ? row.ace_families[0] : row.ace_families;
-        return [
-          {
+      const pageSize = 1000;
+      const links: AceMemberLinkRef[] = [];
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+          .from('ace_family_members')
+          .select('id, name, member_id, ace_families(name)')
+          .not('member_id', 'is', null)
+          .order('id', { ascending: true })
+          .range(from, from + pageSize - 1);
+        // Never return a partial cross-family identity index.
+        if (error) throw error;
+        const page = data ?? [];
+        for (const row of page) {
+          if (!row.member_id) continue;
+          const family = Array.isArray(row.ace_families) ? row.ace_families[0] : row.ace_families;
+          links.push({
             nodeId: row.id,
             memberId: row.member_id,
             nodeName: row.name,
             familyName: family?.name ?? null,
-          },
-        ];
-      });
+          });
+        }
+        if (page.length < pageSize) return links;
+      }
     }, 'Failed to fetch ACE member links');
   }
 
