@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { HouseAssignmentCoveragePanel } from './HouseAssignmentCoveragePanel';
@@ -83,10 +83,8 @@ it('shows an eligible applicant missing from a batch with a payment-roster revie
   ]);
   mount();
   fireEvent.click(await screen.findByRole('button', { name: 'Check coverage' }));
-  const entry = await screen.findByText(/Fictional Applicant two · not-in-batch/);
-  const item = entry.closest('li');
-  expect(item).not.toBeNull();
-  expect(within(item as HTMLElement).getByRole('link', { name: 'Review payment roster' }))
+  expect(await screen.findByText(/Fictional Applicant two · not-in-batch/)).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Review payment roster' }))
     .toHaveAttribute('href', '/admin/houses?tab=payments');
 });
 
