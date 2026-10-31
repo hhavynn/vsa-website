@@ -88,6 +88,19 @@ describe('eligible House population read-only review (#621)', () => {
     expect(r.results.map(x => x.state)).toEqual(['duplicate-applicant','duplicate-applicant']);
   });
 
+  it('flags duplicate rows for one eligible applicant before a false green placement, including on Reveal', () => {
+    const original = linked('1','one','hp1','A');
+    const duplicate = { ...linked('2','one','hp2','A'), source_order: 1 };
+    const before = review([approved('A','one')], [original, duplicate]);
+    expect(before.results).toHaveLength(1);
+    expect(before.results[0]).toMatchObject({ applicantId: 'A', rowId: original.id, state: 'duplicate-batch-row' });
+    expect(before.results[0].reason).toMatch(/multiple rows/);
+    const after = review([approved('A','one')], [original, duplicate],
+      new Map([['one', [interval('hp1')]]]), true);
+    expect(after.results[0].state).toBe('duplicate-batch-row');
+    expect(review([approved('A','one')], [original]).results[0].state).toBe('assigned');
+  });
+
   it('flags conflicting future interval before Reveal and outside-batch membership', () => {
     const r = review([approved('A','one')], [linked('1','one','hp1','A')],
       new Map([['one',[interval('hp2','2026-10-29')]],['two',[interval('hp1')]]]));
