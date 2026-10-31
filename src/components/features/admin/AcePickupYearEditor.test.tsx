@@ -204,3 +204,25 @@ it('retains old approval history as a count and never exposes raw review notes',
   expect(screen.queryByText('PRIVATE_NOT_FOR_UI')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Use candidate' })).not.toBeInTheDocument();
 });
+
+it('approves matching pending evidence even when the already-approved year stays unchanged', async () => {
+  correction.mockResolvedValueOnce({
+    ace_member_id: 'target', changed: false,
+    previous: { academic_year_start: 2022, term: null },
+    current: { academic_year_start: 2022, term: null },
+  });
+  mount({ evidence: [example('same-year-evidence', 2022, null)] });
+  fireEvent.click(screen.getByRole('button', { name: 'Use candidate' }));
+  const save = screen.getByRole('button', { name: 'Review and save year' });
+  expect(save).toBeEnabled();
+  fireEvent.click(save);
+  const dialog = screen.getByRole('alertdialog', { name: 'Confirm pickup-year correction' });
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm audited correction' }));
+  await waitFor(() => expect(correction).toHaveBeenCalledTimes(1));
+  expect(correction.mock.calls[0][0]).toMatchObject({
+    expected: { academicYearStart: 2022, term: null },
+    next: { academicYearStart: 2022, term: null },
+    evidenceId: 'same-year-evidence', sourceKind: 'official_pairing',
+  });
+  expect(await screen.findByText(/Evidence approval recorded. The approved pickup year is unchanged/)).toBeInTheDocument();
+});
