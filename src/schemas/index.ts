@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { OFFICIAL_YEARS } from '../lib/yearNormalizer';
+import { parsePickupValue } from '../lib/acePickupYear';
 
 export const AdminMemberSchema = z.object({
   first_name: z.string().trim().min(1, 'First name is required').max(100),
@@ -9,6 +10,22 @@ export const AdminMemberSchema = z.object({
   year: z.string().refine(value => value === '' || OFFICIAL_YEARS.includes(value), 'Choose a valid year'),
 });
 export type AdminMemberInput = z.infer<typeof AdminMemberSchema>;
+
+
+/**
+ * Explicit admin ACE correction. Unknown is a separate confirmed action;
+ * a blank, bare calendar year or historical "legacy" marker is not a date.
+ */
+export const acePickupYearSchema = z.object({
+  year: z.string().trim(),
+  season: z.enum(['', 'FA', 'WI', 'SP']),
+  sourceKind: z.enum(['official_pairing', 'workbook_year_row', 'import_json', 'admin_entry']),
+}).strict().superRefine((value, ctx) => {
+  if (parsePickupValue(value.year).kind !== 'academic_year') {
+    ctx.addIssue({ code: 'custom', path: ['year'], message: 'Enter a complete academic year, e.g. 2023–24. Use Set to Unknown to clear it.' });
+  }
+});
+export type AcePickupYearFormData = z.infer<typeof acePickupYearSchema>;
 
 // Event schemas
 export const EventSchema = z.object({
