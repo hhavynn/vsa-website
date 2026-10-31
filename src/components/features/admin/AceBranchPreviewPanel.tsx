@@ -62,13 +62,17 @@ export function AceBranchPreviewPanel({ cycle, drafts, nodes, ready }: AceBranch
       </div>
       {open && (
         <div id="ace-branch-preview-content" className="mt-4 space-y-4">
-          {!ready || isLoading || families === undefined ? (
+          {!ready ? (
             <p role="status" className="text-sm text-[var(--color-text2)]">
-              {ready ? 'Loading the complete private ACE family list…' : 'Waiting for complete assignment and tree reads…'}
+              Waiting for complete assignment and tree reads…
             </p>
           ) : isError ? (
             <p role="alert" className="text-sm text-red-700 dark:text-red-300">
               Family data could not be loaded. The preview is unavailable; do not treat missing branches as approved.
+            </p>
+          ) : isLoading || families === undefined ? (
+            <p role="status" className="text-sm text-[var(--color-text2)]">
+              Loading the complete private ACE family list…
             </p>
           ) : plan ? (
             <>
