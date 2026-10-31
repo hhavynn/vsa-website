@@ -242,6 +242,24 @@ const EVIDENCE_CATEGORY: Record<string, string> = {
   UNKNOWN: 'reviewer_supplied',
 };
 
+/** Explicit mapping from review classifications to the approved evidence-table enum. */
+export const EVIDENCE_SOURCE_KIND: Readonly<Record<string, string>> = {
+  official_pairing: 'official_pairing',
+  explicit_term_or_official_loose: 'import_json',
+  master_year_row: 'workbook_year_row',
+  reviewer_resolved_conflict: 'admin_entry',
+  reviewer_supplied: 'admin_entry',
+};
+
+export function validatePickupBatchLabel(label: string): string {
+  const clean = label.trim();
+  if (!clean || clean.length > 200 || /(https?:\/\/|drive\.google|docs\.google)/i.test(clean) || clean.includes('$$') || /[\u0000-\u001f]/.test(clean)) {
+    throw new Error('Batch label must be 1–200 characters and cannot contain URLs or Drive links.');
+  }
+  // Only deliberately generic labels are appropriate for audit records, never a person's name.
+  return clean;
+}
+
 export interface PlanOptions {
   maxAcademicYearStart: number;
   /**
@@ -381,6 +399,10 @@ export function buildBackfillPlan(review: readonly ReviewRow[], snapshot: LiveSn
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+function sqlLiteral(value: string): string {
+  return "'" + value.replace(/'/g, "''") + "'";
+}
+
 function sqlUuid(value: string): string {
   if (!UUID.test(value)) throw new Error(`Refusing to render a non-UUID id into SQL: ${JSON.stringify(value)}`);
   return `'${value.toLowerCase()}'::uuid`;
@@ -407,11 +429,16 @@ function sqlYear(value: number | null): string {
  * recorded, and at the end every such node id is reported together and the
  * whole transaction is aborted: nothing is half-applied.
  */
-export function planSqlPreview(plan: BackfillPlan): string {
+export function planSqlPreview(plan: BackfillPlan, options?: { batchLabel?: string }): string {
+  const batchLabel = plan.snapshot_has_pickup_columns
+    ? validatePickupBatchLabel(options?.batchLabel ?? '')
+    : options?.batchLabel ? validatePickupBatchLabel(options.batchLabel) : null;
+  const labelSql = batchLabel === null ? null : sqlLiteral(batchLabel);
+
   const lines: string[] = [
     '-- ACE pickup-year backfill PREVIEW (#670). Generated; review-only.',
     `-- ${plan.updates.length} update(s), ${plan.unchanged.length} already applied, ${plan.rejected.length} rejected.`,
-    `-- Writes only: ${PICKUP_COLUMNS.join(', ')}. Requires the #669 columns.`,
+    `-- Only pickup_* columns are UPDATED on ACE nodes; approved evidence and aggregate admin audit are INSERTED. Requires #669.`,
   ];
   if (!plan.snapshot_has_pickup_columns) {
     lines.push('-- WARNING: planned against a snapshot WITHOUT pickup columns; previous values were assumed blank.', '-- Regenerate from a post-#669 snapshot before any real apply.');
@@ -430,6 +457,11 @@ export function planSqlPreview(plan: BackfillPlan): string {
         ? 'pickup_academic_year_start is null'
         : `pickup_academic_year_start = ${sqlYear(u.previous.pickup_academic_year_start)}`;
     const parent = u.expected_parent_member_id === null ? 'parent_member_id is null' : `parent_member_id = ${sqlUuid(u.expected_parent_member_id)}`;
+    const sourceKind = EVIDENCE_SOURCE_KIND[u.evidence_category];
+    if (!sourceKind) throw new Error('Unknown ACE evidence category: ' + u.evidence_category);
+    if (!/^[A-Z_]{2,64}$/.test(u.review_sheet_confidence_class)) {
+      throw new Error('Unexpected ACE confidence class in reviewed sheet.');
+    }
     lines.push(
       'do $$',
       'declare changed integer;',
@@ -443,8 +475,44 @@ export function planSqlPreview(plan: BackfillPlan): string {
       `     and ${prevYear};`,
       '  get diagnostics changed = row_count;',
       `  if changed <> 1 then insert into ace_pickup_plan_failures values (${sqlUuid(u.ace_node_id)}, changed); end if;`,
+      // Audited provenance is generated only after the guarded year update changed exactly one row.
+      ...(labelSql !== null && u.next.pickup_academic_year_start !== null ? [
+        '  if changed = 1 then',
+        '    insert into public.ace_member_pickup_evidence',
+        '      (ace_member_id, source_kind, source_label, raw_value, candidate_academic_year_start, candidate_term, source_confidence, review_status, reviewed_at)',
+        `    values (${sqlUuid(u.ace_node_id)}, ${sqlLiteral(sourceKind)}, ${labelSql}, ${sqlLiteral(u.next.pickup_term ?? academicYearLabel(u.next.pickup_academic_year_start))}, ${sqlYear(u.next.pickup_academic_year_start)}, ${sqlTerm(u.next.pickup_term)}, ${sqlLiteral(u.review_sheet_confidence_class)}, 'approved', now())`,
+        '    on conflict (ace_member_id, source_kind, source_label, raw_value) do nothing;',
+        // ON CONFLICT alone is unsafe: an existing pending/rejected/superseded
+        // row cannot be used as proof of this reviewed change.
+        '    if not exists (select 1 from public.ace_member_pickup_evidence',
+        `      where ace_member_id = ${sqlUuid(u.ace_node_id)} and source_kind = ${sqlLiteral(sourceKind)}`,
+        `        and source_label = ${labelSql} and raw_value = ${sqlLiteral(u.next.pickup_term ?? academicYearLabel(u.next.pickup_academic_year_start))}`,
+        `        and candidate_academic_year_start = ${sqlYear(u.next.pickup_academic_year_start)}`,
+        `        and candidate_term is not distinct from ${sqlTerm(u.next.pickup_term)}`,
+        `        and source_confidence is not distinct from ${sqlLiteral(u.review_sheet_confidence_class)}`,
+        "        and review_status = 'approved' and reviewed_at is not null) then",
+        "      raise exception 'ACE pickup evidence conflict: reviewed evidence is missing or not approved. Use a fresh batch label.';",
+        '    end if;',
+        '  end if;',
+      ] : []),
+      // Same as set_ace_member_pickup_year: an approval the node no longer matches is superseded.
+      ...(labelSql !== null ? [
+        '  if changed = 1 then',
+        "    update public.ace_member_pickup_evidence set review_status = 'superseded'",
+        `      where ace_member_id = ${sqlUuid(u.ace_node_id)} and review_status = 'approved'`,
+        `        and (candidate_academic_year_start is distinct from ${sqlYear(u.next.pickup_academic_year_start)}`,
+        `          or candidate_term is distinct from ${sqlTerm(u.next.pickup_term)});`,
+        '  end if;',
+      ] : []),
       'end $$;'
     );
+  }
+  const byFam = new Map<string, { updates: number; overwrites: number }>();
+  for (const update of plan.updates) {
+    const count = byFam.get(update.family_id) ?? { updates: 0, overwrites: 0 };
+    count.updates++;
+    if (update.overwrites_existing_value) count.overwrites++;
+    byFam.set(update.family_id, count);
   }
   lines.push(
     'do $$',
@@ -453,6 +521,11 @@ export function planSqlPreview(plan: BackfillPlan): string {
     "  select string_agg(ace_node_id::text || ' (' || changed || ' rows)', ', ' order by ace_node_id) into failed from ace_pickup_plan_failures;",
     "  if failed is not null then raise exception 'ACE pickup plan aborted; these nodes did not match their reviewed state: %', failed; end if;",
     'end $$;',
+    // An audit failure is transactional: no years or evidence survive unless the audit insert succeeds.
+    ...(labelSql !== null ? Array.from(byFam.entries()).map(([famId, count]) =>
+      `insert into public.admin_activity_log (actor_user_id, action, entity_type, entity_id, academic_year_start, summary, metadata)
+  values (null, 'ace.pickup_backfill', 'ace_family', ${sqlUuid(famId)}, null, ${sqlLiteral('ACE pickup-year backfill: ' + count.updates + ' reviewed node(s)')}, jsonb_build_object('updates', ${count.updates}, 'overwrites', ${count.overwrites}, 'batch_label', ${labelSql}));`
+    ) : []),
     'rollback;',
     ''
   );
