@@ -120,7 +120,9 @@ export function AcePickupYearEditor({
     pickup_academic_year_start: next.academicYearStart,
     pickup_term: next.term,
   }, big, littles) : [];
-  const eligible = ready && !!next && !same(next, current) && consistentEvidence;
+  // A pending candidate can still require approval when its value matches the approved node.
+  const approvingPendingEvidence = selectedEvidence?.review_status === 'pending' && consistentEvidence;
+  const eligible = ready && !!next && consistentEvidence && (!same(next, current) || approvingPendingEvidence);
 
   const queueConfirmation = (data: AcePickupYearFormData) => {
     const parsedYear = parsePickupValue(data.year);
@@ -152,11 +154,13 @@ export function AcePickupYearEditor({
 
   const applyCorrection = async () => {
     if (!confirm) return;
+    let changed = false;
     try {
-      await aceFamiliesRepository.correctPickupYear({
+      const result = await aceFamiliesRepository.correctPickupYear({
         nodeId: member.id, expected: current, next: confirm.next,
         sourceKind: confirm.sourceKind, evidenceId: confirm.evidenceId,
       });
+      changed = result.changed;
     } catch (err) {
       const message = toUserMessage(err, 'Unable to save pickup year. Review the source and try again.');
       setError(message);
@@ -166,7 +170,9 @@ export function AcePickupYearEditor({
       throw new Error(message);
     }
     setError(null);
-    setSuccess('Pickup year saved and audited. Only this node was changed.');
+    setSuccess(changed
+      ? 'Pickup year saved and audited. Only this node was changed.'
+      : 'Evidence approval recorded. The approved pickup year is unchanged.');
     setConfirm(null);
     try {
       await onSaved();
