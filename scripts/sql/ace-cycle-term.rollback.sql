@@ -1,0 +1,18 @@
+-- Owner-only recovery for 20261031235959_ace_cycle_pickup_term.sql.
+-- DO NOT run automatically. First freeze writes, capture cycles/terms and new
+-- ACE nodes/evidence, verify there are no two non-archived cycles in one year,
+-- and deploy matching frontend + publish function.
+--
+-- If two terms in the same academic year already exist, recreating the old
+-- one-open-cycle-per-year index WILL FAIL. Never delete/archive a real cycle
+-- to make the index fit. Leave this rollback unexecuted; arrange a dedicated
+-- owner-reviewed migration/recovery plan preserving published participation.
+--
+-- Even with one open cycle per year, dropping the term column by itself is not
+-- safe: the previous publish RPC would create Littles without an approved year.
+-- Restore the prior publish function from the original reviewed migration
+-- under change control, first. The exact historical values added to Littles
+-- and their private assignment-cycle evidence are intentionally retained.
+--
+-- This file contains NO executable destructive SQL by design. Historical
+-- data cannot be safely reverted without a source-specific owner decision.
