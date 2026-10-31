@@ -316,7 +316,10 @@ function PublicMemberProfileModal({
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [historyError, setHistoryError] = useState(false);
   const [houseBadge, setHouseBadge] = useState<MemberHouseBadge | null>(null);
-  const house = houseBadgeToPublished(houseBadge);
+  const revealedHouse = houseBadgeToPublished(houseBadge);
+  // Refuse a stale/wrong-year RPC response instead of cross-labeling a member.
+  const house = revealedHouse && (typeof selectedYear !== 'number' ||
+    revealedHouse.academicYearStart === selectedYear) ? revealedHouse : null;
   const houseSlug = house ? houseSlugFromKey(house.houseKey || house.label) : '';
   const houseTo = house && houseSlug
     ? '/house/year/' + formatAcademicYear(house.academicYearStart) + '/' + houseSlug : undefined;

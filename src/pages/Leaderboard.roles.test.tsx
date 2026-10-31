@@ -261,6 +261,20 @@ describe('rank 4+ modal House and role navigation (#627)', () => {
     expect(within(modal).queryByRole('link', { name: /House page/ })).not.toBeInTheDocument();
   });
 
+
+  it('does not label a prior House as this selected academic year', async () => {
+    jest.spyOn(leaderboardRepository, 'getMemberHouseBadge').mockResolvedValue({
+      ...badge, academic_year_start: 2025,
+    });
+    mount();
+    const row = screen.getByRole('row', { name: 'Rank #4: Cam Four' });
+    fireEvent.click(within(row).getByRole('button', { name: 'Open profile for Cam Four' }));
+    const modal = await screen.findByRole('dialog', { name: 'Cam Four member profile' });
+    expect(within(modal).getByText('Events Chair')).toBeInTheDocument();
+    expect(within(modal).queryByRole('link', { name: /House page/ })).not.toBeInTheDocument();
+    expect(within(modal).queryByText(/House ·/)).not.toBeInTheDocument();
+  });
+
   it('never links when the House RPC omits a verified academic year', async () => {
     jest.spyOn(leaderboardRepository, 'getMemberHouseBadge')
       .mockResolvedValue({ ...badge, academic_year_start: NaN });
