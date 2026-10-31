@@ -194,6 +194,17 @@ describe('saved eligibility policy', () => {
 });
 
 describe('approved cycle term writes (#674)', () => {
+
+  it('permits a private year-setup placeholder with null term; Lock remains server-blocked', async () => {
+    supabaseMock.setDefault('ace_assignment_cycles', {
+      data: { id: 'placeholder', academic_year_start: 2026, pickup_term: null, status: 'draft' },
+      error: null,
+    });
+    await aceAssignmentsRepository.createCycle(2026, null);
+    expect(callsOf('ace_assignment_cycles', 'insert')[0].args[0]).toMatchObject({
+      academic_year_start: 2026, pickup_term: null,
+    });
+  });
   it('creates a cycle with explicit FA26, not a term guessed from the current date', async () => {
     supabaseMock.setDefault('ace_assignment_cycles', {
       data: { id: 'cycle-1', academic_year_start: 2026, pickup_term: 'FA26', status: 'draft' }, error: null,
