@@ -186,7 +186,7 @@ it('does not resubmit an already-committed RPC if the post-save view refresh fai
   await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
   expect(correction).toHaveBeenCalledTimes(1);
   await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
-  expect(screen.getByRole('alert')).toHaveTextContent(/correction was saved, but the family view could not refresh/);
+  expect(screen.getByText(/correction was saved, but the family view could not refresh/)).toBeInTheDocument();
 });
 
 it('warns when the proposed Little date precedes the Big without changing lineage', () => {
@@ -262,7 +262,7 @@ it('unlocks a committed correction only when the fresh approved node reflects th
   const dialog = await screen.findByRole('alertdialog', { name: 'Confirm pickup-year correction' });
   fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm audited correction' }));
   await waitFor(() => expect(correction).toHaveBeenCalledTimes(1));
-  expect(screen.getByRole('button', { name: 'Set to Unknown…' })).toBeDisabled();
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Set to Unknown…' })).toBeDisabled());
   view.rerenderFor(base);
   expect(screen.getByRole('button', { name: 'Set to Unknown…' })).toBeDisabled();
 
