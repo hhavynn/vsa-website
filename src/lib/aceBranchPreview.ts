@@ -141,7 +141,7 @@ export function buildBranchPreview({ cycle, drafts, nodes, families }: BranchPre
       while (current && !visited.has(current.id)) {
         visited.add(current.id);
         ancestors.push(current);
-        const parent = current.parentId ? byId.get(current.parentId) : undefined;
+        const parent: AceNodeRef | undefined = current.parentId ? byId.get(current.parentId) : undefined;
         if (current.parentId && !parent) add({
           code: 'parent_missing', familyId, nodeIds: [current.id], draftIds,
           message: 'A lineage ancestor points to a missing parent node.',
