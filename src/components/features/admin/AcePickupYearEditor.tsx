@@ -254,6 +254,7 @@ export function AcePickupYearEditor({
           ) : (
             <>
               <form onSubmit={handleSubmit(queueConfirmation)} className="space-y-3">
+                <fieldset disabled={!!refreshGate} className="space-y-3">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
                     <label htmlFor={uid + '-year'} className={labelClass}>Pickup academic year</label>
@@ -302,6 +303,7 @@ export function AcePickupYearEditor({
                   <button type="button" className="vsa-btn-secondary min-h-11 text-sm"
                     onClick={() => { reset(asForm(member)); setEvidenceId(null); setError(null); setSuccess(null); }}>Discard draft</button>
                 </div>
+                </fieldset>
               </form>
               <div className="border-t border-[var(--color-border)] pt-3">
                 <h5 className="text-sm font-semibold text-[var(--color-text)]">Private source evidence ({evidence.length})</h5>
@@ -316,7 +318,8 @@ export function AcePickupYearEditor({
                         academicYearStart: row.candidate_academic_year_start, term: row.candidate_term,
                       })} · Pending
                       {row.candidate_academic_year_start !== null && approvedEvidenceSource(row.source_kind) &&
-                        <button type="button" className="vsa-btn-secondary ml-2 min-h-11 text-xs" onClick={() => selectEvidenceCandidate(row)}>
+                        <button type="button" className="vsa-btn-secondary ml-2 min-h-11 text-xs" disabled={!!refreshGate}
+                          onClick={() => selectEvidenceCandidate(row)}>
                           Use candidate
                         </button>}
                     </li>)}
