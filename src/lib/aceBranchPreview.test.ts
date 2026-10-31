@@ -148,7 +148,7 @@ describe('admin-only ACE branch preview foundation (#665)', () => {
       expect.objectContaining({ id: 'draft:one', isDraft: true, parent: null }),
     ]);
     expect(result.fams[0].newOnlyNodes).toHaveLength(1);
-    expect(result.fams[0].byBig[0]).toMatchObject({ existing: 1, incoming: 1 });
+    expect(result.fams[0].byBig[0]).toMatchObject({ existing: 0, incoming: 1 });
     expect(result.checks.map((c) => c.code)).toContain('family_unpublished');
   });
 
