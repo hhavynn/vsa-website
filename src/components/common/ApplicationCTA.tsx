@@ -9,6 +9,7 @@ import {
   getApplicationStatus,
 } from '../../lib/applicationLinks';
 import { FALLBACK_APPLICATIONS, FALLBACK_LINKS } from '../../config/publicFallbackContent';
+import { OPENING_SOON_DAYS, pacificDaysBetween } from '../../lib/applicationWindows';
 import { Skeleton } from '../ui/Skeleton';
 
 type FallbackOverrides = Partial<Record<'not_open' | 'closed' | 'unavailable', string>>;
@@ -101,6 +102,33 @@ function MutedMessage({ children }: { children: React.ReactNode }) {
 }
 
 /**
+ * Only configured, enabled future dates can earn an Opening soon label.
+ * A closed annual form means that window ended, not that next year's dates
+ * are known. House/production forms may have multiple cycles in one year.
+ */
+export function publicWindowCue(
+  link: PublicApplicationLink | null,
+  key: ApplicationKey,
+  now: Date,
+): string | null {
+  if (!link) return null;
+  if (link.status === 'not_open' && link.is_enabled) {
+    const opening = new Date(link.open_at);
+    if (!Number.isFinite(opening.getTime())) return null;
+    const days = pacificDaysBetween(now, opening);
+    if (opening.getTime() > now.getTime() && days >= 0 && days <= OPENING_SOON_DAYS) {
+      return 'Opening soon';
+    }
+    return opening.getTime() > now.getTime() ? 'Scheduled for later' : null;
+  }
+  if (link.status === 'closed') {
+    return ['ace_application', 'intern_application', 'cabinet_application'].includes(key)
+      ? 'Closed for this year' : 'Closed for this round';
+  }
+  return null;
+}
+
+/**
  * One window's public card: Apply button while open, otherwise the before/after copy.
  * Exported so the admin preview renders exactly what the site renders.
  */
@@ -109,17 +137,20 @@ export function CTABlock({
   fallbackKey,
   fallback,
   showNextSteps = false,
+  now = new Date(),
 }: {
   link: PublicApplicationLink | null;
   fallbackKey: ApplicationKey;
   fallback?: FallbackOverrides;
   /** Admin's literal public preview stays link-free for inactive forms. */
   showNextSteps?: boolean;
+  now?: Date;
 }) {
   const title = link?.title || applicationKeyLabel(fallbackKey);
   const defaults = DEFAULT_APPLICATION_MESSAGES[fallbackKey];
   const status: ApplicationStatus = link?.status ?? 'disabled';
   const isActionable = status === 'open' && Boolean(link?.target_url);
+  const timingCue = publicWindowCue(link, fallbackKey, now);
   // Only announce a date actually supplied by an upcoming admin-managed window.
   const opensAt = status === 'not_open' && !link?.before_open_message
     ? formatApplicationDateTime(link?.open_at)
@@ -168,6 +199,9 @@ export function CTABlock({
       >
         {title}
       </div>
+      {timingCue && (
+        <p className="mt-1 font-sans text-xs font-semibold text-[var(--color-text2)]">{timingCue}</p>
+      )}
       <div className="mt-2">{body}</div>
       {showNextSteps && !isActionable && (
         <div className="mt-3 border-t border-[var(--color-border)] pt-3 font-sans text-xs leading-5 text-[var(--color-text2)]">
@@ -319,7 +353,7 @@ export function ApplicationCTA({
       )}
       <div className="grid gap-3 sm:grid-cols-2">
         {rows.map(({ key, link }) => (
-          <CTABlock key={key} link={link} fallbackKey={key} fallback={fallback} showNextSteps />
+          <CTABlock key={key} link={link} fallbackKey={key} fallback={fallback} showNextSteps now={now} />
         ))}
       </div>
       {!hasRequestedOpenWindow && otherOpenPrograms.length > 0 && (
