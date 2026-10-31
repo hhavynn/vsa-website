@@ -105,7 +105,8 @@ Big's name or existing year/term no longer matches the live tree.
 
 ```bash
 npm run ace:years -- plan --live-families ... --live-members ... \
-  --review <reviewed review_sheet.csv> --out-dir $R/plan
+  --review <reviewed review_sheet.csv> --batch-label FA26-reviewed-historical-pass-1 \
+  --out-dir $R/plan
 ```
 
 A row is planned only if it is approved, the node is still published, its fam,
@@ -118,11 +119,21 @@ the same plan run after it was applied plans **zero** updates. The plan
 records the sheet's confidence class as written; it is reviewer-editable, so
 re-run `reconcile` before applying to confirm it.
 
-`backfill_preview.sql` sets only `pickup_term` and
-`pickup_academic_year_start`, guards each update on the node's live
-`family_id`, `parent_member_id` and reviewed previous values, collects every
-node that did not change exactly once and then aborts with all of their ids
-together, and ends in `ROLLBACK`. Applying it for
+`backfill_preview.sql` updates **only** `pickup_term` and
+`pickup_academic_year_start` on existing ACE nodes, guarded by live
+`family_id`, `parent_member_id`, and reviewed previous values. Every
+successful year update also inserts a deduplicated approved evidence claim
+(source category, generic label, approved term/year; no personal data), and
+one counts-only `ace.pickup_backfill` admin activity entry per affected
+family is appended **after** every node passes. Any failure is transactional,
+and the generated SQL still ends in `ROLLBACK`. The human operator must
+explicitly authorize and verify a separate application.
+
+`--batch-label` is required for post-#669 plans; it must be a generic,
+URL-free 1–200 character audit label. Pre-#669 preview-only snapshots can omit
+it, and do not generate evidence or activity statements. Do not call
+`set_ace_member_pickup_year` from the SQL editor or migration role: it
+requires an authenticated admin `auth.uid()` and returns 42501 without it. Applying it for
 real is a separate owner-approved step (below).
 
 ## Evidence classes
