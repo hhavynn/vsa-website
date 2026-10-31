@@ -76,7 +76,7 @@ function HouseEventPreviewCard({ item }: { item: HouseUpcomingItem }) {
   const eventHouses = event.houses ?? [];
   const primaryHouse = eventHouses[0];
   const color = primaryHouse ? houseFill(primaryHouse) : 'var(--brand)';
-  const imageUrl = event.image_thumbnail_url || event.image_url || primaryHouse?.image_thumbnail_url || primaryHouse?.image_url;
+  const imageUrl = event.image_thumbnail_url || event.image_url;
   const timeLabel = event.start_time && event.end_time ? formatEventTimeRange(event.start_time, event.end_time) : null;
 
   return (
