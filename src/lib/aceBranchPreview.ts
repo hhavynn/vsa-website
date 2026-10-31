@@ -26,7 +26,7 @@ export interface BranchPreviewInput {
 
 export type BranchCheckCode =
   | 'big_no_member_link' | 'big_name_ambiguous' | 'big_unpublished'
-  | 'family_unpublished' | 'family_missing' | 'parent_missing'
+  | 'family_unpublished' | 'family_missing' | 'parent_missing' | 'parent_wrong_family'
   | 'lineage_cycle' | 'member_linked_twice'
   | 'draft_year_unknown' | 'little_before_big';
 
@@ -80,7 +80,8 @@ export function buildBranchPreview({ cycle, drafts, nodes, families }: BranchPre
   for (const [familyId, additions] of plannedByFamily) {
     const family = byFamily.get(familyId);
     const refs = refsByFamily.get(familyId) ?? [];
-    const publicRefs = refs.filter((n) => n.isPublished === true);
+    // A published node inside an unpublished family is not publicly visible.
+    const publicRefs = family?.is_published === true ? refs.filter((n) => n.isPublished === true) : [];
     const publicIds = new Set(publicRefs.map((n) => n.id));
     const published: TreeNode[] = publicRefs.map(nodeRefToTreeNode);
     const pickup = cycle.pickup_term
@@ -140,11 +141,17 @@ export function buildBranchPreview({ cycle, drafts, nodes, families }: BranchPre
       while (current && !visited.has(current.id)) {
         visited.add(current.id);
         ancestors.push(current);
-        if (current.parentId && !byId.has(current.parentId)) add({
+        const parent = current.parentId ? byId.get(current.parentId) : undefined;
+        if (current.parentId && !parent) add({
           code: 'parent_missing', familyId, nodeIds: [current.id], draftIds,
           message: 'A lineage ancestor points to a missing parent node.',
         });
-        current = current.parentId ? byId.get(current.parentId) : undefined;
+        if (parent && parent.familyId !== familyId) add({
+          code: 'parent_wrong_family', familyId, nodeIds: [current.id], draftIds,
+          message: 'A lineage ancestor points to a parent in another ACE family.',
+        });
+        // Never follow a cross-family link into a different family's private tree.
+        current = parent?.familyId === familyId ? parent : undefined;
       }
       if (ancestors.some((n) => n.isPublished !== true)) add({
         code: 'big_unpublished', familyId, nodeIds: ancestors.filter((n) => n.isPublished !== true).map((n) => n.id),
@@ -177,6 +184,10 @@ export function buildBranchPreview({ cycle, drafts, nodes, families }: BranchPre
         code: 'parent_missing', familyId, nodeIds: [ref.id], draftIds: [],
         message: 'An existing ACE node has a missing parent.',
       });
+      if (ref.parentId && byId.has(ref.parentId) && byId.get(ref.parentId)?.familyId !== familyId) add({
+        code: 'parent_wrong_family', familyId, nodeIds: [ref.id], draftIds: [],
+        message: 'An existing ACE node points to a parent in another ACE family.',
+      });
     }
 
     const included = new Set(draftNodes.map((n) => n.id));
@@ -186,7 +197,8 @@ export function buildBranchPreview({ cycle, drafts, nodes, families }: BranchPre
       while (current && !visited.has(current.id)) {
         visited.add(current.id);
         if (publicIds.has(current.id)) included.add(current.id);
-        current = current.parentId ? byId.get(current.parentId) : undefined;
+        const next = current.parentId ? byId.get(current.parentId) : undefined;
+        current = next?.familyId === familyId ? next : undefined;
       }
       for (const sibling of publicRefs.filter((n) => n.parentId === bigId)) included.add(sibling.id);
     }
