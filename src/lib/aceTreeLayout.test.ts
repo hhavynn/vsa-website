@@ -1,4 +1,5 @@
-import { comparePickup, edgeGeometry, layoutTree, uniqueTreeNodes } from './aceTreeLayout';
+import { edgeGeometry, layoutTree, uniqueTreeNodes } from './aceTreeLayout';
+import { comparePickup } from './acePickupYear';
 import {
   bigAcrossYears, childBeforeParent, cycle2, cycle3, duplicateNames, eightYearGap,
   fa23AndSp24, goldenPABC, graveyardFam, large150, legacyAllUnknown,

@@ -1,4 +1,6 @@
+import { comparePickup } from './acePickupYear';
 import type { AcePickupYear } from './acePickupYear';
+export { comparePickup } from './acePickupYear';
 
 export interface TreeNode {
   id: string;
@@ -52,20 +54,6 @@ export function uniqueTreeNodes(nodes: TreeNode[]): TreeNode[] {
     seen.add(node.id);
     return true;
   });
-}
-
-/** Compare approved years, and terms only when both are known. */
-export function comparePickup(a: AcePickupYear | undefined, b: AcePickupYear | undefined): -1 | 0 | 1 | null {
-  if (!a || !b || a.status !== 'verified' || b.status !== 'verified') return null;
-  if (a.academicYearStart !== b.academicYearStart) {
-    return a.academicYearStart < b.academicYearStart ? -1 : 1;
-  }
-  if (!a.term || !b.term) return null;
-  const seasons: Record<string, number> = { FA: 0, WI: 1, SP: 2 };
-  const x = seasons[a.term.slice(0, 2)];
-  const y = seasons[b.term.slice(0, 2)];
-  if (x === undefined || y === undefined) return null;
-  return x < y ? -1 : x > y ? 1 : 0;
 }
 
 export function layoutTree(rawNodes: TreeNode[]): LayoutResult {
