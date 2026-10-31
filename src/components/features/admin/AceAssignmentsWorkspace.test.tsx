@@ -2,12 +2,13 @@
  * Admin -> ACE -> Assignments: private drafting, lock, preflight, publish.
  */
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { ThemeProvider } from '../../../context/ThemeContext';
 import AdminAceFamilies from '../../../pages/Admin/AceFamilies';
 import { AceAssignmentsWorkspace } from './AceAssignmentsWorkspace';
-import { supabaseMock } from '../../../test-utils/supabaseMock';
+import { postgrestError, supabaseMock } from '../../../test-utils/supabaseMock';
 
 jest.mock('../../../data/repos/adminActivity', () => ({
   logAdminActivity: jest.fn(),
@@ -84,11 +85,13 @@ function seed(status: string, drafts: ReturnType<typeof draft>[], cycleOver: Rec
 function renderWorkspace() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
   render(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
-        <AceAssignmentsWorkspace />
-      </MemoryRouter>
-    </QueryClientProvider>,
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <AceAssignmentsWorkspace />
+        </MemoryRouter>
+      </QueryClientProvider>
+    </ThemeProvider>,
   );
 }
 
@@ -157,6 +160,70 @@ describe('draft cycle', () => {
     await waitFor(() => expect(callsOf('ace_assignment_drafts', 'update')).toHaveLength(1));
     expect(callsOf('ace_assignment_drafts', 'update')[0].args[0]).toMatchObject({ little_member_id: 'm-amy' });
     expect(supabaseMock.filtersFor('ace_assignment_drafts')).toContainEqual(['id', 'd2']);
+  });
+});
+
+describe('admin-only branch preview (#665)', () => {
+  beforeEach(() => {
+    seed('draft', [
+      draft('fictional-draft', 'Fictional Little', { big_ace_member_id: 'fictional-big' }),
+    ]);
+    supabaseMock.setDefault('ace_family_members', { data: [
+      {
+        ...aceNode('fictional-big', 'Fictional Big', 'fictional-family', 'Fictional Fam', 'fictional-canonical-big'),
+        is_published: true, pickup_academic_year_start: 2023, pickup_term: 'FA23',
+      },
+    ], error: null });
+    supabaseMock.setDefault('ace_families', { data: [
+      { id: 'fictional-family', name: 'Fictional Fam', is_published: true, academic_year_start: 2023 },
+    ], error: null });
+  });
+
+  it('lazily loads families, displays unpublished draft nodes and keeps a read-only edit link', async () => {
+    renderWorkspace();
+    const button = await screen.findByRole('button', { name: 'Preview family branches' });
+    expect(supabaseMock.queriesFor('ace_families')).toHaveLength(0);
+    fireEvent.click(button);
+    expect(await screen.findByRole('region', { name: 'Private Fictional Fam family tree preview' })).toBeInTheDocument();
+    expect(screen.getAllByText('Fictional Little').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('DRAFT · NOT PUBLISHED').length).toBeGreaterThan(0);
+    expect(screen.getByRole('link', { name: 'Review family records' }))
+      .toHaveAttribute('href', '/admin/ace?family=fictional-family');
+    expect(supabaseMock.queriesFor('ace_families')).toHaveLength(1);
+    expect(supabaseMock.queriesFor('ace_family_members').every((query) =>
+      query.calls.every((call) => !['insert', 'update', 'delete'].includes(call.method)))).toBe(true);
+    expect(supabaseMock.queriesFor('rpc:publish_ace_assignment_cycle')).toHaveLength(0);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Full published ancestry' }));
+    expect(screen.getByRole('region', { name: 'Private Fictional Fam family tree preview' })).toBeInTheDocument();
+  });
+
+  it('fails closed when the private family list cannot be read', async () => {
+    supabaseMock.setDefault('ace_families', {
+      data: null, error: postgrestError('permission denied for ACE families', '42501'),
+    });
+    renderWorkspace();
+    fireEvent.click(await screen.findByRole('button', { name: 'Preview family branches' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Family data could not be loaded');
+    expect(screen.queryByRole('region', { name: /Private.*family tree preview/ })).not.toBeInTheDocument();
+  });
+
+  it('applies the active dark mode to the same SVG renderer and preview wrapper', async () => {
+    document.documentElement.classList.add('dark');
+    try {
+      renderWorkspace();
+      fireEvent.click(await screen.findByRole('button', { name: 'Preview family branches' }));
+      const region = await screen.findByRole('region', { name: 'Private Fictional Fam family tree preview' });
+      expect(region).toHaveClass('is-dark');
+      expect(within(region).getByRole('group', { name: 'Family tree' })).toBeInTheDocument();
+    } finally {
+      document.documentElement.classList.remove('dark');
+    }
+  });
+
+  it('marks the working preview provisional until the cycle is locked', async () => {
+    renderWorkspace();
+    fireEvent.click(await screen.findByRole('button', { name: 'Preview family branches' }));
+    expect(await screen.findByText(/Working draft; edits can still change this preview/)).toBeInTheDocument();
   });
 });
 
@@ -333,11 +400,13 @@ describe('Admin → ACE page', () => {
     supabaseMock.setDefault('ace_families', { data: [], error: null });
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
     render(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter>
-          <AdminAceFamilies />
-        </MemoryRouter>
-      </QueryClientProvider>,
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <AdminAceFamilies />
+          </MemoryRouter>
+        </QueryClientProvider>
+      </ThemeProvider>,
     );
     expect(await screen.findByRole('tab', { name: 'Families', selected: true })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '+ New Fam' })).toBeInTheDocument();
