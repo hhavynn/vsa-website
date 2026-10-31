@@ -494,10 +494,20 @@ async function runTests() {
       const r5 = await anon.from('house_events').select('id').eq('is_published', false).limit(1);
       check('#640 R5 drafts hidden', empty(r5), r5);
 
-      const r6 = await anon.from('house_event_houses')
-        .select('house_event_id,house_events!inner(is_published)')
-        .eq('house_events.is_published', false).limit(1);
-      check('#640 R6 draft associations hidden', empty(r6), r6);
+      // The inner-join variant was vacuous: parent RLS hid a draft even if
+      // association RLS regressed. A known, existing draft with a host must
+      // be supplied by an authorized operator in an ephemeral environment
+      // variable (never committed or printed) for a meaningful negative probe.
+      const draftId = process.env.RLS_HOUSE_DRAFT_EVENT_ID?.trim();
+      if (!draftId) {
+        reportSkip('#640 R6 direct draft association check NOT VERIFIED: requires an existing hosted draft event UUID with a host (RLS_HOUSE_DRAFT_EVENT_ID)');
+      } else if (!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(draftId)) {
+        reportFail('#640 R6 invalid fixture event ID shape; no query was made');
+      } else {
+        const r6 = await anon.from('house_event_houses')
+          .select('house_event_id').eq('house_event_id', draftId).limit(1);
+        check('#640 R6 direct draft association hidden', empty(r6) || denied(r6), r6);
+      }
 
       const r7 = await anon.from('published_house_page_assets')
         .select('id').eq('is_active', false).limit(1);
