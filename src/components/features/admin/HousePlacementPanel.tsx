@@ -6,7 +6,7 @@
 // only; no email or extra form answer is stored or logged.
 import { ChangeEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { houseAssignmentsRepository } from '../../../data/repos/houseAssignments';
 import { houseParentsRepository } from '../../../data/repos/houseParents';
 import { PAYMENTS_UNAVAILABLE, housePaymentsRepository } from '../../../data/repos/housePayments';

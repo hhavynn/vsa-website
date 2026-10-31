@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useMutation, useQueryClient } from 'react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { aceAssignmentsRepository } from '../../../data/repos/aceAssignments';
 import { logAdminActivity } from '../../../data/repos/adminActivity';
 import { toUserMessage } from '../../../data/errors';
@@ -107,34 +107,32 @@ export function AceEligibilityPanel({ cycle, eligibility }: AceEligibilityPanelP
   const selectedCountable = Array.from(selected).filter((id) => choosableIds.has(id)).length;
   const draftUnreachable = minimumsValid ? unreachableMinimums({ littleMin: little, bigMin: big }, selectedCountable) : [];
 
-  const save = useMutation(
-    () =>
+  const save = useMutation({
+    mutationFn: () =>
       aceAssignmentsRepository.saveEligibilityPolicy(cycle.id, {
         littleMin: little,
         bigMin: big,
         eventIds: Array.from(selected).filter((id) => choosableIds.has(id)),
       }),
-    {
-      onSuccess: async (saved) => {
-        await Promise.all([
-          queryClient.invalidateQueries(ACE_ASSIGNMENT_CYCLES_KEY),
-          queryClient.invalidateQueries(aceEligibilityEventsKey(cycle.id)),
-        ]);
-        logAdminActivity({
-          action: ACTIVITY_ACTIONS.aceEligibilitySaved,
-          entityType: 'ace_assignment_cycle',
-          entityId: cycle.id,
-          academicYearStart: cycle.academic_year_start,
-          summary: `Saved the ${formatAcademicYear(cycle.academic_year_start)} ACE eligibility policy: Littles ${little}, Bigs ${big}, ${saved.eventCount} qualifying events`,
-        });
-        toast.success('Eligibility policy saved.');
-        setPolicyOpen(false);
-      },
-      onError: (err) => {
-        toast.error(toUserMessage(err, 'Could not save the eligibility policy'));
-      },
+    onSuccess: async (saved) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ACE_ASSIGNMENT_CYCLES_KEY }),
+        queryClient.invalidateQueries({ queryKey: aceEligibilityEventsKey(cycle.id) }),
+      ]);
+      logAdminActivity({
+        action: ACTIVITY_ACTIONS.aceEligibilitySaved,
+        entityType: 'ace_assignment_cycle',
+        entityId: cycle.id,
+        academicYearStart: cycle.academic_year_start,
+        summary: `Saved the ${formatAcademicYear(cycle.academic_year_start)} ACE eligibility policy: Littles ${little}, Bigs ${big}, ${saved.eventCount} qualifying events`,
+      });
+      toast.success('Eligibility policy saved.');
+      setPolicyOpen(false);
     },
-  );
+    onError: (err) => {
+      toast.error(toUserMessage(err, 'Could not save the eligibility policy'));
+    },
+  });
 
   const toggleEvent = (id: string, on: boolean) =>
     setSelected((current) => {
@@ -198,12 +196,12 @@ export function AceEligibilityPanel({ cycle, eligibility }: AceEligibilityPanelP
           <div className="flex flex-wrap items-end gap-4">
             <label className={labelCls}>
               Little minimum
-              <input type="number" min={1} max={20} step={1} value={littleMin} disabled={!editable || save.isLoading}
+              <input type="number" min={1} max={20} step={1} value={littleMin} disabled={!editable || save.isPending}
                 onChange={(e) => setLittleMin(e.target.value)} className={cn(inputCls, 'mt-1 block w-24')} />
             </label>
             <label className={labelCls}>
               Big minimum
-              <input type="number" min={1} max={20} step={1} value={bigMin} disabled={!editable || save.isLoading}
+              <input type="number" min={1} max={20} step={1} value={bigMin} disabled={!editable || save.isPending}
                 onChange={(e) => setBigMin(e.target.value)} className={cn(inputCls, 'mt-1 block w-24')} />
             </label>
             {!policy && editable && (
@@ -220,10 +218,10 @@ export function AceEligibilityPanel({ cycle, eligibility }: AceEligibilityPanelP
             </p>
             {editable && (
               <>
-                <button type="button" onClick={selectAllCompleted} disabled={!choosable.length || save.isLoading} className={ghostBtnCls}>
+                <button type="button" onClick={selectAllCompleted} disabled={!choosable.length || save.isPending} className={ghostBtnCls}>
                   Select all completed events this year
                 </button>
-                <button type="button" onClick={() => setSelected(new Set())} disabled={!selected.size || save.isLoading} className={ghostBtnCls}>
+                <button type="button" onClick={() => setSelected(new Set())} disabled={!selected.size || save.isPending} className={ghostBtnCls}>
                   Clear
                 </button>
               </>
@@ -240,7 +238,7 @@ export function AceEligibilityPanel({ cycle, eligibility }: AceEligibilityPanelP
               <legend className="sr-only">Qualifying events for {formatAcademicYear(cycle.academic_year_start)}</legend>
               {choosable.map((event) => (
                 <label key={event.id} className="flex min-h-11 items-center gap-3 border-b border-[var(--color-border)] px-3 py-2 font-sans text-xs text-[var(--color-text)] last:border-b-0">
-                  <input type="checkbox" checked={selected.has(event.id)} disabled={!editable || save.isLoading}
+                  <input type="checkbox" checked={selected.has(event.id)} disabled={!editable || save.isPending}
                     onChange={(e) => toggleEvent(event.id, e.target.checked)} />
                   <span className="min-w-0 flex-1">
                     {event.name}
@@ -273,8 +271,8 @@ export function AceEligibilityPanel({ cycle, eligibility }: AceEligibilityPanelP
           )}
           {editable && (
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => save.mutate()} disabled={!policyKnown || !minimumsValid || !dirty || save.isLoading || !readiness} className={primaryBtnCls}>
-                {save.isLoading ? 'Saving…' : policy ? 'Save policy' : 'Save minimums & events'}
+              <button type="button" onClick={() => save.mutate()} disabled={!policyKnown || !minimumsValid || !dirty || save.isPending || !readiness} className={primaryBtnCls}>
+                {save.isPending ? 'Saving…' : policy ? 'Save policy' : 'Save minimums & events'}
               </button>
               {dirty && policy && <span className="font-sans text-[11px] text-[var(--color-text3)]">Unsaved changes. The check below uses the saved policy.</span>}
             </div>

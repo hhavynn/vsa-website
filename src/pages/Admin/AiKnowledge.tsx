@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { FilterChips } from '../../components/features/admin/ops';
@@ -428,7 +428,7 @@ export default function AdminAiKnowledge() {
           })),
         );
       }
-      void queryClient.invalidateQueries(ADMIN_HEALTH_QUERY_KEYS.all);
+      void queryClient.invalidateQueries({ queryKey: ADMIN_HEALTH_QUERY_KEYS.all });
     } catch (error) {
       console.error(error);
       setErrorText(toUserMessage(error, 'Failed to save Ask VSA knowledge snippet.'));
@@ -448,7 +448,7 @@ export default function AdminAiKnowledge() {
       // Only the review date moves: unsaved edits in the form stay as they are.
       updateForm('last_verified_date', toDateInput(updated.last_verified_at));
       setReviews(current => new Map(current).set(updated.id, { reviewedAt: updated.last_verified_at ?? new Date().toISOString(), reviewer: 'you' }));
-      void queryClient.invalidateQueries(ADMIN_HEALTH_QUERY_KEYS.all);
+      void queryClient.invalidateQueries({ queryKey: ADMIN_HEALTH_QUERY_KEYS.all });
       setSuccessText('Marked as reviewed. The text was not changed.');
     } catch (error) {
       console.error(error);

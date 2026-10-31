@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from 'react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cabinetRolesRepository, CabinetRoleDescription, CabinetRoleDescriptionUpdate, CabinetRoleDescriptionInsert } from '../data/repos/cabinetRolesRepository';
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { FALLBACK_CABINET_ROLES } from '../config/publicFallbackContent';
@@ -49,38 +49,32 @@ export function useAdminCabinetRoles() {
 export function useUpdateCabinetRole() {
   const queryClient = useQueryClient();
 
-  return useMutation<CabinetRoleDescription, Error, { roleSlug: string; updates: CabinetRoleDescriptionUpdate }>(
-    ({ roleSlug, updates }) => cabinetRolesRepository.updateRole(roleSlug, updates),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries([CABINET_ROLES_QUERY_KEY]);
-      },
-    }
-  );
+  return useMutation<CabinetRoleDescription, Error, { roleSlug: string; updates: CabinetRoleDescriptionUpdate }>({
+    mutationFn: ({ roleSlug, updates }) => cabinetRolesRepository.updateRole(roleSlug, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [CABINET_ROLES_QUERY_KEY] });
+    },
+  });
 }
 
 export function useCreateCabinetRole() {
   const queryClient = useQueryClient();
 
-  return useMutation<CabinetRoleDescription, Error, CabinetRoleDescriptionInsert>(
-    (newRole) => cabinetRolesRepository.createRole(newRole),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries([CABINET_ROLES_QUERY_KEY]);
-      },
-    }
-  );
+  return useMutation<CabinetRoleDescription, Error, CabinetRoleDescriptionInsert>({
+    mutationFn: (newRole) => cabinetRolesRepository.createRole(newRole),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [CABINET_ROLES_QUERY_KEY] });
+    },
+  });
 }
 
 export function useDeleteCabinetRole() {
   const queryClient = useQueryClient();
 
-  return useMutation<void, Error, string>(
-    (roleSlug) => cabinetRolesRepository.deleteRole(roleSlug),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries([CABINET_ROLES_QUERY_KEY]);
-      },
-    }
-  );
+  return useMutation<void, Error, string>({
+    mutationFn: (roleSlug) => cabinetRolesRepository.deleteRole(roleSlug),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [CABINET_ROLES_QUERY_KEY] });
+    },
+  });
 }

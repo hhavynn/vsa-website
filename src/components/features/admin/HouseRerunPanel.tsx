@@ -7,7 +7,7 @@
 // the database on payment eligibility (#660).
 import { useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { houseAssignmentsRepository } from '../../../data/repos/houseAssignments';
 import { housePaymentsRepository } from '../../../data/repos/housePayments';
 import { logAdminActivity } from '../../../data/repos/adminActivity';
@@ -71,8 +71,18 @@ const labelCls = 'mb-1 block font-mono text-[10px] font-bold uppercase tracking-
 
 export function HouseRerunPanel({ batch, drafts, profiles, userId, onSaved, onClose }: HouseRerunPanelProps) {
   const cycleId = batch.payment_cycle_id as string;
-  const cycleQuery = useQuery(['admin', 'house-payment-cycle', cycleId], () => housePaymentsRepository.getCycle(cycleId), { retry: false, staleTime: 0 });
-  const applicantsQuery = useQuery(['admin', 'house-applicants', cycleId], () => housePaymentsRepository.listApplicants(cycleId), { retry: false, staleTime: 0 });
+  const cycleQuery = useQuery({
+    queryKey: ['admin', 'house-payment-cycle', cycleId],
+    queryFn: () => housePaymentsRepository.getCycle(cycleId),
+    retry: false,
+    staleTime: 0,
+  });
+  const applicantsQuery = useQuery({
+    queryKey: ['admin', 'house-applicants', cycleId],
+    queryFn: () => housePaymentsRepository.listApplicants(cycleId),
+    retry: false,
+    staleTime: 0,
+  });
   const cycle = cycleQuery.data ?? null;
   const applicants = useMemo(() => applicantsQuery.data ?? [], [applicantsQuery.data]);
 

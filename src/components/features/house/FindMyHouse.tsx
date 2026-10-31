@@ -3,7 +3,7 @@
 // score-free public_member_house_badge RPC already used by the leaderboard.
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { memberLookupRepository } from '../../../data/repos/memberLookup';
 import { leaderboardRepository } from '../../../data/repos/leaderboard';
 import { formatAcademicYear } from '../../../lib/academicTerms';
@@ -19,16 +19,20 @@ export function FindMyHouse({ academicYearStart }: { academicYearStart: number }
   const [selected, setSelected] = useState<MemberOption | null>(null);
   const normalized = typed.trim().replace(/\s+/g, ' ');
   const valid = normalized.length >= 3 && normalized.length <= MAX_QUERY_LENGTH;
-  const members = useQuery<MemberOption[], unknown>(
-    ['find-my-house', 'public-members', submitted],
-    () => memberLookupRepository.searchMembers(submitted, SEARCH_LIMIT),
-    { enabled: submitted.length >= 3, staleTime: 60_000, retry: false },
-  );
-  const badge = useQuery(
-    ['find-my-house', 'published-house-badge', academicYearStart, selected?.id],
-    () => leaderboardRepository.getMemberHouseBadge(selected!.id, academicYearStart),
-    { enabled: !!selected, staleTime: 60_000, retry: false },
-  );
+  const members = useQuery<MemberOption[], unknown>({
+    queryKey: ['find-my-house', 'public-members', submitted],
+    queryFn: () => memberLookupRepository.searchMembers(submitted, SEARCH_LIMIT),
+    enabled: submitted.length >= 3,
+    staleTime: 60_000,
+    retry: false,
+  });
+  const badge = useQuery({
+    queryKey: ['find-my-house', 'published-house-badge', academicYearStart, selected?.id],
+    queryFn: () => leaderboardRepository.getMemberHouseBadge(selected!.id, academicYearStart),
+    enabled: !!selected,
+    staleTime: 60_000,
+    retry: false,
+  });
   const tooMany = (members.data?.length ?? 0) >= SEARCH_LIMIT;
   const results = tooMany ? [] : members.data ?? [];
 

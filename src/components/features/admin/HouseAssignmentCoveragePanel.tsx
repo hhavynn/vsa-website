@@ -1,7 +1,7 @@
 // Admin-only read-only batch review. Never creates membership intervals.
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { houseAssignmentsRepository } from '../../../data/repos/houseAssignments';
 import { getCompleteHouseBatchCoverage, getRevealedHouseBatches } from '../../../data/repos/houseAssignmentCoverage';
 import { housePaymentsRepository } from '../../../data/repos/housePayments';

@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { supabase } from '../../lib/supabase';
@@ -155,7 +155,7 @@ export default function AdminContent() {
       setPhotoFile(null);
       setPhotoPreview('');
       queryClient.setQueryData(PRESIDENTS_CONTENT_QUERY_KEY, savedContent);
-      queryClient.invalidateQueries(PRESIDENTS_CONTENT_QUERY_KEY);
+      queryClient.invalidateQueries({ queryKey: PRESIDENTS_CONTENT_QUERY_KEY });
       toast.success('Presidents message saved');
     } catch (error) {
       console.error(error);

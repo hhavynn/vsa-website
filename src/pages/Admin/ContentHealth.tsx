@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from 'react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
@@ -80,7 +80,11 @@ function FindingCard({ finding, busy, onAcknowledge }: { finding: ContentHealthF
 export default function AdminContentHealth() {
   const queryClient = useQueryClient();
   // The same cached snapshot as the Admin Overview: opening this page from the Overview costs no requests.
-  const overview = useQuery(ADMIN_HEALTH_QUERY_KEYS.overview, () => adminOverviewRepository.load(), HEALTH_QUERY_OPTIONS);
+  const overview = useQuery({
+    queryKey: ADMIN_HEALTH_QUERY_KEYS.overview,
+    queryFn: () => adminOverviewRepository.load(),
+    ...HEALTH_QUERY_OPTIONS,
+  });
   const report = overview.data?.contentHealth ?? null;
   const [severity, setSeverity] = useUrlFilter(SEVERITY_KEYS);
   const [area, setArea] = useUrlParam('area');
@@ -97,7 +101,7 @@ export default function AdminContentHealth() {
     setActionError(null);
     try {
       await action();
-      await queryClient.invalidateQueries(ADMIN_HEALTH_QUERY_KEYS.all);
+      await queryClient.invalidateQueries({ queryKey: ADMIN_HEALTH_QUERY_KEYS.all });
     } catch (error) {
       console.error(error);
       setActionError(toUserMessage(error, 'That did not save. Try again.'));
@@ -115,7 +119,7 @@ export default function AdminContentHealth() {
         description="Public content that is broken, incomplete, or out of date, with the page that fixes each one. Nothing here changes or deletes anything."
         actions={
           <div className="flex flex-col items-start gap-1 sm:items-end">
-            <button type="button" className={btn} disabled={refreshing} onClick={() => queryClient.invalidateQueries(ADMIN_HEALTH_QUERY_KEYS.all)}>
+            <button type="button" className={btn} disabled={refreshing} onClick={() => queryClient.invalidateQueries({ queryKey: ADMIN_HEALTH_QUERY_KEYS.all })}>
               {refreshing ? 'Refreshing…' : 'Re-scan'}
             </button>
             {report && <p className="font-sans text-[11px] text-text-muted">Scanned {dateTime(report.generatedAt)}</p>}

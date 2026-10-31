@@ -9,7 +9,7 @@ import { hasUnsavedChanges } from '../../hooks/useUnsavedChangesGuard';
 import { ApplicationLink } from '../../types';
 
 jest.mock('react-hot-toast', () => ({ __esModule: true, default: Object.assign(jest.fn(), { success: jest.fn(), error: jest.fn() }) }));
-jest.mock('react-query', () => ({ useQueryClient: () => ({ invalidateQueries: jest.fn() }) }));
+jest.mock('@tanstack/react-query', () => ({ useQueryClient: () => ({ invalidateQueries: jest.fn() }) }));
 jest.mock('../../data/repos/adminActivity', () => ({ logAdminActivity: jest.fn() }));
 jest.mock('../../data/repos/applicationLinks', () => ({
   applicationLinksRepository: {

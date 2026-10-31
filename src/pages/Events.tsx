@@ -43,7 +43,7 @@ import {
 } from '../hooks/useEvents';
 import { AcademicTerm, Event, PublicHouseEvent, HousePageAsset } from '../types';
 import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
@@ -177,7 +177,7 @@ export function Events() {
     queryKey: ['events-page', 'upcoming-house-events', todayDateOnly],
     queryFn: () => houseEventsRepository.getPublicUpcomingPreview(todayDateOnly, null, 24),
     staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
@@ -299,7 +299,7 @@ export function Events() {
     queryFn: () => activeYear ? houseAssetsRepository.getPublishedAssets(activeYear) : Promise.resolve([]),
     enabled: activeYear !== null,
     staleTime: 10 * 60 * 1000,
-    cacheTime: 20 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
   const houseAssetsById = useMemo(() => new Map(houseAssets.map((asset) => [asset.id, asset])), [houseAssets]);

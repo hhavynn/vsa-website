@@ -4,7 +4,7 @@
 // picks someone. Never creates a member and never touches House memberships.
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useMutation, useQuery, useQueryClient } from 'react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { houseParentsRepository, HouseParentLink } from '../../../data/repos/houseParents';
 import { memberLookupRepository } from '../../../data/repos/memberLookup';
 import { formatAcademicYear } from '../../../lib/academicTerms';
@@ -66,15 +66,13 @@ export function HouseParentLinks({ selectedYear }: { selectedYear: number | null
     (houseFilter === 'all' || houseFilter === parent.house_profile_id) &&
     (statusFilter === 'all' || statusFilter === state));
 
-  const setMember = useMutation(
-    ({ parentId, memberId }: { parentId: string; memberId: string | null }) => houseParentsRepository.setMember(parentId, memberId),
-    {
-      onSuccess: () => queryClient.invalidateQueries(queryKey),
-      onError: (err: unknown) => {
-        toast.error(err instanceof Error && err.message ? err.message : 'Failed to update the House Parent link.');
-      },
+  const setMember = useMutation({
+    mutationFn: ({ parentId, memberId }: { parentId: string; memberId: string | null }) => houseParentsRepository.setMember(parentId, memberId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onError: (err: unknown) => {
+      toast.error(err instanceof Error && err.message ? err.message : 'Failed to update the House Parent link.');
     },
-  );
+  });
 
   if (selectedYear === null) return null;
   const needsReview = counts.unlinked + counts.ambiguous + counts['duplicate-stale'];
@@ -147,7 +145,7 @@ export function HouseParentLinks({ selectedYear }: { selectedYear: number | null
                   suggestion={parent.member_id ? null : suggestHouseParentMember(parent.display_name, directory)}
                   onLink={(member) => setMember.mutate({ parentId: parent.id, memberId: member.id })}
                   onUnlink={() => setMember.mutate({ parentId: parent.id, memberId: null })}
-                  busy={setMember.isLoading || unavailable}
+                  busy={setMember.isPending || unavailable}
                 />
               </li>
             ))}

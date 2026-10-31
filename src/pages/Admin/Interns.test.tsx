@@ -1,11 +1,13 @@
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AdminInterns from './Interns';
 import { internCohortRepository } from '../../data/repos/internCohort';
 import { memberLookupRepository } from '../../data/repos/memberLookup';
 import { InternCohortCycle, InternCohortDraft } from '../../lib/internCohort';
+
+import { adminReviewRepository } from '../../data/repos/adminReview';
 
 jest.mock('../../data/repos/adminActivity', () => ({ logAdminActivity: jest.fn() }));
 jest.mock('../../data/repos/adminReview', () => ({
@@ -88,7 +90,10 @@ async function settle() {
   });
 }
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  (adminReviewRepository.listReviewed as jest.Mock).mockResolvedValue(new Set());
+});
 
 it('summarizes the cohort and shows a linked intern with member, shadow positions, and track', async () => {
   await openCohort('draft', [

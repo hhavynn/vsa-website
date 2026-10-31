@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { PageTitle } from '../../components/common/PageTitle';
 import { aiUsageRepository, type AiUsageDay, type ReportDays } from '../../data/repos/aiUsage';
 export type { AiUsageDay } from '../../data/repos/aiUsage';
@@ -17,11 +17,12 @@ export function summarizeAiUsage(days: AiUsageDay[]) {
 
 export default function AdminAiUsage() {
   const [period, setPeriod] = useState<ReportDays>(30);
-  const { data: rows = [], isLoading: loading, isError: error } = useQuery(
-    ['admin-ai-usage', period],
-    () => aiUsageRepository.getDaily(period),
-    { retry: false, staleTime: 2 * 60 * 1000 },
-  );
+  const { data: rows = [], isLoading: loading, isError: error } = useQuery({
+    queryKey: ['admin-ai-usage', period],
+    queryFn: () => aiUsageRepository.getDaily(period),
+    retry: false,
+    staleTime: 2 * 60 * 1000,
+  });
   const totals = useMemo(() => summarizeAiUsage(rows), [rows]);
 
   return (

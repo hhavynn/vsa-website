@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { eventsRepository, type EventInterestAction } from '../../../data/repos/events';
 import { EventInterestCounts } from '../../../types';
 import toast from 'react-hot-toast';
@@ -59,9 +59,9 @@ export function EventInterestButtons({ eventId, initialCounts, compact = false }
 
       // Other cached copies of this event's counts (Home preview, /events,
       // event detail) would otherwise show the old numbers on the next visit.
-      queryClient.invalidateQueries(['events']);
-      queryClient.invalidateQueries(['event', eventId]);
-      queryClient.invalidateQueries(['home', 'upcoming-events-section']);
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['home', 'upcoming-events-section'] });
 
       setCounts(prev => ({
         event_id: eventId,

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AddMemberModal } from "./AddMemberModal";
 import { MemberAttendanceModal } from "./MemberAttendanceModal";
 import { adminMembersRepository } from "../../../data/repos/adminMembers";
@@ -53,7 +53,7 @@ beforeEach(() => {
 function mount(ui: React.ReactElement) {
   const client = new QueryClient({
     defaultOptions: {
-      queries: { retry: false, cacheTime: 0 },
+      queries: { retry: false, gcTime: 0 },
       mutations: { retry: false },
     },
   });
@@ -159,7 +159,7 @@ it("adds attendance and immediately reloads history, totals and shared point cac
   expect(
     screen.getByRole("option", { name: /GBM 1.*Attended/ }),
   ).toBeDisabled();
-  expect(invalidate).toHaveBeenCalledWith(["find-my-points"]);
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ["find-my-points"] });
 });
 
 it("confirms the member and event before removing attendance, then refreshes totals", async () => {

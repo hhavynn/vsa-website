@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ContinueWorking, OperationsDashboard } from './OperationsDashboard';
 import { OperationsInputs } from '../../../lib/adminOperations';

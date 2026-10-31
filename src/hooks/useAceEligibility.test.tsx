@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useAceEligibility, aceEligibilityReadinessKey } from './useAceEligibility';
 import { aceAssignmentsRepository } from '../data/repos/aceAssignments';
@@ -37,7 +37,7 @@ it('drops a previous result when a refresh fails instead of showing it as curren
   const { result } = renderHook(() => useAceEligibility(cycle, drafts, [], true), { wrapper });
 
   await waitFor(() => expect(result.current.result?.littles[0].status).toBe('meets'));
-  await act(() => client.invalidateQueries(aceEligibilityReadinessKey(2026)));
+  await act(() => client.invalidateQueries({ queryKey: aceEligibilityReadinessKey(2026) }));
   await waitFor(() => expect(result.current.error).toMatch(/incomplete/));
   expect(result.current.result).toBeNull();
 });

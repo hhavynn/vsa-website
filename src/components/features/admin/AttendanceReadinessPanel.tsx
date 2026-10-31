@@ -5,7 +5,7 @@
 // attendance or points. House credits shown here are private (#692).
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from 'react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ConfirmDialog } from '../../common/ConfirmDialog';
 import { ATTENDANCE_READINESS_UNAVAILABLE, ReadinessEvent, attendanceReadinessRepository } from '../../../data/repos/attendanceReadiness';
 import { useAcademicTerms } from '../../../hooks/useAcademicTerms';
@@ -45,15 +45,18 @@ export function AttendanceReadinessPanel({ selectedYear }: { selectedYear: numbe
   const [attesting, setAttesting] = useState<Attesting | null>(null);
   const [note, setNote] = useState('');
 
-  const readiness = useQuery(
-    [...QUERY_KEY, selectedYear, termId],
-    () => attendanceReadinessRepository.getReadiness(selectedYear as number, termId),
-    { enabled: selectedYear !== null, retry: false, staleTime: 0, refetchOnWindowFocus: false },
-  );
-  const attest = useMutation(
-    ({ event, status }: Attesting) => attendanceReadinessRepository.attest(event.id, status, note.trim() || null),
-    { onSuccess: () => queryClient.invalidateQueries(QUERY_KEY) },
-  );
+  const readiness = useQuery({
+    queryKey: [...QUERY_KEY, selectedYear, termId],
+    queryFn: () => attendanceReadinessRepository.getReadiness(selectedYear as number, termId),
+    enabled: selectedYear !== null,
+    retry: false,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+  });
+  const attest = useMutation({
+    mutationFn: ({ event, status }: Attesting) => attendanceReadinessRepository.attest(event.id, status, note.trim() || null),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
+  });
 
   const now = useMemo(() => new Date(readiness.data?.checkedAt ?? Date.now()), [readiness.data?.checkedAt]);
   const scoped = useMemo(

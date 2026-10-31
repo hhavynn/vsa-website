@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AceEligibilityPanel } from './AceEligibilityPanel';
 import { aceAssignmentsRepository } from '../../../data/repos/aceAssignments';
 import type { AceEligibilityState } from '../../../hooks/useAceEligibility';

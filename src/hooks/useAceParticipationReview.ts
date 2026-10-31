@@ -1,4 +1,4 @@
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { aceAssignmentsRepository } from '../data/repos/aceAssignments';
 import { attendanceReadinessRepository, type AttendanceReadiness } from '../data/repos/attendanceReadiness';
 import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
@@ -18,7 +18,7 @@ export function useAceParticipationReview(
   const eventsQuery=useQuery<AttendanceReadiness>({
     queryKey:['ace','participation','events',cycleId,year,eventVersion],
     enabled:expanded && loadEvents,
-    retry:false,staleTime:0,cacheTime:0,
+    retry:false,staleTime:0,gcTime:0,
     queryFn:async()=>{
       const data=await attendanceReadinessRepository.getReadiness(year,null);
       if(data.truncated || data.totalEvents>data.events.length)
@@ -30,7 +30,7 @@ export function useAceParticipationReview(
   const resultQuery=useQuery<AceParticipationRow[]>({
     queryKey:['ace','participation','result',cycleId,year,policy?.revision??null,policy?.ids??[],policy?.minimum??null,eventVersion],
     enabled:expanded && !!policy && !!events && !eventsQuery.isFetching && !eventsQuery.isError,
-    retry:false,staleTime:0,cacheTime:0,
+    retry:false,staleTime:0,gcTime:0,
     queryFn:async()=>{
       if(!policy||!events)throw new Error('Explicit eligible event policy required');
       const chosen=policy.ids.map(id=>events.events.find(event=>event.id===id));

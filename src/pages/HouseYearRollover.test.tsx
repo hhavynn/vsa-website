@@ -9,7 +9,7 @@
 
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HouseDetail } from './HouseDetail';
 import { House } from './House';
 import { supabaseMock } from '../test-utils/supabaseMock';
@@ -75,7 +75,7 @@ const BOWSER_2025 = {
 
 function renderAt(path: string) {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false, cacheTime: 0 } },
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
 
   return render(

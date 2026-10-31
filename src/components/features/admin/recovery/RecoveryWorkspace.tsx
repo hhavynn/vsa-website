@@ -1,5 +1,5 @@
 import { KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery, useQueryClient } from 'react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { attendanceRecoveryRepository, RecoverResult } from '../../../../data/repos/attendanceRecovery';
 import { toUserMessage } from '../../../../data/errors';
@@ -121,8 +121,16 @@ const rowIdOf = (insight: RowInsight) => insight.finding.record.row_id;
 export function RecoveryWorkspace() {
   const client = useQueryClient();
   const { user } = useAuth();
-  const records = useQuery(FINDINGS_KEY, () => attendanceRecoveryRepository.listFindingRecords(), { staleTime: 30_000 });
-  const actions = useQuery(ACTIONS_KEY, () => attendanceRecoveryRepository.listActions(), { staleTime: 30_000 });
+  const records = useQuery({
+    queryKey: FINDINGS_KEY,
+    queryFn: () => attendanceRecoveryRepository.listFindingRecords(),
+    staleTime: 30_000,
+  });
+  const actions = useQuery({
+    queryKey: ACTIONS_KEY,
+    queryFn: () => attendanceRecoveryRepository.listActions(),
+    staleTime: 30_000,
+  });
   const staging = useStagedRecovery(user?.id ?? null);
 
   const findings = useMemo(
@@ -344,13 +352,13 @@ export function RecoveryWorkspace() {
   const onBatchFinished = useCallback(async (results: ApplyItemResult[]) => {
     const { staging: stage } = latest.current;
     stage.replaceAll(reconcileStaging(stage.list, results));
-    await Promise.all(RECOVERY_INVALIDATIONS.map((key) => client.invalidateQueries(key as string[])));
+    await Promise.all(RECOVERY_INVALIDATIONS.map((key) => client.invalidateQueries({ queryKey: key as string[] })));
     setAnnouncement(`Batch finished: ${results.filter((r) => r.status === 'applied' || r.status === 'replayed').length} of ${results.length} applied.`);
   }, [client]);
 
   const refreshAfterSingle = async (result: RecoverResult) => {
     if (openRowId && staging.staged.has(openRowId)) staging.unstage(openRowId);
-    await Promise.all(RECOVERY_INVALIDATIONS.map((key) => client.invalidateQueries(key as string[])));
+    await Promise.all(RECOVERY_INVALIDATIONS.map((key) => client.invalidateQueries({ queryKey: key as string[] })));
     toast.success(result.replayed ? 'Already applied earlier; nothing was written twice.' : OUTCOME_LABELS[result.outcome]);
   };
 
@@ -642,7 +650,7 @@ export function RecoveryWorkspace() {
         <MemberAttendanceModal
           memberId={attendanceMemberId}
           onClose={() => setAttendanceMemberId(null)}
-          onChanged={() => client.invalidateQueries(['attendance-recovery'])}
+          onChanged={() => client.invalidateQueries({ queryKey: ['attendance-recovery'] })}
         />
       )}
     </section>

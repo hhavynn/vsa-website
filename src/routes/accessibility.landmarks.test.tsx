@@ -9,7 +9,7 @@
 
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '../context/ThemeContext';
 import { AuthProvider } from '../context/AuthContext';
 import { SiteSettingsProvider } from '../context/SiteSettingsContext';
@@ -43,7 +43,7 @@ const REPRESENTATIVE_PUBLIC_ROUTES = [
 function renderRoute(path: string) {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { retry: false, cacheTime: 0 },
+      queries: { retry: false, gcTime: 0 },
     },
   });
 

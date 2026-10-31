@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { UVSA_SOCAL } from '../../../config/uvsaSocal';
 import { Event } from '../../../types';
 import { makeEvent, makeSchool, OWN_LOGO_URL } from '../../../test-utils/uvsaFixtures';

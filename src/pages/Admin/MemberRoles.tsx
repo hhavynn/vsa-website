@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
 import { useCabinetYears } from '../../hooks/useCabinetYears';
 import { useMemberDirectory } from '../../hooks/useMemberDirectory';

@@ -1,5 +1,5 @@
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider, focusManager } from 'react-query';
+import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { Leaderboard } from '../pages/Leaderboard';
@@ -53,7 +53,7 @@ async function advanceTime(milliseconds = 0) {
 }
 
 function renderLeaderboard() {
-  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
@@ -178,7 +178,7 @@ it('refreshes query when explicitly invalidated', async () => {
   jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard').mockResolvedValue([
     member('Alpha', 10), member('Beta', 5),
   ]);
-  await act(async () => { queryClient.invalidateQueries(['individual-leaderboard']); });
+  await act(async () => { queryClient.invalidateQueries({ queryKey: ['individual-leaderboard'] }); });
   await advanceTime();
   expect(screen.queryByText('Leaderboard temporarily unavailable')).not.toBeInTheDocument();
   expect(screen.getByText('Alpha Member')).toBeInTheDocument();
@@ -223,7 +223,7 @@ describe('useIndividualLeaderboard hook', () => {
   });
 
   function hookWrapper({ children }: { children: ReactNode }) {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
     return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
   }
 
@@ -306,7 +306,8 @@ describe('useIndividualLeaderboard hook', () => {
     // Give an (incorrectly) enabled query a chance to fire.
     await act(async () => { await Promise.resolve(); });
 
-    expect(result.current.isIdle).toBe(true);
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.fetchStatus).toBe('idle');
     expect(result.current.data).toBeUndefined();
     expect(leaderboardRepository.getYearlyLeaderboard).not.toHaveBeenCalled();
     expect(leaderboardRepository.getAllTimeLeaderboard).not.toHaveBeenCalled();

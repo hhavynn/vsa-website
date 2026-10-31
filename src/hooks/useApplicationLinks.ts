@@ -1,4 +1,4 @@
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { ApplicationLink, PublicApplicationLink } from '../types';
 import { applicationLinksRepository } from '../data/repos/applicationLinks';
 
@@ -15,7 +15,7 @@ export function useAdminApplicationLinks() {
     queryKey: ADMIN_APPLICATION_LINKS_QUERY_KEY,
     queryFn: () => applicationLinksRepository.listAdminApplicationLinks(),
     staleTime: 30 * 1000,
-    cacheTime: 5 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 
   return { links, loading, error, refetch };
@@ -36,7 +36,7 @@ export function usePublicApplicationLinks() {
     queryKey: PUBLIC_APPLICATION_LINKS_QUERY_KEY,
     queryFn: () => applicationLinksRepository.getPublicApplicationLinks(),
     staleTime: 60 * 1000,
-    cacheTime: 5 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 
   return { links, loading, error, refetch };

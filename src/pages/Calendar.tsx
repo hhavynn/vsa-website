@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { motion, useReducedMotion } from 'framer-motion';
 import { PageTitle } from '../components/common/PageTitle';
 import { DownloadEventCalendarButton } from '../components/features/events/DownloadEventCalendarButton';
@@ -84,9 +84,9 @@ export function Calendar() {
   const dataWindow = useMemo(() => getCalendarWindow(todayStr), [todayStr]);
 
   // ── Data (public-safe sources only) ────────────────────────────────────────
-  const vsaQuery = useQuery(
-    ['calendar-vsa-events', dataWindow.start, dataWindow.end],
-    () =>
+  const vsaQuery = useQuery({
+    queryKey: ['calendar-vsa-events', dataWindow.start, dataWindow.end],
+    queryFn: () =>
       eventsRepository.getEvents({
         date_from: dataWindow.start,
         // +1 day: the events.date column is a timestamp, keep the last window
@@ -94,18 +94,18 @@ export function Calendar() {
         date_to: addDaysToDateOnly(dataWindow.end, 1),
         limit: 400,
       }),
-    QUERY_OPTIONS
-  );
-  const houseQuery = useQuery(
-    ['calendar-house-events', dataWindow.start, dataWindow.end],
-    () => houseEventsRepository.getPublicEventsInRange(dataWindow.start, dataWindow.end),
-    QUERY_OPTIONS
-  );
-  const applicationsQuery = useQuery(
-    ['calendar-application-links'],
-    () => applicationLinksRepository.getPublicApplicationLinks(),
-    QUERY_OPTIONS
-  );
+    ...QUERY_OPTIONS,
+  });
+  const houseQuery = useQuery({
+    queryKey: ['calendar-house-events', dataWindow.start, dataWindow.end],
+    queryFn: () => houseEventsRepository.getPublicEventsInRange(dataWindow.start, dataWindow.end),
+    ...QUERY_OPTIONS,
+  });
+  const applicationsQuery = useQuery({
+    queryKey: ['calendar-application-links'],
+    queryFn: () => applicationLinksRepository.getPublicApplicationLinks(),
+    ...QUERY_OPTIONS,
+  });
 
   const items = useMemo<CalendarItem[]>(() => {
     const collected: CalendarItem[] = [];

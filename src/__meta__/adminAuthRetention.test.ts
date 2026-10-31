@@ -119,10 +119,10 @@ describe("retirement removes member accounts, not the admin lifecycle", () => {
       expect(source).toMatch(/queryClient\.clear\(\)/);
       // Expiry: stale admin verdicts are dropped, mounted queries are kept.
       expect(source).toMatch(
-        /queryClient\.removeQueries\(\{ inactive: true \}\)/,
+        /queryClient\.removeQueries\(\{ type: 'inactive' \}\)/,
       );
       expect(source).toMatch(
-        /queryClient\.removeQueries\(\['admin-status'\]\)/,
+        /queryClient\.removeQueries\(\{ queryKey: \['admin-status'\] \}\)/,
       );
       // Same account signing back in revalidates in place.
       expect(source).toMatch(/queryClient\.invalidateQueries\(\)/);

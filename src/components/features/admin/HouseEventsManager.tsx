@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useQuery, useQueryClient } from 'react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getVerifiedLegacyHouseYears } from '../../../data/legacyHouseArchive';
 import { ADMIN_HOUSE_EVENT_LIMIT, houseEventsRepository, HouseEventFormData } from '../../../data/repos/houseEvents';
 import { useAcademicTerms } from '../../../hooks/useAcademicTerms';
@@ -199,7 +199,7 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
   const formRef = useRef<HTMLFormElement>(null);
 
   // Both entry points (Admin Events and this tab) read the same key.
-  const invalidateEvents = () => queryClient.invalidateQueries(['admin', 'house-events']);
+  const invalidateEvents = () => queryClient.invalidateQueries({ queryKey: ['admin', 'house-events'] });
 
   function loadForm(next: HouseEventDraft, event: HouseEvent | null) {
     setDraft(next);

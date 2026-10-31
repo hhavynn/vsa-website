@@ -18,7 +18,7 @@ Member accounts and code-based check-in are formally retired. `/points` remains 
 
 - **Frontend**: React 18, TypeScript, Create React App (react-scripts), Tailwind CSS v3, Framer Motion
 - **Routing**: React Router v6, lazy-loaded pages
-- **Data fetching**: react-query, a repository layer in `src/data/repos/` wrapping Supabase queries
+- **Data fetching**: TanStack Query (`@tanstack/react-query`), a repository layer in `src/data/repos/` wrapping Supabase queries
 - **Forms**: react-hook-form + zod (`src/schemas/`)
 - **Backend**: Supabase — Postgres, Auth, Storage, and Deno Edge Functions (`supabase/functions/`)
 - **Deployment**: Vercel (see `vercel.json`)

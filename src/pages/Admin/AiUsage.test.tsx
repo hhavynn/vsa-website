@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AdminAiUsage, { summarizeAiUsage } from './AiUsage';
 import { supabase } from '../../lib/supabase';
 

@@ -1,5 +1,5 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ProgramPhotoStack, useProgramHeroMedia } from './ProgramPhotoStack';
 import { galleryRepository, type ProgramAlbum } from '../../../data/repos/gallery';
 import { supabaseMock } from '../../../test-utils/supabaseMock';

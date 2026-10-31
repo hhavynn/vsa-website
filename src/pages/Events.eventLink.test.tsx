@@ -1,6 +1,6 @@
 /* eslint-disable testing-library/no-node-access -- asserts the card the anchor lands on */
 import { render, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { Events } from './Events';
 import { supabaseMock } from '../test-utils/supabaseMock';

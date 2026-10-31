@@ -1,7 +1,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useDropzone } from 'react-dropzone';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
@@ -649,12 +649,12 @@ export default function AdminAceFamilies() {
   }
 
   const invalidateLists = async () => {
-    await queryClient.invalidateQueries(['ace-families']);
-    await queryClient.invalidateQueries(['ace-family-members']);
+    await queryClient.invalidateQueries({ queryKey: ['ace-families'] });
+    await queryClient.invalidateQueries({ queryKey: ['ace-family-members'] });
   };
 
   const refreshMemberLinks = async () => {
-    await queryClient.invalidateQueries(ACE_MEMBER_LINKS_QUERY_KEY);
+    await queryClient.invalidateQueries({ queryKey: ACE_MEMBER_LINKS_QUERY_KEY });
     await invalidateLists();
   };
 
@@ -869,7 +869,7 @@ export default function AdminAceFamilies() {
       }
       toast.success(clearedLink ? 'Member saved. The rename cleared its member link.' : 'Member saved');
       await refetchMembers();
-      if (clearedLink) await queryClient.invalidateQueries(ACE_MEMBER_LINKS_QUERY_KEY);
+      if (clearedLink) await queryClient.invalidateQueries({ queryKey: ACE_MEMBER_LINKS_QUERY_KEY });
     } catch (err) {
       console.error(err);
       const message = toUserMessage(err, 'Failed to save member');
@@ -929,8 +929,8 @@ export default function AdminAceFamilies() {
       setImportError(null);
       setSelectedFamilyId(family.id);
       setImportedFamilyId(family.id);
-      await queryClient.invalidateQueries(['ace-families']);
-      await queryClient.invalidateQueries(['ace-family-members']);
+      await queryClient.invalidateQueries({ queryKey: ['ace-families'] });
+      await queryClient.invalidateQueries({ queryKey: ['ace-family-members'] });
       await refetch();
     } catch (err) {
       console.error(err);

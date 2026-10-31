@@ -2,7 +2,7 @@
 // function. Synthetic members only; no network.
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import toast, { Toaster } from "react-hot-toast";
-import { QueryClient, QueryClientProvider } from "react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AdminImport from "./Import";
 import { supabaseMock } from "../../test-utils/supabaseMock";
 import type { AttendanceImportRequest } from "../../lib/attendanceImportDecisions";

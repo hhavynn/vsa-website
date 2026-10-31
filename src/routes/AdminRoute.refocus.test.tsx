@@ -15,8 +15,9 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '../context/AuthContext';
+import { listenForWindowFocus } from '../lib/queryClient';
 import { AdminRoute } from './AdminRoute';
 import AdminLayout from '../components/features/admin/AdminLayout';
 import { DataRightsRequestTracker } from '../components/features/admin/DataRightsRequestTracker';
@@ -118,6 +119,8 @@ async function leaveAndReturn(client: QueryClient, adminId: string) {
   });
 }
 
+beforeAll(() => listenForWindowFocus());
+
 beforeEach(() => {
   supabaseMock.reset();
   supabaseMock.setAuthSession(sessionFor('admin-1'));
@@ -185,7 +188,7 @@ describe('server data refreshes while the admin has unsaved edits', () => {
       requestRow({ summary: 'server summary v2 (other admin)', status: 'pending_review', updated_at: '2026-10-07T00:00:00Z' }),
     ]);
     await act(async () => {
-      await client.invalidateQueries(['admin', 'data-rights-requests']);
+      await client.invalidateQueries({ queryKey: ['admin', 'data-rights-requests'] });
     });
     await waitFor(() => expect(repo.listDataRightsRequests).toHaveBeenCalledTimes(2));
 
@@ -210,7 +213,7 @@ describe('server data refreshes while the admin has unsaved edits', () => {
 
     repo.listDataRightsRequests.mockResolvedValue([requestRow({ summary: 'server summary v2 (other admin)' })]);
     await act(async () => {
-      await client.invalidateQueries(['admin', 'data-rights-requests']);
+      await client.invalidateQueries({ queryKey: ['admin', 'data-rights-requests'] });
     });
 
     await waitFor(() => expect(screen.getByLabelText(/brief summary/i)).toHaveValue('server summary v2 (other admin)'));

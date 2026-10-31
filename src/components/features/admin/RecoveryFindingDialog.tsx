@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { DialogFrame, dialogBtnCls, dialogPrimaryCls } from '../../common/ConfirmDialog';
 import { attendanceRecoveryRepository, RecoverResult } from '../../../data/repos/attendanceRecovery';
 import { toUserMessage } from '../../../data/errors';
@@ -63,7 +63,11 @@ function MemberLine({ member, attended }: { member: MemberSnapshot; attended?: b
 }
 
 function RecentAttendance({ memberId }: { memberId: string }) {
-  const recent = useQuery(['attendance-recovery', 'recent', memberId], () => attendanceRecoveryRepository.getRecentAttendance(memberId), { staleTime: 0 });
+  const recent = useQuery({
+    queryKey: ['attendance-recovery', 'recent', memberId],
+    queryFn: () => attendanceRecoveryRepository.getRecentAttendance(memberId),
+    staleTime: 0,
+  });
   if (recent.isLoading) return <p className="text-xs text-[var(--color-text3)]">Loading attendance…</p>;
   if (recent.isError) return <p className="text-xs text-red-700 dark:text-red-300">Could not load attendance.</p>;
   const items = recent.data ?? [];
@@ -101,11 +105,12 @@ function MemberPicker({
 }) {
   const searchId = useId();
   const [term, setTerm] = useState('');
-  const search = useQuery(
-    ['attendance-recovery', 'member-search', term.trim().toLowerCase()],
-    () => attendanceRecoveryRepository.searchMembers(term),
-    { enabled: term.trim().length >= 2, staleTime: 30_000 },
-  );
+  const search = useQuery({
+    queryKey: ['attendance-recovery', 'member-search', term.trim().toLowerCase()],
+    queryFn: () => attendanceRecoveryRepository.searchMembers(term),
+    enabled: term.trim().length >= 2,
+    staleTime: 30_000,
+  });
   const options = useMemo(() => {
     const seen = new Set<string>();
     return [...candidates, ...(search.data ?? [])].filter((member) => {
@@ -164,29 +169,36 @@ export function RecoveryFindingDialog({
   const eventName = record.event_name ?? 'this event';
   const actions = allowedActions(finding);
 
-  const detail = useQuery(['attendance-recovery', 'row', record.row_id], () => attendanceRecoveryRepository.getRowDetail(record.row_id), { staleTime: 0 });
+  const detail = useQuery({
+    queryKey: ['attendance-recovery', 'row', record.row_id],
+    queryFn: () => attendanceRecoveryRepository.getRowDetail(record.row_id),
+    staleTime: 0,
+  });
   const relatedIds = useMemo(() => relatedMemberIds(record, detail.data?.match_details), [record, detail.data]);
-  const related = useQuery(
-    ['attendance-recovery', 'members', relatedIds.join(',')],
-    () => attendanceRecoveryRepository.getMembers(relatedIds),
-    { enabled: detail.isSuccess, staleTime: 0 },
-  );
+  const related = useQuery({
+    queryKey: ['attendance-recovery', 'members', relatedIds.join(',')],
+    queryFn: () => attendanceRecoveryRepository.getMembers(relatedIds),
+    enabled: detail.isSuccess,
+    staleTime: 0,
+  });
   const [extraIds, setExtraIds] = useState<string[]>([]);
   const attendanceIds = useMemo(() => Array.from(new Set([...relatedIds, ...extraIds])), [relatedIds, extraIds]);
-  const eventAttendance = useQuery(
-    ['attendance-recovery', 'event-attendance', record.event_id, attendanceIds.join(',')],
-    () => (record.event_id ? attendanceRecoveryRepository.getEventAttendance(record.event_id, attendanceIds) : Promise.resolve([])),
-    { enabled: !!record.event_id && attendanceIds.length > 0, staleTime: 0 },
-  );
+  const eventAttendance = useQuery({
+    queryKey: ['attendance-recovery', 'event-attendance', record.event_id, attendanceIds.join(',')],
+    queryFn: () => (record.event_id ? attendanceRecoveryRepository.getEventAttendance(record.event_id, attendanceIds) : Promise.resolve([])),
+    enabled: !!record.event_id && attendanceIds.length > 0,
+    staleTime: 0,
+  });
   const attendedIds = useMemo(() => new Set((eventAttendance.data ?? []).map((row) => row.member_id)), [eventAttendance.data]);
   const attendanceOf = (memberId: string): boolean | undefined =>
     eventAttendance.isSuccess && !eventAttendance.isFetching && attendanceIds.includes(memberId) ? attendedIds.has(memberId) : undefined;
   // Members with exactly this name, even when the audit row recorded no candidates.
-  const sameName = useQuery(
-    ['attendance-recovery', 'same-name', record.display_name],
-    () => attendanceRecoveryRepository.searchMembers(record.display_name ?? '', 25),
-    { enabled: record.exact_name_members > 0 && !!record.display_name, staleTime: 0 },
-  );
+  const sameName = useQuery({
+    queryKey: ['attendance-recovery', 'same-name', record.display_name],
+    queryFn: () => attendanceRecoveryRepository.searchMembers(record.display_name ?? '', 25),
+    enabled: record.exact_name_members > 0 && !!record.display_name,
+    staleTime: 0,
+  });
   const creditedMember = related.data?.find((member) => member.id === record.attendance_member_id) ?? null;
   const counterRows = useMemo(
     () => rowsNamingMember(allRecords, record.event_id, record.attendance_member_id, record.row_id),

@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { AuthProvider } from '../context/AuthContext';
 import { AdminRoute } from './AdminRoute';

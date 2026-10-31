@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import AdminAiKnowledge from './AiKnowledge';
 import { AiKnowledgeSnippet, aiKnowledgeRepository } from '../../data/repos/aiKnowledge';
@@ -120,7 +120,7 @@ describe('Ask VSA knowledge freshness', () => {
     expect(repo.createSnippet).not.toHaveBeenCalled();
     await waitFor(() => expect(within(listItem('Quarterly points rules')).queryByText('Review due')).not.toBeInTheDocument());
     // The Overview count and Content Health refresh.
-    expect(invalidate).toHaveBeenCalledWith('admin-health');
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['admin-health'] });
     expect(screen.getByText(/Last reviewed .* by you/)).toBeInTheDocument();
   });
 
