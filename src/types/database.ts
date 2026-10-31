@@ -4359,6 +4359,10 @@ export type Database = {
         Args: Record<string, never>;
         Returns: Json;
       };
+      admin_match_members_by_email: {
+        Args: { p_emails: string[] };
+        Returns: Json;
+      };
       admin_lookup_members: {
         Args: { p_emails?: string[] | null; p_surnames?: string[] | null };
         Returns: Json;

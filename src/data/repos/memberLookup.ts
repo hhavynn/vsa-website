@@ -115,17 +115,36 @@ export class MemberLookupRepository {
     const matches = new Map<string, MemberOption[]>();
     if (wanted.length === 0) return matches;
     return withErrorHandling(async () => {
+      const requested = new Set(wanted);
+      // POST RPC body, not URL query string. No private email column is returned
+      // in MemberOption: the matched address is used only as the Map key.
       for (let from = 0; from < wanted.length; from += 100) {
         const chunk = wanted.slice(from, from + 100);
-        const { data, error } = await supabase
-          .from('members')
-          .select('id, first_name, last_name, college, year, email')
-          .in('email', chunk);
+        const { data, error } = await supabase.rpc('admin_match_members_by_email', {
+          p_emails: chunk,
+        });
         if (error) throw error;
-        for (const row of data ?? []) {
-          const key = row.email?.trim().toLowerCase();
-          if (!key) continue;
-          matches.set(key, [...(matches.get(key) ?? []), toMemberOption(row)]);
+        if (!Array.isArray(data)) throw new Error('Email match RPC returned invalid data.');
+        for (const raw of data) {
+          if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            throw new Error('Email match RPC returned an invalid row.');
+          }
+          const row = raw as Record<string, unknown>;
+          if (typeof row.input_email !== 'string' || typeof row.id !== 'string' ||
+              typeof row.first_name !== 'string' || typeof row.last_name !== 'string') {
+            throw new Error('Email match RPC returned an invalid member row.');
+          }
+          const key = row.input_email.trim().toLowerCase();
+          if (!requested.has(key)) throw new Error('Email match RPC returned an unrequested address.');
+          const next = toMemberOption({
+            id: row.id, first_name: row.first_name, last_name: row.last_name,
+            college: typeof row.college === 'string' ? row.college : null,
+            year: typeof row.year === 'string' ? row.year : null,
+          });
+          const previous = matches.get(key) ?? [];
+          if (!previous.some((member) => member.id === next.id)) {
+            matches.set(key, [...previous, next]);
+          }
         }
       }
       return matches;
