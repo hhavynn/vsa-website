@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { axe } from 'jest-axe';
+import { axe, toHaveNoViolations } from 'jest-axe';
+
+expect.extend(toHaveNoViolations);
 import type { AceFamilyMember } from '../../../types';
 import type { AcePickupEvidenceRow } from '../../../data/repos/aceFamilies';
 import { reviewFamilyYears } from '../../../lib/aceYearReview';
