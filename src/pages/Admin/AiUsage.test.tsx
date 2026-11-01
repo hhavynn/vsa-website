@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
-import AdminAiUsage, { summarizeAiUsage } from './AiUsage';
+import AdminAiUsage, { loggedOutcomePercent, summarizeAiUsage } from './AiUsage';
 import { supabase } from '../../lib/supabase';
 
 jest.mock('../../lib/supabase', () => ({ supabase: { rpc: jest.fn() } }));
@@ -37,6 +37,38 @@ describe('Ask VSA admin aggregate usage report (#240)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Usage report unavailable');
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it('explains the rate-limit and error shares using all recorded attempts, including unknown outcomes', async () => {
+    mount();
+    expect(await screen.findByRole('heading', { name: 'Share of recorded attempts' })).toBeInTheDocument();
+    expect(screen.getByText('17.6%')).toBeInTheDocument(); // 3 / 17 rate-limited
+    expect(screen.getByText('5.9%')).toBeInTheDocument(); // 1 / 17 errors
+    expect(screen.getByText('52.9%')).toBeInTheDocument(); // 9 / 17 answered
+    expect(screen.getByText(/including fallback and unknown outcomes in the denominator/)).toBeInTheDocument();
+    expect(screen.getByText(/cannot identify who was affected/)).toBeInTheDocument();
+    expect(screen.getByText(/does not include diagnostic traces/)).toBeInTheDocument();
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows N/A for shares when no attempts are recorded rather than claiming a zero-percent failure rate', async () => {
+    rpc.mockResolvedValue({ data: [], error: null });
+    mount();
+    expect(await screen.findByText('No recorded Ask VSA attempts in this period.')).toBeInTheDocument();
+    expect(screen.getAllByText('N/A')).toHaveLength(3);
+    expect(screen.queryByText(/Recorded rate-limit rejections warrant/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Recorded errors warrant/)).not.toBeInTheDocument();
+  });
+
+  it('rejects invalid outcome denominators and never fabricates a ratio', () => {
+    expect(loggedOutcomePercent(3, 17)).toBe('17.6%');
+    expect(loggedOutcomePercent(0, 17)).toBe('0.0%');
+    expect(loggedOutcomePercent(0, 0)).toBeNull();
+    expect(loggedOutcomePercent(2, 1)).toBeNull();
+    expect(loggedOutcomePercent(-1, 10)).toBeNull();
+    expect(loggedOutcomePercent(NaN, 10)).toBeNull();
+    expect(loggedOutcomePercent(1, Infinity)).toBeNull();
+    expect(loggedOutcomePercent(0.5, 10)).toBeNull();
   });
 
   it('keeps incomplete status samples visible in totals rather than hiding them', () => {
