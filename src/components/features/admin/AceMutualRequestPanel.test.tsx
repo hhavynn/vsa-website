@@ -122,3 +122,37 @@ it('shows an existing unique Big node as ready without implying a guarantee', ()
   expect(within(preview).queryByRole('list', { name: 'Mutual pairs needing Big tree review' })).not.toBeInTheDocument();
   expect(preview).toHaveTextContent('not chair-approved guarantees');
 });
+
+it('loads a local TSV mutual form without writing drafts or reading contacts into a database', async () => {
+  setup();
+  fireEvent.change(screen.getByLabelText('Pasted mutual request responses'), { target: { value: '' } });
+  const file = new File([PASTE], 'mutual-responses.tsv', { type: 'text/tab-separated-values' });
+  fireEvent.change(screen.getByLabelText('Upload mutual request CSV or TSV'), { target: { files: [file] } });
+  await waitFor(() => expect(screen.getByTestId('mutual-summary')).toHaveTextContent('4 people · 1 Big · 3 Littles'));
+  expect(screen.getByRole('button', { name: 'Add 1 confirmed pair to draft' })).toBeEnabled();
+  expect(mockMatchMembersByEmail).not.toHaveBeenCalled();
+});
+
+it('supports quoted CSV export and resets stale spelling approvals when the file changes', async () => {
+  setup();
+  const possible = section(/Possible matches/);
+  fireEvent.click(within(possible).getByRole('button', { name: 'Same person' }));
+  expect(within(possible).getByRole('button', { name: 'Same person' })).toHaveAttribute('aria-pressed', 'true');
+  const csv = PASTE.split('\n')
+    .map((line) => line.split('\t').map((cell) => `"${cell.replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+  fireEvent.change(screen.getByLabelText('Upload mutual request CSV or TSV'), {
+    target: { files: [new File([csv], 'mutual-responses.CSV', { type: 'text/csv' })] },
+  });
+  await waitFor(() => expect(within(section(/Possible matches/)).getByRole('button', { name: 'Same person' })).toHaveAttribute('aria-pressed', 'false'));
+  expect(screen.getByTestId('mutual-summary')).toHaveTextContent('4 people · 1 Big · 3 Littles');
+});
+
+it('rejects unsupported .xlsx exports without erasing an existing paste', async () => {
+  setup();
+  fireEvent.change(screen.getByLabelText('Upload mutual request CSV or TSV'), {
+    target: { files: [new File(['binary'], 'mutual.xlsx')] },
+  });
+  expect(await screen.findByRole('alert')).toHaveTextContent(/export the Form Responses tab as CSV first/i);
+  expect(screen.getByTestId('mutual-summary')).toHaveTextContent('4 people · 1 Big · 3 Littles');
+});
