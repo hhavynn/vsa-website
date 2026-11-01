@@ -17,6 +17,11 @@ const NOW = new Date('2026-10-02T12:00:00Z');
 
 beforeEach(() => {
   supabaseMock.reset();
+  // HEAD selects request an exact count, so a successful empty response
+  // contains count=0. Unlike row reads, count=null is not a healthy zero.
+  for (const table of ['members', 'academic_terms', 'member_photo_requests', 'data_rights_requests', 'ai_feedback']) {
+    supabaseMock.setDefault(table, { data: null, error: null, count: 0 });
+  }
   (academicTermsRepository.getActiveTerm as jest.Mock).mockResolvedValue({ academic_year_start: 2026 });
 });
 
@@ -129,6 +134,53 @@ describe('adminOverviewRepository.load', () => {
       expect(unavailable).toEqual(['gallery']);
     } finally {
       consoleError.mockRestore();
+    }
+  });
+
+  it('distinguishes a real zero from a missing count in the admin attention queue', async () => {
+    // Defaults above provide exact zero; no row details ever leave the database.
+    const clear = await adminOverviewRepository.load(NOW);
+    expect(clear.attention.photoRequestsPending).toBe(0);
+    expect(clear.attention.dataRightsOpen).toBe(0);
+    expect(clear.attention.aiFeedbackUnresolved).toBe(0);
+    expect(clear.unavailable).not.toContain('photo requests');
+
+    const errors = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      supabaseMock.queueResult('member_photo_requests', { data: null, error: null, count: null });
+      supabaseMock.queueResult('data_rights_requests', { data: null, error: null });
+      supabaseMock.queueResult('ai_feedback', { data: null, error: null, count: -1 });
+      const unknown = await adminOverviewRepository.load(NOW);
+      expect(unknown.attention).toMatchObject({
+        photoRequestsPending: null,
+        dataRightsOpen: null,
+        aiFeedbackUnresolved: null,
+      });
+      expect(unknown.unavailable).toEqual(expect.arrayContaining([
+        'photo requests', 'data rights requests', 'Ask VSA feedback',
+      ]));
+      expect(errors).toHaveBeenCalledTimes(3);
+      expect(errors.mock.calls.map(([message]) => message)).toEqual([
+        'Admin overview: pending photo requests count was missing or invalid',
+        'Admin overview: open data rights requests count was missing or invalid',
+        'Admin overview: unresolved Ask VSA feedback count was missing or invalid',
+      ]);
+    } finally {
+      errors.mockRestore();
+    }
+  });
+
+  it('does not render a missing overall head count as a verified empty roster', async () => {
+    const errors = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      supabaseMock.queueResult('members', { data: null, error: null, count: null });
+      supabaseMock.queueResult('academic_terms', { data: null, error: null, count: 1.5 });
+      const result = await adminOverviewRepository.load(NOW);
+      expect(result.unavailable).toEqual(expect.arrayContaining(['members', 'academic terms']));
+      // Numbers used for rendering are only fallbacks; unavailable accompanies them.
+      expect(errors).toHaveBeenCalledTimes(2);
+    } finally {
+      errors.mockRestore();
     }
   });
 
