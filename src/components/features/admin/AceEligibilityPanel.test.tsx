@@ -176,17 +176,14 @@ it('exports exactly the visible needs-attention rows without emails or IDs', () 
   expect(csv).not.toContain('m-big');
 });
 
-it('disables local export on an eligibility read error or a refresh', () => {
+it('disables local export while eligibility is refreshing', () => {
   const policy = { littleMin: 2, bigMin: 1, eventIds: ['e1', 'e2'] };
   const result = computeAceEligibility({
     drafts: [{ id: 'd1', little_name: 'Synthetic Short', little_member_id: 'm1', big_ace_member_id: null }],
     nodes: [], policy, events, now: new Date(checkedAt), attendance: new Map(),
   });
   const entry = { policy, savedEventIds: ['e1', 'e2'], readiness, result, loading: true, error: null };
-  const { rerender } = mount(cycle('draft', [2, 1]), entry);
+  mount(cycle('draft', [2, 1]), entry);
   expect(screen.getByRole('button', { name: 'Download visible eligibility CSV' })).toBeDisabled();
-  // A failed refresh cannot export a stale Meets/Short snapshot.
-  // Export is still disabled when the error is available.
   expect(downloadCsv).not.toHaveBeenCalled();
-  void rerender;
 });
