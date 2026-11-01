@@ -131,7 +131,7 @@ the name).
 - Name-only matches are never auto-linked on import. Use **Link N obvious member
   matches** (unique exact names only) or the per-row picker.
 
-- Both general-form and mutual imports re-read the current drafts before writing. An existing Little is skipped by linked member ID or normalized name; ambiguous collisions with distinct linked members and ambiguous duplicates inside the incoming paste hold the entire batch for manual review, without writing anything. Exact repeat rows with the same linked member are deduplicated. This client-side guard is not a persistent intake system (#644/#661) or a replacement for server-side publication preflight.
+- Both general-form and mutual imports re-read the current drafts before writing. An existing Little is skipped by linked member ID or normalized name; a linked applicant whose name matches a different or unlinked draft, and ambiguous duplicates inside the incoming paste hold the entire batch for manual review, without writing anything. Exact repeat rows with the same linked member are deduplicated. This client-side guard is not a persistent intake system (#644/#661) or a replacement for server-side publication preflight.
 
 ## Checking mutual requests
 
