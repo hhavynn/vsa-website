@@ -5,6 +5,7 @@ import { aceAssignmentsRepository } from '../../../data/repos/aceAssignments';
 import type { AceEligibilityState } from '../../../hooks/useAceEligibility';
 import type { ReadinessEvent } from '../../../data/repos/attendanceReadiness';
 import { computeAceEligibility } from '../../../lib/aceEligibility';
+import { downloadCsv } from '../../../lib/housePlacementExport';
 import type { AceAssignmentCycle } from '../../../types';
 
 jest.mock('../../../data/repos/aceAssignments', () => ({
@@ -12,6 +13,7 @@ jest.mock('../../../data/repos/aceAssignments', () => ({
   aceAssignmentsRepository: { saveEligibilityPolicy: jest.fn() },
 }));
 jest.mock('../../../data/repos/adminActivity', () => ({ logAdminActivity: jest.fn() }));
+jest.mock('../../../lib/housePlacementExport', () => ({ downloadCsv: jest.fn() }));
 
 // Synthetic people and events only.
 const checkedAt = '2026-10-30T12:00:00Z';
@@ -147,4 +149,44 @@ it('warns before saving a minimum that no one could meet', () => {
   mount(cycle('draft'), { policy: null, savedEventIds: [], readiness, result: null, loading: false, error: null });
   fireEvent.click(screen.getByRole('checkbox', { name: /Sample GBM/ }));
   expect(screen.getByText(/Only 1 qualifying event is selected, fewer than the Little and Big minimum/)).toBeInTheDocument();
+});
+
+it('exports exactly the visible needs-attention rows without emails or IDs', () => {
+  const policy = { littleMin: 2, bigMin: 1, eventIds: ['e1', 'e2'] };
+  const result = computeAceEligibility({
+    drafts: [
+      { id: 'd1', little_name: 'Synthetic Complete', little_member_id: 'm1', big_ace_member_id: 'n1' },
+      { id: 'd2', little_name: 'Synthetic Short', little_member_id: 'm2', big_ace_member_id: 'n1' },
+      { id: 'd3', little_name: 'Synthetic Unknown', little_member_id: null, big_ace_member_id: null },
+    ],
+    nodes: [{ id: 'n1', name: 'Synthetic Big', memberId: 'm-big' }],
+    policy, events, now: new Date(checkedAt),
+    attendance: new Map([['m1', new Set(['e1', 'e2'])], ['m2', new Set(['e1'])], ['m-big', new Set(['e1'])]]),
+  });
+  mount(cycle('draft', [2, 1]), { policy, savedEventIds: ['e1', 'e2'], readiness, result, loading: false, error: null });
+  fireEvent.click(screen.getByRole('button', { name: 'Needs attention (2)' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Download visible eligibility CSV' }));
+  expect(downloadCsv).toHaveBeenCalledTimes(1);
+  const [csv, filename] = (downloadCsv as jest.Mock).mock.calls[0] as [string, string];
+  expect(filename).toBe('ace-eligibility-2026-filtered.csv');
+  expect(csv).toContain('Synthetic Short');
+  expect(csv).toContain('Synthetic Unknown');
+  expect(csv).not.toContain('Synthetic Complete');
+  expect(csv).not.toContain('Synthetic Big');
+  expect(csv).not.toContain('m-big');
+});
+
+it('disables local export on an eligibility read error or a refresh', () => {
+  const policy = { littleMin: 2, bigMin: 1, eventIds: ['e1', 'e2'] };
+  const result = computeAceEligibility({
+    drafts: [{ id: 'd1', little_name: 'Synthetic Short', little_member_id: 'm1', big_ace_member_id: null }],
+    nodes: [], policy, events, now: new Date(checkedAt), attendance: new Map(),
+  });
+  const entry = { policy, savedEventIds: ['e1', 'e2'], readiness, result, loading: true, error: null };
+  const { rerender } = mount(cycle('draft', [2, 1]), entry);
+  expect(screen.getByRole('button', { name: 'Download visible eligibility CSV' })).toBeDisabled();
+  // A failed refresh cannot export a stale Meets/Short snapshot.
+  // Export is still disabled when the error is available.
+  expect(downloadCsv).not.toHaveBeenCalled();
+  void rerender;
 });
