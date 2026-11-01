@@ -130,9 +130,9 @@ describe('draft cycle', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add 2 to draft' }));
     await waitFor(() => expect(callsOf('ace_assignment_drafts', 'insert')).toHaveLength(1));
     const rows = callsOf('ace_assignment_drafts', 'insert')[0].args[0];
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ little_name: 'New Person', big_ace_member_id: 'big-emily' });
-    expect(rows[0].little_name).not.toBe('John Nguyen');
+    expect(rows).toEqual([
+      expect.objectContaining({ little_name: 'New Person', big_ace_member_id: 'big-emily' }),
+    ]);
   });
 
   it('locking changes only the cycle status and publishes nothing', async () => {
