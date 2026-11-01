@@ -73,3 +73,48 @@ describe('cabinetYearsRepository current behavior (#291)', () => {
     expect(supabaseMock.queriesFor('cabinet_years')).toHaveLength(1);
   });
 });
+
+
+describe('cabinetYearsRepository: write failure boundaries (#291)', () => {
+  it('does not report a year creation when the insert is denied', async () => {
+    supabaseMock.queueResult('cabinet_years', {
+      data: null, error: postgrestError('synthetic insert denied', '42501'),
+    });
+    await expect(cabinetYearsRepository.createYear({
+      start_year: 2026,
+    } as Parameters<typeof cabinetYearsRepository.createYear>[0])).rejects.toMatchObject({
+      name: 'DatabaseError', code: '42501',
+    });
+    const queries = supabaseMock.queriesFor('cabinet_years');
+    expect(queries).toHaveLength(1);
+    expect(queries[0].calls.some((call) => call.method === 'insert')).toBe(true);
+  });
+
+  it('does not report a year update when the scoped update is denied', async () => {
+    supabaseMock.queueResult('cabinet_years', {
+      data: null, error: postgrestError('synthetic update denied', '42501'),
+    });
+    await expect(cabinetYearsRepository.updateYear('synthetic-year', {
+      start_year: 2026,
+    })).rejects.toMatchObject({ name: 'DatabaseError', code: '42501' });
+    const queries = supabaseMock.queriesFor('cabinet_years');
+    expect(queries).toHaveLength(1);
+    expect(supabaseMock.filtersFor('cabinet_years')).toContainEqual(['id', 'synthetic-year']);
+    expect(queries[0].calls.some((call) => call.method === 'update')).toBe(true);
+  });
+
+  it('surfaces the second activation failure without claiming both writes were atomic', async () => {
+    supabaseMock
+      .queueResult('cabinet_years', { data: null, error: null })
+      .queueResult('cabinet_years', {
+        data: null, error: postgrestError('synthetic activation denied', '42501'),
+      });
+    await expect(cabinetYearsRepository.setActiveYear('synthetic-year'))
+      .rejects.toMatchObject({ name: 'DatabaseError', code: '42501' });
+    const queries = supabaseMock.queriesFor('cabinet_years');
+    expect(queries).toHaveLength(2);
+    expect(queries[0].calls).toContainEqual({ method: 'neq', args: ['id', 'synthetic-year'] });
+    expect(queries[1].calls).toContainEqual({ method: 'eq', args: ['id', 'synthetic-year'] });
+    // Characterization, not a fix: the repository does not roll back the first request.
+  });
+});

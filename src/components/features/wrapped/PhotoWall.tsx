@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { GalleryAlbum } from '../../../data/repos/gallery';
-import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
+import { OptimizedImage } from '../../common/OptimizedImage';
 import { formatDateOnly } from '../../../lib/dateOnly';
 
 const ROTATIONS = [
@@ -49,11 +49,20 @@ export function PhotoWall({ albums }: Props) {
               to="/gallery"
               className={`scrapbook-photo scrapbook-hover-tilt block break-inside-avoid overflow-hidden p-2 pb-3 transition-transform ${ROTATIONS[index % ROTATIONS.length]} ${TAPES[index % TAPES.length]}`}
             >
-              <img
-                src={getSupabaseImageUrl(src, { width: 480 }) || src}
+              <OptimizedImage
+                src={src}
                 alt={album.title}
+                width={480}
+                height={360}
+                widths={[240, 480]}
+                sizes="(min-width: 640px) 33vw, 50vw"
+                quality={72}
                 className="w-full rounded-[3px] object-cover"
-                loading="lazy"
+                fallback={
+                  <div className="flex aspect-[4/3] items-center justify-center rounded-[3px] bg-[var(--color-surface2)] px-3 text-center font-sans text-xs text-text-muted">
+                    Photo unavailable
+                  </div>
+                }
               />
               <div className="mt-2 px-1">
                 <div className="truncate font-sans text-[12.5px] font-bold text-text-primary">{album.title}</div>

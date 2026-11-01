@@ -18,7 +18,7 @@ import { usePublishedLeaderboardRoles } from '../hooks/usePublishedLeaderboardRo
 import { usePublishedBoardRoster } from '../hooks/usePublishedBoardRoster';
 import { usePublishedMemberHouses } from '../hooks/usePublishedMemberHouses';
 import type { PublicMemberHouse } from '../data/repos/houseMemberships';
-import { rankPublishedCohort, type LeaderboardCohort } from '../lib/memberCohorts';
+import { rankPublishedCohort } from '../lib/memberCohorts';
 import { relatedPublicPath, rolesForSelectedYear, type PublicMemberRole } from '../lib/memberRoles';
 import { formatAcademicYear } from '../lib/academicTerms';
 import { houseSlugFromKey } from '../utils/houseSlug';
@@ -522,7 +522,6 @@ export function Leaderboard() {
     searchParams.get('view') === 'houses' ? 'houses' : 'individual'
   );
   const [activeTab, setActiveTab] = useState<'points' | 'events'>(searchParams.get('metric') === 'events' ? 'events' : 'points');
-  const [cohort, setCohort] = useState<LeaderboardCohort>(searchParams.get('cohort') === 'board' ? 'board' : 'members');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<SelectedYear | null>(null);
   const [hasUserSelectedYear, setHasUserSelectedYear] = useState(false);
@@ -550,8 +549,6 @@ export function Leaderboard() {
   );
 
   useEffect(() => {
-    const selectedCohort = searchParams.get('cohort') === 'board' ? 'board' : 'members';
-    setCohort(selectedCohort);
     setActiveTab(searchParams.get('metric') === 'events' ? 'events' : 'points');
     const view = searchParams.get('view');
     if (view === 'houses' && activeView !== 'houses') {
@@ -627,11 +624,9 @@ export function Leaderboard() {
   const handleSelectedYearChange = (value: string) => {
     setHasUserSelectedYear(true);
     setSelectedYear(value === 'all' ? 'all' : Number(value));
-    if (value === 'all') setCohort('members');
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       next.set('year', value);
-      if (value === 'all') next.delete('cohort');
       return next;
     }, { replace: true });
   };
@@ -644,27 +639,16 @@ export function Leaderboard() {
       return next;
     }, { replace: true });
   };
-  const selectCohort = (nextCohort: LeaderboardCohort) => {
-    setCohort(nextCohort);
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (selectedYear !== null) next.set('year', String(selectedYear));
-      if (activeTab === 'events') next.set('metric', 'events');
-      if (nextCohort === 'board') next.set('cohort', 'board');
-      else next.delete('cohort');
-      return next;
-    }, { replace: true });
-  };
-
   const boardRoster = usePublishedBoardRoster(selectedYear);
   const cohortAvailable = typeof selectedYear === 'number' && !boardRoster.isLoading && !boardRoster.isError && !!boardRoster.data;
   const boardRosterUnavailable = typeof selectedYear === 'number' && !boardRoster.isLoading && !cohortAvailable;
   const unsplitEntries = activeTab === 'points' ? byPoints : byEvents;
-  // A Board roster outage displays an explicitly unsplit fallback. It NEVER
-  // claims everyone is a general member. All-Time is deliberately unsplit.
+  // Board members don't sign into events, so the public standings list members
+  // only. A Board roster outage displays an explicitly unsplit fallback. It
+  // NEVER claims everyone is a general member. All-Time is deliberately unsplit.
   const entries = cohortAvailable
-    ? rankPublishedCohort(members ?? [], boardRoster.data as Set<string>, cohort, activeTab)
-    : cohort === 'board' && typeof selectedYear === 'number' ? [] : unsplitEntries;
+    ? rankPublishedCohort(members ?? [], boardRoster.data as Set<string>, 'members', activeTab)
+    : unsplitEntries;
   const searchTerm = searchQuery.trim().toLowerCase();
   const filteredEntries = entries.filter(
     (entry) =>
@@ -674,7 +658,7 @@ export function Leaderboard() {
       (entry.year ?? '').toLowerCase().includes(searchTerm)
   );
 
-  const resetKey = `${activeTab}|${searchQuery}|${selectedYear}|${cohort}`;
+  const resetKey = `${activeTab}|${searchQuery}|${selectedYear}`;
   const {
     page,
     totalPages,
@@ -687,9 +671,9 @@ export function Leaderboard() {
   } = usePagination(filteredEntries, { defaultRowsPerPage: 25, resetKey });
 
   const top3 = filteredEntries.slice(0, 3);
-  // Skip the podium when a tie spills past 3rd place: there's no fair way to
-  // pick which tied members get the last podium spots.
-  const showPodium = top3.length >= 3 && top3.every((entry) => isWithinTop(entry, 3));
+  // Always stage the podium once there are three members. When a tie reaches
+  // past 3rd place, PodiumIndividual says how many tied members are not shown.
+  const showPodium = top3.length >= 3;
 
   // One bounded role read for the actual page, any visible podium members and
   // the opened profile. This never joins on display name or changes rankings.
@@ -796,27 +780,6 @@ export function Leaderboard() {
               </div>
             )}
 
-            {/* Cohorts depend only on verified published Cabinet member IDs. */}
-            {activeView === 'individual' && typeof selectedYear === 'number' && (
-              <div role="group" aria-label="Leaderboard member category" className="flex flex-wrap gap-2">
-                {(['members', 'board'] as const).map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    aria-pressed={cohort === option}
-                    onClick={() => selectCohort(option)}
-                    className={`chip-check min-h-11 rounded-full border-2 px-4 py-1.5 font-mono text-xs font-bold transition-all ${
-                      cohort === option
-                        ? 'border-[var(--accent)] bg-[var(--accent)] text-[color:var(--color-on-accent)] shadow-sm'
-                        : 'border-[var(--border)] bg-[var(--surface2)] text-[var(--text3)] hover:border-[var(--accent)]'
-                    }`}
-                  >
-                    {option === 'board' ? 'BOARD' : 'MEMBERS'}
-                  </button>
-                ))}
-              </div>
-            )}
-
             {/* Year Selector */}
             <div className="ml-auto w-full max-w-[180px] sm:w-auto">
               <select
@@ -876,13 +839,8 @@ export function Leaderboard() {
               )}
               {boardRosterUnavailable && (
                 <p role="status" className="mb-3 font-sans text-xs text-text-secondary">
-                  Board roster is unavailable for this academic year. {cohort === 'board'
-                    ? 'Board rankings cannot be verified right now.'
-                    : 'Showing unsegmented standings; no member is being excluded based on an unknown role.'}
+                  Board roster is unavailable for this academic year. Showing unsegmented standings; no member is being excluded based on an unknown role.
                 </p>
-              )}
-              {selectedYear === 'all' && (
-                <p className="mb-3 font-sans text-xs text-text-secondary">All-Time combines everyone. Select an academic year to see separate Members and Board rankings.</p>
               )}
               {housesUnavailable && typeof selectedYear === 'number' && (
                 <p role="status" className="mb-3 font-sans text-xs text-text-secondary">Revealed House badges are temporarily unavailable. Rankings and verified roles are unaffected.</p>
@@ -909,9 +867,7 @@ export function Leaderboard() {
                     />
                   ) : (
                     <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                      {cohort === 'board' && typeof selectedYear === 'number' && !cohortAvailable
-                        ? 'Board rankings are unavailable until a verified published roster can be read.'
-                        : searchTerm ? 'No matching members found in this category.' : `No activity recorded for ${selectedYearLabel} in this category yet.`}
+                      {searchTerm ? 'No matching members found.' : `No activity recorded for ${selectedYearLabel} yet.`}
                     </p>
                   )}
                 </div>
@@ -919,7 +875,7 @@ export function Leaderboard() {
                 <div className="space-y-3">
                   {/* The scrapbook card layout needs flexible widths, so expose one
                       ARIA table instead of maintaining a separate hidden table. */}
-                  <div role="table" aria-label={(cohortAvailable ? (cohort === 'board' ? 'Board' : 'Members') : 'Full member') + ' standings for ' + selectedYearLabel}>
+                  <div role="table" aria-label={(cohortAvailable ? 'Members' : 'Full member') + ' standings for ' + selectedYearLabel}>
                     <div role="rowgroup" className="sr-only">
                       <div role="row">
                         <span role="columnheader">Rank</span>
@@ -1139,6 +1095,10 @@ function PodiumIndividual({
   // so the full standings start on the first screen; md+ keeps the staged cards.
   const compactRows = [cards[1], cards[0], cards[2]].filter((card) => card.entry);
 
+  // A tie that runs past the last podium slot: those members share the rank but
+  // don't fit on the podium, so say so rather than silently picking among them.
+  const tiedBeyondPodium = third ? third.rank + third.tiedCount - 1 - 3 : 0;
+
   return (
     <div className="mt-6">
       <div className="mb-4 flex items-center gap-3 px-2 md:mb-8">
@@ -1314,6 +1274,12 @@ function PodiumIndividual({
           );
         })}
       </div>
+
+      {tiedBeyondPodium > 0 && third && (
+        <p className="mt-4 px-2 font-mono text-[11px] font-semibold text-[var(--text3)]">
+          {tiedBeyondPodium.toLocaleString()} more {tiedBeyondPodium === 1 ? 'member is' : 'members are'} tied for {formatRank(third)} — see Full Standings.
+        </p>
+      )}
     </div>
   );
 }

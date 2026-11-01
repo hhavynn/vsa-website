@@ -94,3 +94,78 @@ describe('eventRecapsRepository boundary characterization (#291)', () => {
     });
   });
 });
+
+
+describe('eventRecapsRepository: untested error and empty boundaries (#291)', () => {
+  it('returns an empty status list for a successful null result', async () => {
+    supabaseMock.queueResult('event_recaps', { data: null, error: null });
+    await expect(eventRecapsRepository.getRecapEventIds(['fictional-event']))
+      .resolves.toEqual([]);
+    expect(supabaseMock.queriesFor('event_recaps')[0].calls).toContainEqual({
+      method: 'select', args: ['event_id'],
+    });
+  });
+
+  it('preserves read permission errors in the recap-status batch', async () => {
+    supabaseMock.queueResult('event_recaps', {
+      data: null, error: postgrestError('synthetic permission denied', '42501'),
+    });
+    await expect(eventRecapsRepository.getRecapEventIds(['fictional-event']))
+      .rejects.toMatchObject({ name: 'DatabaseError', code: '42501' });
+  });
+
+  it('preserves a denied create rather than pretending a private recap was saved', async () => {
+    supabaseMock.queueResult('event_recaps', {
+      data: null, error: postgrestError('synthetic insert denied', '42501'),
+    });
+    await expect(eventRecapsRepository.saveRecapForEvent('fictional-event', input, 'fictional-admin'))
+      .rejects.toMatchObject({ name: 'DatabaseError', code: '42501' });
+    const calls = supabaseMock.queriesFor('event_recaps')[0].calls;
+    expect(calls.some((call) => call.method === 'insert')).toBe(true);
+    expect(calls.some((call) => call.method === 'update')).toBe(false);
+  });
+
+  it('rejects an empty successful update instead of claiming a recap was changed', async () => {
+    supabaseMock.queueResult('event_recaps', { data: null, error: null });
+    await expect(eventRecapsRepository.saveRecapForEvent(
+      'fictional-event', input, 'fictional-admin', 'fictional-recap',
+    )).rejects.toMatchObject({
+      name: 'DatabaseError', message: 'Failed to update event recap',
+    });
+    const calls = supabaseMock.queriesFor('event_recaps')[0].calls;
+    expect(calls).toContainEqual({ method: 'eq', args: ['id', 'fictional-recap'] });
+    expect(calls.some((call) => call.method === 'insert')).toBe(false);
+  });
+
+  it('preserves denied-update errors without substituting a generic empty-data error', async () => {
+    supabaseMock.queueResult('event_recaps', {
+      data: null, error: postgrestError('synthetic update denied', '42501'),
+    });
+    await expect(eventRecapsRepository.saveRecapForEvent(
+      'fictional-event', input, 'fictional-admin', 'fictional-recap',
+    )).rejects.toMatchObject({ name: 'DatabaseError', code: '42501' });
+  });
+
+  it('trims new private text and preserves hidden/publication fields on update', async () => {
+    const updated = { id: 'fictional-recap', is_public_highlight_published: false };
+    supabaseMock.queueResult('event_recaps', { data: updated, error: null });
+    await expect(eventRecapsRepository.saveRecapForEvent(
+      'fictional-event', input, 'fictional-admin', 'fictional-recap',
+    )).resolves.toEqual(updated);
+    const calls = supabaseMock.queriesFor('event_recaps')[0].calls;
+    expect(calls).toContainEqual({
+      method: 'update',
+      args: [expect.objectContaining({
+        owner_names: 'Board Team',
+        attendance_notes: null,
+        public_highlight: 'A community workshop',
+        is_public_highlight_published: false,
+        updated_by: 'fictional-admin',
+        updated_at: expect.any(String),
+      })],
+    });
+    // Update targets only the current recap; the event_id is not used as a write filter.
+    expect(calls).toContainEqual({ method: 'eq', args: ['id', 'fictional-recap'] });
+    expect(calls).not.toContainEqual({ method: 'eq', args: ['event_id', 'fictional-event'] });
+  });
+});
