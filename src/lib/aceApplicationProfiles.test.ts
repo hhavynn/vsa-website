@@ -224,15 +224,41 @@ describe('parseApplicationProfiles', () => {
     expect(result.profiles[0].year).toEqual({ text: '2nd Year Transfer', value: 2, transfer: true });
   });
 
-  it('keeps the latest submission per email across roles, then drops a row naming both roles', () => {
-    const switched = parse(big('Ben Ho', '', 'bho'), little('Ben Ho', '', 'bho'));
-    expect(switched.repeatsReplaced).toBe(1);
-    expect(switched.profiles.map((p) => p.role)).toEqual(['little']);
+  it('holds conflicting Big/Little submissions out of pairing, even if the newest answer looks valid', () => {
+    const switched = parse(
+      big('Ben Ho', '', 'BHO@ucsd.edu'),
+      little('Ben Ho', '', 'bho'),
+      little('Cy Do', '', 'cdo'),
+    );
+    expect(switched.repeatsReplaced).toBe(0);
+    expect(switched.profiles.map((p) => p.fullName)).toEqual(['Cy Do']);
+    expect(switched.warnings).toEqual([
+      expect.stringContaining('1 applicant identity has both Big and Little submissions'),
+    ]);
+    expect(switched.warnings[0]).toContain('Ben Ho');
+    expect(JSON.stringify(switched.warnings)).not.toContain('bho@ucsd.edu');
 
+    const reversed = parse(little('Ben Ho', '', 'bho'), big('Ben Ho', '', 'bho'));
+    expect(reversed.profiles).toEqual([]);
+    expect(reversed.warnings).toHaveLength(1);
+  });
+
+  it('keeps previous behavior for an unreadable newest role, without guessing it', () => {
     const both = parse(little('Ben Ho', '', 'bho'), { ...little('Ben Ho', '', 'bho'), 'Are You Applying to be an Anh/Chi (Big) or Em (Little)? ': 'Big or Little' });
     expect(both.repeatsReplaced).toBe(1);
     expect(both.profiles).toHaveLength(0);
     expect(both.skipped).toBe(1);
+  });
+
+  it('does not confuse two distinct emails or consistent-role repeat submissions', () => {
+    const result = parse(
+      little('Ben Ho', '', 'bho'),
+      big('Ben Ho', '', 'bho-other'),
+      little('Ben Ho', '', 'bho'),
+    );
+    expect(result.profiles).toHaveLength(2);
+    expect(result.repeatsReplaced).toBe(1);
+    expect(result.warnings).toEqual([]);
   });
 
   it('skips rows with no name or role, and rejects a paste that is not the application', () => {
