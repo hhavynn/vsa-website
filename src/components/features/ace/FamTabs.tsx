@@ -11,6 +11,7 @@ import { generationDepth, getDisplayFamName, patternForFamily } from '../../../l
 import { getFamIconUrl, resolveFamHeads } from '../../../lib/aceFamRoster';
 import { useMemberAvatars } from '../../../hooks/useMemberAvatars';
 import { FamAccent, FamCover } from './FamCover';
+import { OptimizedImage } from '../../common/OptimizedImage';
 
 export interface FamTabEntry {
   family: AceFamily;
@@ -170,7 +171,16 @@ export function FamTabs({ fams, selectedId, onSelect, onOpenSheet }: FamTabsProp
                   onClick={() => onSelect(f.family.id)}
                   type="button"
                 >
-                  {tabIconUrl && <img className="ace-famtabs-tab-icon" src={tabIconUrl} alt="" loading="lazy" decoding="async" />}
+                  {tabIconUrl && (
+                    <OptimizedImage
+                      src={tabIconUrl}
+                      alt=""
+                      width={20}
+                      height={20}
+                      sizes="20px"
+                      className="ace-famtabs-tab-icon"
+                    />
+                  )}
                   {name}
                   {f.viet && <span className="ace-famtabs-tab-viet">{f.viet}</span>}
                 </button>
@@ -258,7 +268,14 @@ function FamPanel({ entry, onOpenSheet }: { entry: FamTabEntry; onOpenSheet: (id
       {/* Panel header */}
       <div className="ace-famtabs-panel-head">
         {iconUrl ? (
-          <img className="ace-famtabs-icon" src={iconUrl} alt={`${displayName} fam icon`} decoding="async" />
+          <OptimizedImage
+              src={iconUrl}
+              alt={`${displayName} fam icon`}
+              width={72}
+              height={72}
+              sizes="72px"
+              className="ace-famtabs-icon"
+            />
         ) : (
           <div className="ace-famtabs-cover">
             <FamCover
@@ -365,7 +382,16 @@ function FamHeadCard({ name, photoUrl, roleLabel, accent }: FamHeadCardProps) {
     <div className="ace-famhead-card">
       <div className={`ace-famhead-avatar ace-famhead-avatar-${accent} ${!name ? 'is-placeholder' : ''}`}>
         {photoUrl ? (
-          <img src={photoUrl} alt={name ?? ''} className="ace-famhead-photo" />
+          <OptimizedImage
+              src={photoUrl}
+              alt={name ?? ''}
+              width={46}
+              height={46}
+              widths={[46, 92]}
+              sizes="46px"
+              className="ace-famhead-photo"
+              fallback={initials ? <span>{initials}</span> : null}
+            />
         ) : initials ? (
           <span>{initials}</span>
         ) : (

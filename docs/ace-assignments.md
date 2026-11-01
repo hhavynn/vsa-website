@@ -15,6 +15,8 @@ Drafts never touch `ace_family_members` until **Publish**.
 
 The preflight panel shows before Lock and again before Publish.
 
+The ACE workspace loads **every draft row** in deterministic pages rather than relying on PostgREST's default first page. A later-page error, repeated row, or row from the wrong cycle fails the entire private snapshot instead of showing partial preflight, capacity, or publish counts. Refresh the workspace and resolve the data error before proceeding.
+
 **Blocks Publish:** an unassigned Little, a Big that no longer exists, the same
 Little twice (case, spacing and diacritics ignored), one canonical member
 assigned twice, a draft that already created a node, a Little already on the tree
@@ -74,8 +76,10 @@ Per cycle, the ACE Chair saves:
   toward meeting a minimum. Someone who already meets it on verified events is
   Meets. Someone who could not reach it even if every unverified event counted
   is Short.
-- A saved event that stops qualifying (unpublished, moved to the future, or no
-  longer in the year) is listed and ignored, and is removed on the next save.
+- A saved event that stops qualifying (unpublished, moved to the future, has
+  a missing/invalid event date, or no longer belongs to the year) is listed
+  and ignored, and is removed on the next save. Malformed dates are **never**
+  treated as completed events or as verified attendance evidence.
 - The panel shows counts at the top and filters by status, role and name.
 - **Needs attention** shows Short, Unknown, and Needs identity review together. **Download visible eligibility CSV** exports exactly the currently filtered rows as a private local download, with saved-year/snapshot context and no emails, IDs or application answers. It is disabled while refreshing or if source evidence is unavailable. The Chair must keep the file private; it is not a decision or a verified copy of self-reports.
 
@@ -175,9 +179,44 @@ fixed.
 - Littles attach to rows by the linked member's email (looked up once, never
   stored), then by normalized name or preferred + last name; Bigs attach to
   tree nodes by normalized name. Ambiguous matches are left alone.
-- Checks (gender preference, capacity, year preference, substance comfort,
-  do-not-pair) and the suggestion score are **advisory**. They never block
-  Lock or Publish. Picking a suggestion just sets the Big like the picker does.
+- Pair checks (gender preference, capacity, year preference, substance comfort,
+  do-not-pair) are **advisory**: they do not block Lock or Publish, so the Chair
+  must review any warnings before making a decision. Suggestions are shown
+  only when there is at least one meaningful non-gender shared-answer reason;
+  the UI shows those reasons, **not** a numeric fit/compatibility rating.
+  Gender agreement is not a suggestion score bonus. Picking a suggestion just
+  sets the Big like the regular picker does, and still requires an explicit click.
+
+## Big capacity foundation (#646/#663 — not connected to live intake)
+
+`src/lib/aceCapacity.ts` is the **shared, pure calculation** for reviewed
+Big capacity and guaranteed mutual Littles. It does not create a second
+capacity planner, a matching decision, an orphan draft, a tree writer, an RPC
+or a database migration. **No new admin capacity UI or production behavior
+is enabled by this change.**
+
+A Chair must explicitly review a Big's maximum and, when they have mutual
+guarantees, choose whether it means **total Littles including mutual** or
+**additional Littles beyond mutual**. Until a maximum is reviewed,
+`needsCapacity` is set and no additional seat is authorized, so a `remaining`
+of 0 or below is not a real limit. A reviewed maximum with no interpretation
+gives `remaining = null`. A conditional/ranged form answer cannot authorize a
+seat count.
+
+Within the same academic cycle, each canonical Little participant ID counts
+once regardless of whether they submitted mutual, regular or both forms.
+Approved mutual guarantees are reserved first; confirmed and tentative
+regular pairings consume the unreserved seats; provisional requests are
+display-only; historical children do **not** consume this cycle's capacity.
+A withdrawn Big or overloaded plan requires explicit review, never an
+automatic deletion of a guaranteed pairing. Orphans stay in the private
+intake workflow, **not** `ace_assignment_drafts`.
+
+**Still blocked:** #644 participant storage and review status, #646 private
+capacity/orphan RPCs and panel, #662 verified guarantee approvals, #663
+interpretation UI, #647 matching integrations. The older
+`aceApplicationProfiles.ts` free-text capacity advisory is unchanged and
+must **not** be treated as a reviewed capacity.
 
 ## Database
 

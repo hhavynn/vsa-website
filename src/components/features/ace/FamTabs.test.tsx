@@ -111,3 +111,53 @@ describe('FamTabs', () => {
     expect(selectedTab()).toHaveAttribute('aria-controls', panel.id);
   });
 });
+
+describe('ACE Fam image delivery (#303)', () => {
+  it('reserves fixed intrinsic sizes and lazy loads decorative tabs and selected fam icon', () => {
+    render(<Harness />);
+    const tabs = screen.getAllByRole('tab');
+    const icons = tabs.map((tab) => within(tab).getByAltText(''));
+    for (const icon of icons) {
+      expect(icon).toHaveAttribute('alt', '');
+      expect(icon).toHaveAttribute('width', '20');
+      expect(icon).toHaveAttribute('height', '20');
+      expect(icon).toHaveAttribute('loading', 'lazy');
+      expect(icon).toHaveAttribute('decoding', 'async');
+    }
+    const panelIcon = screen.getByRole('img', { name: 'Sweatpants fam icon' });
+    expect(panelIcon).toHaveAttribute('width', '72');
+    expect(panelIcon).toHaveAttribute('height', '72');
+    expect(panelIcon).toHaveAttribute('loading', 'lazy');
+    fireEvent.click(screen.getByRole('tab', { name: 'Sunshine' }));
+    expect(screen.getByRole('img', { name: 'Sunshine fam icon' })).toHaveAttribute('width', '72');
+  });
+
+  it('uses a correctly sized avatar and restores initials if an approved head photo fails', () => {
+    const leader = {
+      id: 'fictional-head',
+      family_id: FAMS[0].family.id,
+      name: 'Ada Fictional',
+      role_label: 'Fam Head',
+      photo_url: '/images/fictional-ace-head.webp',
+      parent_member_id: null,
+      member_id: null,
+      display_order: 0,
+      is_published: true,
+      created_at: '',
+      updated_at: '',
+    };
+    render(<FamTabs
+      fams={[{ ...FAMS[0], members: [leader] }]}
+      selectedId={FAMS[0].family.id}
+      onSelect={() => {}}
+      onOpenSheet={() => {}}
+    />);
+    const photo = screen.getByRole('img', { name: 'Ada Fictional' });
+    expect(photo).toHaveAttribute('width', '46');
+    expect(photo).toHaveAttribute('height', '46');
+    expect(photo).toHaveAttribute('loading', 'lazy');
+    fireEvent.error(photo);
+    expect(screen.queryByRole('img', { name: 'Ada Fictional' })).not.toBeInTheDocument();
+    expect(screen.getByText('AF')).toBeInTheDocument();
+  });
+});
