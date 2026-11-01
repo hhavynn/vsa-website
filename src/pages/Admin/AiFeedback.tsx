@@ -14,6 +14,8 @@ export default function AdminAiFeedback() {
   const dirtyNotes = useRef<Set<string>>(new Set());
   const [savingNoteId, setSavingNoteId] = useState<string | null>(null);
   const [noteError, setNoteError] = useState<string | null>(null);
+  const [savingResolutionId, setSavingResolutionId] = useState<string | null>(null);
+  const [resolutionErrorId, setResolutionErrorId] = useState<string | null>(null);
   
   const [statusParam, setStatusFilter] = useUrlFilter(['unresolved', 'resolved', 'all'], 'filter', 'unresolved');
   const statusFilter = statusParam as AiFeedbackFilters['status'];
@@ -57,12 +59,24 @@ export default function AdminAiFeedback() {
     };
   }, [statusFilter, ratingFilter]);
 
-  async function handleMarkResolved(id: string) {
+  async function handleSetResolution(id: string, resolve: boolean) {
+    if (savingResolutionId || savingNoteId || dirtyNotes.current.has(id)) return;
+    setSavingResolutionId(id);
+    setResolutionErrorId(null);
     try {
-      await aiFeedbackRepository.markResolved(id);
-      setFeedback(current => current.map(item => item.id === id ? { ...item, resolved_at: new Date().toISOString() } : item));
-    } catch (err) {
-      alert('Failed to mark resolved.');
+      if (resolve) await aiFeedbackRepository.markResolved(id);
+      else await aiFeedbackRepository.markUnresolved(id);
+      const resolvedAt = resolve ? new Date().toISOString() : null;
+      setFeedback(current => current
+        .map(item => item.id === id ? { ...item, resolved_at: resolvedAt } : item)
+        // Changing a status should immediately remove the item from the
+        // active filtered inbox, not leave a stale action on the screen.
+        .filter(item => statusFilter === 'all' || (statusFilter === 'resolved' ? !!item.resolved_at : !item.resolved_at)));
+    } catch {
+      // A rejected write must keep the visible status unchanged and retryable.
+      setResolutionErrorId(id);
+    } finally {
+      setSavingResolutionId(null);
     }
   }
 
@@ -169,18 +183,23 @@ export default function AdminAiFeedback() {
                       {item.page_path && ` • on ${item.page_path}`}
                     </p>
                   </div>
-                  {!item.resolved_at && (
-                    <button
-                      onClick={() => handleMarkResolved(item.id)}
-                      disabled={savingNoteId !== null || (noteDrafts[item.id] ?? item.admin_notes ?? '').trim() !== (item.admin_notes ?? '').trim()}
-                      title="Save any pending review note before resolving"
-                      className="shrink-0 disabled:cursor-not-allowed disabled:opacity-50 rounded border px-3 py-1 font-sans text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)]"
-                      style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
-                    >
-                      Mark Resolved
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleSetResolution(item.id, !item.resolved_at)}
+                    disabled={savingNoteId !== null || savingResolutionId !== null || (noteDrafts[item.id] ?? item.admin_notes ?? '').trim() !== (item.admin_notes ?? '').trim()}
+                    title="Save any pending review note before changing resolution"
+                    className="shrink-0 disabled:cursor-not-allowed disabled:opacity-50 rounded border px-3 py-1 font-sans text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)]"
+                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+                  >
+                    {savingResolutionId === item.id ? 'Updating…' : item.resolved_at ? 'Reopen for review' : 'Mark Resolved'}
+                  </button>
                 </div>
+
+                {resolutionErrorId === item.id && (
+                  <p role="alert" className="mt-2 font-sans text-xs text-red-600 dark:text-red-400">
+                    Could not update feedback status. Please retry.
+                  </p>
+                )}
 
                 {item.feedback_text && (
                   <div className="mt-4 rounded-lg bg-[var(--color-surface2)] p-3" style={{ borderLeft: '3px solid var(--accent)' }}>
@@ -222,7 +241,7 @@ export default function AdminAiFeedback() {
                     }}
                     maxLength={1500}
                     rows={3}
-                    disabled={savingNoteId === item.id}
+                    disabled={savingNoteId === item.id || savingResolutionId === item.id}
                     className="mt-2 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 font-sans text-sm text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
                     placeholder="Example: Update the published FAQ about event check-ins."
                   />
@@ -230,7 +249,7 @@ export default function AdminAiFeedback() {
                     <button
                       type="button"
                       onClick={() => handleSaveNote(item)}
-                      disabled={savingNoteId !== null || (noteDrafts[item.id] ?? item.admin_notes ?? '').trim() === (item.admin_notes ?? '').trim()}
+                      disabled={savingNoteId !== null || savingResolutionId !== null || (noteDrafts[item.id] ?? item.admin_notes ?? '').trim() === (item.admin_notes ?? '').trim()}
                       className="rounded-md border border-[var(--color-border)] px-3 py-2 font-sans text-xs font-semibold text-brand-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-brand-300"
                     >
                       {savingNoteId === item.id ? 'Saving…' : 'Save review note'}
