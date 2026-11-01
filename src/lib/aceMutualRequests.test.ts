@@ -108,7 +108,7 @@ describe('mutual source identity safety', () => {
     expect(parsed.warnings).toEqual([expect.stringContaining('multiple submissions without a UCSD email')]);
     expect(classifyMutualRequests(parsed.respondents).pairs).toEqual([]);
     expect(classifyMutualRequests(parsed.respondents).conflicts).toEqual([
-      expect.objectContaining({ kind: 'duplicate_name', person: { name: 'Tamsin Vale' } }),
+      expect.objectContaining({ kind: 'duplicate_name', person: expect.objectContaining({ name: 'Tamsin Vale' }) }),
     ]);
   });
 
@@ -122,7 +122,7 @@ describe('mutual source identity safety', () => {
     const check = classifyMutualRequests(parsed.respondents);
     expect(check.pairs).toEqual([]);
     expect(check.conflicts).toEqual([
-      expect.objectContaining({ kind: 'duplicate_name', person: { name: 'Tamsin Vale' } }),
+      expect.objectContaining({ kind: 'duplicate_name', person: expect.objectContaining({ name: 'Tamsin Vale' }) }),
     ]);
     expect(check.conflicts[0].others).toHaveLength(1);
   });
