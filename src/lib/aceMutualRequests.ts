@@ -642,5 +642,16 @@ export function followUpReviewRows(check: MutualRequestCheck): ImportReviewRow[]
     reason: item.reason,
     raw: { Role: roleLabel(item.from.role), Requested: item.requested, 'Request text': item.from.requestText },
   }));
-  return [...oneSided, ...unresolved].sort((a, b) => a.index - b.index);
+  const conflicts = check.conflicts.map((item): ImportReviewRow => ({
+    index: item.person.line,
+    label: item.person.name,
+    category: 'needs_review',
+    reason: item.message,
+    raw: {
+      Role: roleLabel(item.person.role),
+      Requested: item.person.requested.join(', '),
+      'Request text': item.person.requestText,
+    },
+  }));
+  return [...oneSided, ...unresolved, ...conflicts].sort((a, b) => a.index - b.index);
 }
