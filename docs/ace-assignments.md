@@ -163,6 +163,10 @@ responses, header row included. Logic: `src/lib/aceMutualRequests.ts`.
   match until the chair accepts it. Ties are never guessed.
 - A pair counts only when both people requested each other. One-sided
   requests, unresolved names, and conflicts (a Little mutually matched with
+  several Bigs, or both roles) are listed separately; conflicts stay out of
+  the confirmed pairs. **Download follow-ups CSV** has names and request text
+  only.
+- **Big tree-node preflight** reports how many reciprocal requests have one unique, existing ACE Big node and names the Littles whose Big is missing or ambiguous, before importing. A missing/duplicate Big remains unassigned in the private draft and must be resolved manually before Lock/Publish. The form cannot establish the canonical family branch; reciprocal interest is not chair approval.
   several Bigs, both roles, or a duplicate source identity) are listed separately;
   conflicts stay out of the confirmed pairs. **Download follow-ups CSV** includes
   one-sided requests, unresolved names, and conflicts; it has names and request
