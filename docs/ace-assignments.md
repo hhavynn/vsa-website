@@ -15,6 +15,8 @@ Drafts never touch `ace_family_members` until **Publish**.
 
 The preflight panel shows before Lock and again before Publish.
 
+The ACE workspace loads **every draft row** in deterministic pages rather than relying on PostgREST's default first page. A later-page error, repeated row, or row from the wrong cycle fails the entire private snapshot instead of showing partial preflight, capacity, or publish counts. Refresh the workspace and resolve the data error before proceeding.
+
 **Blocks Publish:** an unassigned Little, a Big that no longer exists, the same
 Little twice (case, spacing and diacritics ignored), one canonical member
 assigned twice, a draft that already created a node, a Little already on the tree
