@@ -355,7 +355,7 @@ export function AceEligibilityPanel({ cycle, eligibility }: AceEligibilityPanelP
               Download visible eligibility CSV
             </button>
             <p className="font-sans text-[11px] text-[var(--color-text3)]">
-              Private local download of ${visible.length} filtered ${visible.length === 1 ? 'person' : 'people'}.
+              Private local download of {visible.length} filtered {visible.length === 1 ? 'person' : 'people'}.
               Keep the names within ACE leadership. No emails, IDs, or application answers included.
             </p>
           </div>
