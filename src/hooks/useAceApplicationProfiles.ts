@@ -15,6 +15,7 @@ import {
   suggestBigs,
   unmatchedProfiles,
 } from '../lib/aceApplicationProfiles';
+import { findReciprocalPreferences, type ReciprocalPreferenceSignal } from '../lib/aceReciprocalPreferences';
 import type { AceAssignmentDraft } from '../types';
 
 /** What one assignment row shows once application answers are loaded. */
@@ -33,6 +34,7 @@ export interface AceApplicationSummary {
   repeatsReplaced: number;
   skipped: number;
   unmatched: ApplicationProfile[];
+  reciprocalPreferences: ReciprocalPreferenceSignal[];
   warnings: string[];
   emailLookupFailed: boolean;
 }
@@ -113,6 +115,7 @@ export function useAceApplicationProfiles(
       repeatsReplaced: parsed.repeatsReplaced,
       skipped: parsed.skipped,
       unmatched: unmatchedProfiles(parsed.profiles, littleByDraft, bigByNode),
+      reciprocalPreferences: findReciprocalPreferences(parsed.profiles),
       warnings: parsed.warnings,
       emailLookupFailed: loaded.emailLookupFailed,
     };
