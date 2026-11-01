@@ -5,7 +5,7 @@ import { aceAssignmentsRepository, AceAssignmentDraftPatch } from '../../../data
 import { AceParticipationReview } from './AceParticipationReview';
 import { AceEligibilityPanel } from './AceEligibilityPanel';
 import { logAdminActivity } from '../../../data/repos/adminActivity';
-import { toUserMessage } from '../../../data/errors';
+import { toUserMessage, ValidationError } from '../../../data/errors';
 import {
   ACE_ASSIGNMENT_CYCLES_KEY,
   ACE_NODE_REFS_KEY,
@@ -309,7 +309,7 @@ export function AceAssignmentsWorkspace() {
     const currentDrafts = await aceAssignmentsRepository.listDrafts(cycleId);
     const plan = planAceDraftImport(resolution.seeds, currentDrafts);
     if (plan.needsReview > 0) {
-      throw new Error(
+      throw new ValidationError(
         `${plan.needsReview} incoming Little rows have ambiguous names or member links. No changes made. Review those rows in the original sheet before retrying.`,
       );
     }
