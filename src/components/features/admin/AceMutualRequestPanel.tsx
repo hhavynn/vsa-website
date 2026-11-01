@@ -215,6 +215,35 @@ export function AceMutualRequestPanel({ nodes, existingNames = [], onImport, onC
         </div>
       )}
 
+      {hasInput && parsed.respondents.length > 0 && check.pairs.length > 0 && (
+        <section aria-label="Mutual Big tree-node preflight" className="mt-3 rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+          <h4 className="font-semibold text-[var(--color-text)]">Big tree-node preflight</h4>
+          <p className="mt-1 text-[11px] text-[var(--color-text2)]">
+            {preview.resolution.bigMatched} ready to assign to a unique existing ACE Big node
+            {' · '}{preview.resolution.bigUnresolved} needing a manual Big pick
+            {' · '}{preview.alreadyInDraft} Littles already in the draft.
+            These are reciprocal form responses, not chair-approved guarantees.
+          </p>
+          {preview.resolution.bigUnresolved > 0 && (
+            <>
+              <p role="note" className="mt-2 text-[11px] text-amber-700 dark:text-amber-400">
+                These Littles can be added to a private draft, but their Big is not assigned.
+                Resolve the correct existing family-tree Big node before Lock or Publish; never infer a family from the form.
+              </p>
+              <ul className="mt-2 divide-y divide-[var(--color-border)]" aria-label="Mutual pairs needing Big tree review">
+                {preview.resolution.seeds.filter((seed) => !seed.big_ace_member_id).map((seed) => (
+                  <li key={seed.little_name} className="flex flex-wrap gap-2 py-2 text-[11px] text-[var(--color-text2)]">
+                    <span className="font-semibold text-[var(--color-text)]">{seed.little_name}</span>
+                    <span>{seed.notes ?? 'No unique ACE Big node found'}</span>
+                    <span>· pick the correct Big manually</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
+      )}
+
       {hasInput && parsed.respondents.length > 0 && (
         <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
           {pendingPossible > 0 && (
