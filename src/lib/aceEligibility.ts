@@ -91,7 +91,12 @@ export function qualifyingEventProblem(
 ): string | null {
   if (!event.is_published) return 'Not published';
   if (!event.date) return 'Has no date';
-  if (Date.parse(event.date) > now.getTime()) return 'Has not happened yet';
+  // Invalid event dates cannot provide proof that the event happened.
+  // Date.parse() returns NaN for malformed inputs; NaN > now is false, which
+  // previously let a broken date pass as a completed qualifying event.
+  const eventTime = Date.parse(event.date);
+  if (!Number.isFinite(eventTime)) return 'Has an invalid date';
+  if (eventTime > now.getTime()) return 'Has not happened yet';
   return null;
 }
 

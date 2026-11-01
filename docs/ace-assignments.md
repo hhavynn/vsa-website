@@ -74,8 +74,10 @@ Per cycle, the ACE Chair saves:
   toward meeting a minimum. Someone who already meets it on verified events is
   Meets. Someone who could not reach it even if every unverified event counted
   is Short.
-- A saved event that stops qualifying (unpublished, moved to the future, or no
-  longer in the year) is listed and ignored, and is removed on the next save.
+- A saved event that stops qualifying (unpublished, moved to the future, has
+  a missing/invalid event date, or no longer belongs to the year) is listed
+  and ignored, and is removed on the next save. Malformed dates are **never**
+  treated as completed events or as verified attendance evidence.
 - The panel shows counts at the top and filters by status, role and name.
 
 ### Warnings, not blockers
