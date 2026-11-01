@@ -261,6 +261,7 @@ describe('private eligibility CSV review export', () => {
       result.littles.filter((row) => row.status !== 'meets'),
       { academicYearStart: 2026, checkedAt: '2026-10-30T12:00:00Z' },
     );
+    expect(csv.charCodeAt(0)).toBe(0xfeff);
     expect(csv).toContain('2026-2027,2026-10-30T12:00:00Z,Little,Little a,Short,1,4,0,3');
     expect(csv).toContain('Little b,Needs identity review');
     expect(csv).not.toContain('m-a');

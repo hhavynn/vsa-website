@@ -64,7 +64,7 @@ interface AceEligibilityPanelProps {
  */
 export function AceEligibilityPanel({ cycle, eligibility }: AceEligibilityPanelProps) {
   const queryClient = useQueryClient();
-  const { policy, savedEventIds, readiness, result, loading, error } = eligibility;
+  const { policy, savedEventIds, readiness, result, loading, refreshing, error } = eligibility;
   const editable = cycle.status === 'draft';
 
   const savedLittle = cycle.little_min_events ?? null;
@@ -339,10 +339,10 @@ export function AceEligibilityPanel({ cycle, eligibility }: AceEligibilityPanelP
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              disabled={loading || !!error || !readiness || visible.length === 0}
+              disabled={loading || refreshing || !!error || !readiness || visible.length === 0}
               className={ghostBtnCls}
               onClick={() => {
-                if (!readiness || loading || error || visible.length === 0) return;
+                if (!readiness || loading || refreshing || error || visible.length === 0) return;
                 downloadCsv(
                   aceEligibilityReviewCsv(visible, {
                     academicYearStart: cycle.academic_year_start,

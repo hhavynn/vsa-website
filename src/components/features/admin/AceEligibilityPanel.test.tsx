@@ -69,7 +69,7 @@ beforeEach(() => {
 });
 
 it('pre-fills 4 and 3 but checks nothing until the Chair saves them', async () => {
-  mount(cycle('draft'), { policy: null, savedEventIds: [], readiness, result: null, loading: false, error: null });
+  mount(cycle('draft'), { policy: null, savedEventIds: [], readiness, result: null, loading: false, refreshing: false, error: null });
   expect(screen.getByText(/No minimums are saved for this cycle yet/)).toBeInTheDocument();
   expect(screen.getByLabelText('Little minimum')).toHaveValue(4);
   expect(screen.getByLabelText('Big minimum')).toHaveValue(3);
@@ -92,7 +92,7 @@ it('pre-fills 4 and 3 but checks nothing until the Chair saves them', async () =
 });
 
 it('refuses minimums outside 1–20 before saving', () => {
-  mount(cycle('draft'), { policy: null, savedEventIds: [], readiness, result: null, loading: false, error: null });
+  mount(cycle('draft'), { policy: null, savedEventIds: [], readiness, result: null, loading: false, refreshing: false, error: null });
   fireEvent.change(screen.getByLabelText('Little minimum'), { target: { value: '21' } });
   expect(screen.getByRole('alert')).toHaveTextContent('Minimums must be whole numbers from 1 to 20.');
   expect(screen.getByRole('button', { name: 'Save minimums & events' })).toBeDisabled();
@@ -100,7 +100,7 @@ it('refuses minimums outside 1–20 before saving', () => {
 
 it('keeps a locked cycle\'s policy frozen and read-only', () => {
   const policy = { littleMin: 4, bigMin: 3, eventIds: ['e1'] };
-  mount(cycle('locked', [4, 3]), { policy, savedEventIds: ['e1'], readiness, result: null, loading: true, error: null });
+  mount(cycle('locked', [4, 3]), { policy, savedEventIds: ['e1'], readiness, result: null, loading: true, refreshing: true, error: null });
   expect(screen.getByText(/frozen while the cycle is locked/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'View policy' }));
   expect(screen.getByLabelText('Little minimum')).toBeDisabled();
@@ -122,7 +122,7 @@ it('shows counts and filters people by status and name', () => {
     attendance: new Map([['m1', new Set(['e1', 'e2'])], ['m2', new Set(['e1'])], ['m-big', new Set(['e1'])]]),
     now: new Date(checkedAt),
   });
-  mount(cycle('draft', [2, 1]), { policy, savedEventIds: ['e1', 'e2'], readiness, result, loading: false, error: null });
+  mount(cycle('draft', [2, 1]), { policy, savedEventIds: ['e1', 'e2'], readiness, result, loading: false, refreshing: false, error: null });
 
   const list = screen.getByRole('list');
   expect(within(list).getAllByRole('listitem')).toHaveLength(4);
@@ -138,7 +138,7 @@ it('shows counts and filters people by status and name', () => {
 });
 
 it('never offers Save while the saved policy is unread, so it cannot overwrite it', () => {
-  mount(cycle('draft', [4, 3]), { policy: null, savedEventIds: null, readiness, result: null, loading: false, error: 'denied' });
+  mount(cycle('draft', [4, 3]), { policy: null, savedEventIds: null, readiness, result: null, loading: false, refreshing: false, error: 'denied' });
   expect(screen.getByText('The saved policy could not be read.')).toBeInTheDocument();
   expect(screen.queryByText(/No minimums are saved/)).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Edit qualifying events & minimums' }));
@@ -146,7 +146,7 @@ it('never offers Save while the saved policy is unread, so it cannot overwrite i
 });
 
 it('warns before saving a minimum that no one could meet', () => {
-  mount(cycle('draft'), { policy: null, savedEventIds: [], readiness, result: null, loading: false, error: null });
+  mount(cycle('draft'), { policy: null, savedEventIds: [], readiness, result: null, loading: false, refreshing: false, error: null });
   fireEvent.click(screen.getByRole('checkbox', { name: /Sample GBM/ }));
   expect(screen.getByText(/Only 1 qualifying event is selected, fewer than the Little and Big minimum/)).toBeInTheDocument();
 });
@@ -163,7 +163,7 @@ it('exports exactly the visible needs-attention rows without emails or IDs', () 
     policy, events, now: new Date(checkedAt),
     attendance: new Map([['m1', new Set(['e1', 'e2'])], ['m2', new Set(['e1'])], ['m-big', new Set(['e1'])]]),
   });
-  mount(cycle('draft', [2, 1]), { policy, savedEventIds: ['e1', 'e2'], readiness, result, loading: false, error: null });
+  mount(cycle('draft', [2, 1]), { policy, savedEventIds: ['e1', 'e2'], readiness, result, loading: false, refreshing: false, error: null });
   fireEvent.click(screen.getByRole('button', { name: 'Needs attention (2)' }));
   fireEvent.click(screen.getByRole('button', { name: 'Download visible eligibility CSV' }));
   expect(downloadCsv).toHaveBeenCalledTimes(1);
@@ -182,7 +182,8 @@ it('disables local export while eligibility is refreshing', () => {
     drafts: [{ id: 'd1', little_name: 'Synthetic Short', little_member_id: 'm1', big_ace_member_id: null }],
     nodes: [], policy, events, now: new Date(checkedAt), attendance: new Map(),
   });
-  const entry = { policy, savedEventIds: ['e1', 'e2'], readiness, result, loading: true, error: null };
+  // A background refetch keeps the old rows on screen with loading false.
+  const entry = { policy, savedEventIds: ['e1', 'e2'], readiness, result, loading: false, refreshing: true, error: null };
   mount(cycle('draft', [2, 1]), entry);
   expect(screen.getByRole('button', { name: 'Download visible eligibility CSV' })).toBeDisabled();
   expect(downloadCsv).not.toHaveBeenCalled();

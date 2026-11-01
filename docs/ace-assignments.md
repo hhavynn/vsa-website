@@ -92,7 +92,7 @@ the final say.
 ### Privacy
 
 Admin-only and read-only apart from the policy. Eligibility is computed in the
-admin's browser from `member_event_attendance` and is never stored, published,
+admin's browser from `member_event_attendance` and is never stored in the database, published,
 exposed through a `published_*` view or turned into points. No emails are read,
 shown or stored.
 

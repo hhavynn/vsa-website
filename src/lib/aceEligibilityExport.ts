@@ -32,5 +32,6 @@ export function aceEligibilityReviewCsv(rows: readonly AceEligibilityRow[], cont
     row.reason,
     String(row.draftIds.length),
   ])];
-  return `${lines.map((cells) => cells.map(csvCell).join(',')).join('\r\n')}\r\n`;
+  // The BOM keeps Vietnamese names intact when the file opens in Excel.
+  return `\uFEFF${lines.map((cells) => cells.map(csvCell).join(',')).join('\r\n')}\r\n`;
 }
