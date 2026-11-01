@@ -33,6 +33,10 @@ export type LittleReviewState =
   | 'needs_review';
 
 const LIVE_PAIRINGS: ReadonlySet<AcePairingStatus> = new Set(['tentative', 'confirmed']);
+const PAIRING_CODES: ReadonlySet<AcePairingStatus> = new Set(['none', 'tentative', 'confirmed', 'revoked']);
+const OPERATIONAL_CODES: ReadonlySet<AceParticipantStatus> =
+  new Set(['pending_review', 'eligible', 'not_eligible', 'withdrawn']);
+const OUTCOME_CODES: ReadonlySet<AceLittleOutcome> = new Set(['none', 'orphan', 'declined']);
 const FOLLOW_UP_CODES: ReadonlySet<AceOrphanFollowUp> = new Set(['none', 'to_contact', 'contacted', 'closed']);
 
 /**
@@ -42,11 +46,15 @@ const FOLLOW_UP_CODES: ReadonlySet<AceOrphanFollowUp> = new Set(['none', 'to_con
  */
 export function littleState(row: Pick<AceOrphanReviewRow,
   'role' | 'operationalStatus' | 'littleOutcome' | 'pairingStatus'>): LittleReviewState {
-  if (row.role !== 'little') return 'needs_review';
+  if (row.role !== 'little' || !PAIRING_CODES.has(row.pairingStatus) ||
+      !OPERATIONAL_CODES.has(row.operationalStatus) || !OUTCOME_CODES.has(row.littleOutcome)) {
+    return 'needs_review';
+  }
   if (row.littleOutcome === 'orphan' && LIVE_PAIRINGS.has(row.pairingStatus)) return 'needs_review';
   if ((row.operationalStatus === 'withdrawn' || row.operationalStatus === 'not_eligible' ||
        row.littleOutcome === 'declined') && LIVE_PAIRINGS.has(row.pairingStatus)) return 'needs_review';
   if (row.operationalStatus === 'withdrawn' || row.littleOutcome === 'declined') return 'declined_withdrawn';
+  if (row.littleOutcome === 'orphan' && row.operationalStatus !== 'eligible') return 'needs_review';
   if (row.littleOutcome === 'orphan') return 'orphan';
   if (row.pairingStatus === 'confirmed') return 'confirmed_pairing';
   if (row.pairingStatus === 'tentative') return 'tentatively_matched';
@@ -74,6 +82,10 @@ export function buildOrphanCsv(rows: readonly AceOrphanReviewRow[], cycleId: str
       throw new Error('Orphan export contains a missing or duplicate participant ID.');
     }
     seen.add(row.participantId);
+    if (!OUTCOME_CODES.has(row.littleOutcome) || !OPERATIONAL_CODES.has(row.operationalStatus) ||
+        !PAIRING_CODES.has(row.pairingStatus)) {
+      throw new Error('Orphan export contains unrecognized participant or pairing states.');
+    }
     if (row.littleOutcome !== 'orphan') continue;
     if (row.role !== 'little' || row.operationalStatus !== 'eligible' ||
         LIVE_PAIRINGS.has(row.pairingStatus)) {
