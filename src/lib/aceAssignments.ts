@@ -331,6 +331,8 @@ export interface ParsedImport {
   skipped: number;
   /** Rows left out because the person applied as a Big. */
   bigsSkipped: number;
+  /** Rows held out because their form role is missing, mixed, or unreadable. */
+  unknownRoleSkipped: number;
   /** Earlier form submissions replaced by the same person's later one. */
   repeatsReplaced: number;
   warnings: string[];
@@ -422,12 +424,13 @@ export function ucsdEmail(value: string): string {
 /**
  * Parses pasted CSV or TSV, including a copy of the ACE application or mutual
  * request form responses. A header row is optional; without one, column 1 is
- * the name. When the paste says who is a Big, only Littles are kept, and a
- * repeat submission from the same email keeps the latest one.
+ * the name. When the paste includes a Big/Little role, only explicit Littles
+ * are kept. Missing or mixed roles are held out, never silently treated as
+ * Littles. Repeat submissions from the same email keep the latest one.
  */
 export function parseAssignmentImport(text: string): ParsedImport {
   const records = parseDelimitedPaste(text);
-  const result: ParsedImport = { rows: [], columns: [], skipped: 0, bigsSkipped: 0, repeatsReplaced: 0, warnings: [] };
+  const result: ParsedImport = { rows: [], columns: [], skipped: 0, bigsSkipped: 0, unknownRoleSkipped: 0, repeatsReplaced: 0, warnings: [] };
   if (records.length === 0) return result;
 
   const headerCells = records[0];
@@ -502,8 +505,12 @@ export function parseAssignmentImport(text: string): ParsedImport {
   for (const { role, ...row } of latest) {
     if (hasRole && role === 'big') {
       result.bigsSkipped += 1;
+    } else if (hasRole && role === null) {
+      // Form role is mandatory for role-bearing inputs. Do not silently
+      // turn a Big/ambiguous respondent into a new ACE Little draft.
+      unknownRole += 1;
+      result.unknownRoleSkipped += 1;
     } else {
-      if (hasRole && role === null) unknownRole += 1;
       result.rows.push(row);
     }
   }
@@ -515,7 +522,7 @@ export function parseAssignmentImport(text: string): ParsedImport {
     result.warnings.push(`${plural(result.repeatsReplaced, 'earlier submission was', 'earlier submissions were')} replaced by the same person's latest one.`);
   }
   if (unknownRole > 0) {
-    result.warnings.push(`${plural(unknownRole, 'row does not say', 'rows do not say')} Big or Little, so ${unknownRole === 1 ? 'it was' : 'they were'} kept as Littles.`);
+    result.warnings.push(`${plural(unknownRole, 'row does not say', 'rows do not say')} Big or Little, so ${unknownRole === 1 ? 'it was' : 'they were'} excluded. Verify the source form roles before importing.`);
   }
   return result;
 }

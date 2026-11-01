@@ -34,6 +34,40 @@ it('surfaces a permission error and a malformed result', async () => {
   await expect(attendanceReadinessRepository.getReadiness(2026, null)).rejects.toThrow(/returned no result/);
 });
 
+it('rejects missing or invalid snapshot metadata rather than claiming a complete ACE attendance review', async () => {
+  const complete = { events: [{ id: 'event-1' }], total_events: 1, truncated: false, checked_at: '2026-10-30T00:00:00Z' };
+  for (const malformed of [
+    { ...complete, total_events: undefined },
+    { ...complete, total_events: 0 },
+    { ...complete, total_events: 1.5 },
+    { ...complete, truncated: undefined },
+    { ...complete, truncated: 'false' },
+    { ...complete, checked_at: undefined },
+    { ...complete, checked_at: 'not-a-date' },
+  ]) {
+    supabaseMock.queueResult('rpc:admin_event_attendance_readiness', { data: malformed, error: null });
+    await expect(attendanceReadinessRepository.getReadiness(2026, null)).rejects.toThrow(/incomplete snapshot metadata/);
+  }
+});
+
+it('rejects repeated or malformed event IDs before eligibility can count events', async () => {
+  const base = { total_events: 2, truncated: false, checked_at: '2026-10-30T00:00:00Z' };
+  supabaseMock.queueResult('rpc:admin_event_attendance_readiness', { data: { ...base, events: [{ id: 'e1' }, { id: 'e1' }] }, error: null });
+  await expect(attendanceReadinessRepository.getReadiness(2026, null)).rejects.toThrow(/duplicated or invalid events/);
+
+  supabaseMock.queueResult('rpc:admin_event_attendance_readiness', { data: { ...base, events: [{ id: 'e1' }, { id: '' }] }, error: null });
+  await expect(attendanceReadinessRepository.getReadiness(2026, null)).rejects.toThrow(/duplicated or invalid events/);
+});
+
+it('preserves an explicitly truncated readiness snapshot so ACE can refuse incomplete coverage', async () => {
+  supabaseMock.queueResult('rpc:admin_event_attendance_readiness', {
+    data: { events: [{ id: 'e1' }], total_events: 3, truncated: true, checked_at: '2026-10-30T00:00:00Z' }, error: null,
+  });
+  const snapshot = await attendanceReadinessRepository.getReadiness(2026, null);
+  expect(snapshot).toMatchObject({ totalEvents: 3, truncated: true, checkedAt: '2026-10-30T00:00:00Z' });
+  expect(snapshot.events).toHaveLength(1);
+});
+
 it('records a statement through the admin RPC', async () => {
   supabaseMock.queueResult('rpc:admin_attest_event_attendance', { data: {}, error: null });
   await attendanceReadinessRepository.attest('ev', 'no_signin', 'Rained out');

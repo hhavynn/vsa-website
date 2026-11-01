@@ -8,6 +8,8 @@ import { ACE_ASSIGNMENT_CYCLES_KEY } from '../../../hooks/useAceAssignments';
 import { aceEligibilityEventsKey, type AceEligibilityState } from '../../../hooks/useAceEligibility';
 import { ACTIVITY_ACTIONS } from '../../../lib/adminActivity';
 import { formatAcademicYear } from '../../../lib/aceAssignments';
+import { aceEligibilityReviewCsv } from '../../../lib/aceEligibilityExport';
+import { downloadCsv } from '../../../lib/housePlacementExport';
 import {
   DEFAULT_BIG_MIN_EVENTS,
   DEFAULT_LITTLE_MIN_EVENTS,
@@ -40,7 +42,7 @@ const STATUS_TONE: Record<AceEligibilityStatus, string> = {
   'needs-identity-review': 'border-[var(--color-border)] text-[var(--color-text2)]',
 };
 
-type StatusFilter = 'all' | AceEligibilityStatus;
+type StatusFilter = 'all' | 'attention' | AceEligibilityStatus;
 type RoleFilter = 'all' | AceEligibilityRole;
 
 const sameSet = (a: ReadonlySet<string>, b: readonly string[]) => a.size === b.length && b.every((id) => a.has(id));
@@ -62,7 +64,7 @@ interface AceEligibilityPanelProps {
  */
 export function AceEligibilityPanel({ cycle, eligibility }: AceEligibilityPanelProps) {
   const queryClient = useQueryClient();
-  const { policy, savedEventIds, readiness, result, loading, error } = eligibility;
+  const { policy, savedEventIds, readiness, result, loading, refreshing, error } = eligibility;
   const editable = cycle.status === 'draft';
 
   const savedLittle = cycle.little_min_events ?? null;
@@ -149,10 +151,11 @@ export function AceEligibilityPanel({ cycle, eligibility }: AceEligibilityPanelP
   const needle = query.trim().toLowerCase();
   const visible = rows.filter(
     (row) =>
-      (statusFilter === 'all' || row.status === statusFilter) &&
+      (statusFilter === 'all' || (statusFilter === 'attention' ? row.status !== 'meets' : row.status === statusFilter)) &&
       (roleFilter === 'all' || row.role === roleFilter) &&
       (!needle || row.name.toLowerCase().includes(needle)),
   );
+  const attentionCount = rows.filter((row) => row.status !== 'meets' && (roleFilter === 'all' || row.role === roleFilter)).length;
   const statusCount = (status: AceEligibilityStatus) =>
     rows.filter((row) => row.status === status && (roleFilter === 'all' || row.role === roleFilter)).length;
 
@@ -312,10 +315,10 @@ export function AceEligibilityPanel({ cycle, eligibility }: AceEligibilityPanelP
 
           <div className="flex flex-wrap items-end gap-3">
             <div role="group" aria-label="Filter by status" className="flex flex-wrap gap-1.5">
-              {(['all', ...ELIGIBILITY_STATUSES] as const).map((status) => (
+              {(['all', 'attention', ...ELIGIBILITY_STATUSES] as const).map((status) => (
                 <button key={status} type="button" aria-pressed={statusFilter === status} onClick={() => setStatusFilter(status)}
                   className={cn(ghostBtnCls, statusFilter === status && 'border-brand-600 text-[var(--color-text)] dark:border-brand-300')}>
-                  {status === 'all' ? `All (${rows.filter((row) => roleFilter === 'all' || row.role === roleFilter).length})` : `${ELIGIBILITY_STATUS_LABEL[status]} (${statusCount(status)})`}
+                  {status === 'all' ? `All (${rows.filter((row) => roleFilter === 'all' || row.role === roleFilter).length})` : status === 'attention' ? `Needs attention (${attentionCount})` : `${ELIGIBILITY_STATUS_LABEL[status]} (${statusCount(status)})`}
                 </button>
               ))}
             </div>
@@ -331,6 +334,30 @@ export function AceEligibilityPanel({ cycle, eligibility }: AceEligibilityPanelP
               Name
               <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search names…" className={cn(inputCls, 'mt-1 block w-48')} />
             </label>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              disabled={loading || refreshing || !!error || !readiness || visible.length === 0}
+              className={ghostBtnCls}
+              onClick={() => {
+                if (!readiness || loading || refreshing || error || visible.length === 0) return;
+                downloadCsv(
+                  aceEligibilityReviewCsv(visible, {
+                    academicYearStart: cycle.academic_year_start,
+                    checkedAt: readiness.checkedAt,
+                  }),
+                  `ace-eligibility-${cycle.academic_year_start}-filtered.csv`,
+                );
+              }}
+            >
+              Download visible eligibility CSV
+            </button>
+            <p className="font-sans text-[11px] text-[var(--color-text3)]">
+              Private local download of {visible.length} filtered {visible.length === 1 ? 'person' : 'people'}.
+              Keep the names within ACE leadership. No emails, IDs, or application answers included.
+            </p>
           </div>
 
           {visible.length === 0 ? (

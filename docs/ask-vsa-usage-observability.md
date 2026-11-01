@@ -45,6 +45,12 @@ broad grants on the private table are required.
    rollout. A frontend deployment before the RPC degrades to a friendly
    "report unavailable" state and **never** tries to read raw logs.
 
+## Interpreting the admin report
+
+The private `/admin/ai-usage` page now displays **rate-limited**, **error**, and **answered** shares as a percentage of all recorded attempts in the selected 7/30/90-day range. The denominator includes `fallback` and `other` outcomes; a zero-attempt range displays **N/A**, never a misleading 0% rate. The report also flags when a rate-limit rejection or error appears so an operator knows to investigate it rather than silently declaring the service healthy.
+
+These are directional **logged-attempt shares**, not unique affected students, model success/quality rates, or billable API requests. Unknown outcomes and missed reservations can make ratios incomplete; no identity, conversation text or provider costs are inferred. The UI uses the **existing aggregate RPC only**, not private raw log access or new tracking. Limits are unchanged.
+
 ## Costs and budget
 
 The ledger does **not** include Gemini provider prompt/output token usage or

@@ -26,6 +26,8 @@ The header shows the last import that finished with nothing to review, and how m
 - Both functions check `is_admin_user` and are SECURITY DEFINER (the House score views are private to the API since #692). EXECUTE is revoked from anon. At most 400 events per year are returned, and the page says when it stops there.
 - Fixing a status happens in the existing tools: Import, the recovery workspace, the reconciliation process. This page does not import, award or recalculate anything.
 
+- The admin RPC snapshot must include an explicit total-event count, truncation flag and valid checked-at timestamp. Missing or contradictory metadata, duplicate event IDs or wrong-shaped IDs produce an error rather than a deceptively complete event list. An explicitly truncated list remains labeled truncated so ACE eligibility refuses to score it.
+
 Limits: removing a credit after an event was verified does not reset Verified (the ledger keeps no deletion record), and an import's `completed_at` comes from the admin's browser clock. Production on 2026-10-28 (read-only, aggregates): 3 open review rows over 3 events.
 
 Not yet: a non-sensitive summary for ACE/CRC chairs who are not admins needs a role that does not exist (#654), and Admin Overview does not show these statuses yet.

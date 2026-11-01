@@ -15,6 +15,8 @@ Drafts never touch `ace_family_members` until **Publish**.
 
 The preflight panel shows before Lock and again before Publish.
 
+The ACE workspace loads **every draft row** in deterministic pages rather than relying on PostgREST's default first page. A later-page error, repeated row, or row from the wrong cycle fails the entire private snapshot instead of showing partial preflight, capacity, or publish counts. Refresh the workspace and resolve the data error before proceeding.
+
 **Blocks Publish:** an unassigned Little, a Big that no longer exists, the same
 Little twice (case, spacing and diacritics ignored), one canonical member
 assigned twice, a draft that already created a node, a Little already on the tree
@@ -74,9 +76,12 @@ Per cycle, the ACE Chair saves:
   toward meeting a minimum. Someone who already meets it on verified events is
   Meets. Someone who could not reach it even if every unverified event counted
   is Short.
-- A saved event that stops qualifying (unpublished, moved to the future, or no
-  longer in the year) is listed and ignored, and is removed on the next save.
+- A saved event that stops qualifying (unpublished, moved to the future, has
+  a missing/invalid event date, or no longer belongs to the year) is listed
+  and ignored, and is removed on the next save. Malformed dates are **never**
+  treated as completed events or as verified attendance evidence.
 - The panel shows counts at the top and filters by status, role and name.
+- **Needs attention** shows Short, Unknown, and Needs identity review together. **Download visible eligibility CSV** exports exactly the currently filtered rows as a private local download, with saved-year/snapshot context and no emails, IDs or application answers. It is disabled while refreshing or if source evidence is unavailable. The Chair must keep the file private; it is not a decision or a verified copy of self-reports.
 
 ### Warnings, not blockers
 
@@ -91,7 +96,7 @@ the final say.
 ### Privacy
 
 Admin-only and read-only apart from the policy. Eligibility is computed in the
-admin's browser from `member_event_attendance` and is never stored, published,
+admin's browser from `member_event_attendance` and is never stored in the database, published,
 exposed through a `published_*` view or turned into points. No emails are read,
 shown or stored.
 
@@ -130,6 +135,14 @@ the name).
   else is kept in the draft's notes ("Requested Big: … (not found)").
 - Name-only matches are never auto-linked on import. Use **Link N obvious member
   matches** (unique exact names only) or the per-row picker.
+- A form export with a Big/Little role column only imports rows explicitly marked
+  Little (including respondents explicitly requesting a Big in the mutual form).
+  Missing, contradictory or unreadable role answers are **excluded**, never
+  silently turned into Little drafts. The import preview reports their count
+  and asks the Chair to verify the form source. Plain name-only lists without
+  a role column remain supported as deliberate Little lists.
+
+- Both general-form and mutual imports re-read the current drafts before writing. An existing Little is skipped by linked member ID or normalized name; a linked applicant whose name matches a different or unlinked draft, and ambiguous duplicates inside the incoming paste hold the entire batch for manual review, without writing anything. Exact repeat rows with the same linked member are deduplicated. This client-side guard is not a persistent intake system (#644/#661) or a replacement for server-side publication preflight.
 
 ## Checking mutual requests
 
@@ -142,6 +155,11 @@ Logic: `src/lib/aceMutualRequests.ts`.
 - "Requesting a Big" means the respondent is a Little. Repeat submissions are
   keyed on UCSD email (a bare username means `@ucsd.edu`); the latest
   timestamp wins, and someone who answered as both roles is flagged.
+- **Email-less identity safety:** two submissions with the same name but no
+  UCSD email stay separate, not silently deduplicated. Identical normalized
+  names across distinct source identities are flagged as conflicts and withheld
+  from reciprocal pairs until the Chair checks the actual people. No wrong
+  family link or apparent guarantee is inferred from a name alone.
 - Requested names are pulled out of free text and resolved against the
   opposite role only: full name, then first + last, then preferred name +
   last, then a first name that is unique. A near spelling is only a *possible*
@@ -151,6 +169,11 @@ Logic: `src/lib/aceMutualRequests.ts`.
   several Bigs, or both roles) are listed separately; conflicts stay out of
   the confirmed pairs. **Download follow-ups CSV** has names and request text
   only.
+- **Big tree-node preflight** reports how many reciprocal requests have one unique, existing ACE Big node and names the Littles whose Big is missing or ambiguous, before importing. A missing/duplicate Big remains unassigned in the private draft and must be resolved manually before Lock/Publish. The form cannot establish the canonical family branch; reciprocal interest is not chair approval.
+  several Bigs, both roles, or a duplicate source identity) are listed separately;
+  conflicts stay out of the confirmed pairs. **Download follow-ups CSV** includes
+  one-sided requests, unresolved names, and conflicts; it has names and request
+  text only, with no emails, phone numbers, or other contact fields.
 - **Add N confirmed pairs to draft** uses the same import path as above: the
   member links only by a unique email match, the Big is assigned only when
   exactly one tree node has that name (otherwise the note says
@@ -177,9 +200,44 @@ fixed.
 - Littles attach to rows by the linked member's email (looked up once, never
   stored), then by normalized name or preferred + last name; Bigs attach to
   tree nodes by normalized name. Ambiguous matches are left alone.
-- Checks (gender preference, capacity, year preference, substance comfort,
-  do-not-pair) and the suggestion score are **advisory**. They never block
-  Lock or Publish. Picking a suggestion just sets the Big like the picker does.
+- Pair checks (gender preference, capacity, year preference, substance comfort,
+  do-not-pair) are **advisory**: they do not block Lock or Publish, so the Chair
+  must review any warnings before making a decision. Suggestions are shown
+  only when there is at least one meaningful non-gender shared-answer reason;
+  the UI shows those reasons, **not** a numeric fit/compatibility rating.
+  Gender agreement is not a suggestion score bonus. Picking a suggestion just
+  sets the Big like the regular picker does, and still requires an explicit click.
+
+## Big capacity foundation (#646/#663 — not connected to live intake)
+
+`src/lib/aceCapacity.ts` is the **shared, pure calculation** for reviewed
+Big capacity and guaranteed mutual Littles. It does not create a second
+capacity planner, a matching decision, an orphan draft, a tree writer, an RPC
+or a database migration. **No new admin capacity UI or production behavior
+is enabled by this change.**
+
+A Chair must explicitly review a Big's maximum and, when they have mutual
+guarantees, choose whether it means **total Littles including mutual** or
+**additional Littles beyond mutual**. Until a maximum is reviewed,
+`needsCapacity` is set and no additional seat is authorized, so a `remaining`
+of 0 or below is not a real limit. A reviewed maximum with no interpretation
+gives `remaining = null`. A conditional/ranged form answer cannot authorize a
+seat count.
+
+Within the same academic cycle, each canonical Little participant ID counts
+once regardless of whether they submitted mutual, regular or both forms.
+Approved mutual guarantees are reserved first; confirmed and tentative
+regular pairings consume the unreserved seats; provisional requests are
+display-only; historical children do **not** consume this cycle's capacity.
+A withdrawn Big or overloaded plan requires explicit review, never an
+automatic deletion of a guaranteed pairing. Orphans stay in the private
+intake workflow, **not** `ace_assignment_drafts`.
+
+**Still blocked:** #644 participant storage and review status, #646 private
+capacity/orphan RPCs and panel, #662 verified guarantee approvals, #663
+interpretation UI, #647 matching integrations. The older
+`aceApplicationProfiles.ts` free-text capacity advisory is unchanged and
+must **not** be treated as a reviewed capacity.
 
 ## Database
 
