@@ -97,7 +97,9 @@ describe('Ask VSA feedback: private review notes (#237)', () => {
     expect(await screen.findByRole('button', { name: 'Mark Resolved' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'all' } });
     await waitFor(() => expect(list).toHaveBeenCalledWith({ status: 'all', rating: 'all' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Mark Resolved' }));
+    // Changing the URL filter triggers a request and temporarily hides the
+    // list. Wait for the new filtered view before exercising its action.
+    fireEvent.click(await screen.findByRole('button', { name: 'Mark Resolved' }));
     expect(await screen.findByRole('button', { name: 'Reopen for review' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Reopen for review' }));
     await waitFor(() => expect(aiFeedbackRepository.markUnresolved).toHaveBeenCalledWith('synthetic-feedback-1'));
