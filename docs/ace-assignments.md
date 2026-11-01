@@ -139,6 +139,11 @@ responses, header row included. Logic: `src/lib/aceMutualRequests.ts`.
 - "Requesting a Big" means the respondent is a Little. Repeat submissions are
   keyed on UCSD email (a bare username means `@ucsd.edu`); the latest
   timestamp wins, and someone who answered as both roles is flagged.
+- **Email-less identity safety:** two submissions with the same name but no
+  UCSD email stay separate, not silently deduplicated. Identical normalized
+  names across distinct source identities are flagged as conflicts and withheld
+  from reciprocal pairs until the Chair checks the actual people. No wrong
+  family link or apparent guarantee is inferred from a name alone.
 - Requested names are pulled out of free text and resolved against the
   opposite role only: full name, then first + last, then preferred name +
   last, then a first name that is unique. A near spelling is only a *possible*
