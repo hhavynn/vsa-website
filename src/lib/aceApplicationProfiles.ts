@@ -302,9 +302,10 @@ function roleFromAnswer(answer: string): ApplicantRole | null {
 
 /**
  * Parses the pasted ACE application responses. Only whitelisted columns are
- * read. A repeat submission from the same UCSD email keeps the latest, across
- * roles, before rows without a readable Big/Little answer are dropped (the
- * same order the draft import uses).
+ * read. Repeat submissions with one consistent role keep the latest. When
+ * the same UCSD email submitted as both Big and Little, exclude that identity
+ * from suggestions/review until the chair resolves it. Otherwise a newer role
+ * answer would silently overwrite an earlier, conflicting application.
  */
 export function parseApplicationProfiles(text: string): ParsedApplicationProfiles {
   const result: ParsedApplicationProfiles = { profiles: [], bigCount: 0, littleCount: 0, repeatsReplaced: 0, skipped: 0, warnings: [] };
@@ -331,11 +332,39 @@ export function parseApplicationProfiles(text: string): ParsedApplicationProfile
     result.skipped += 1;
     return [];
   });
+  // A single canonical email claiming both roles is not safe to treat as
+  // either role. Hold every copy out of pairing review until the chair resolves
+  // the conflicting form responses. Never include an email in UI warnings.
+  const rolesByEmail = new Map<string, Set<ApplicantRole>>();
+  for (const { cells, email } of named) {
+    if (!email) continue;
+    const role = roleFromAnswer(plain(cells, 'role'));
+    if (!role) continue;
+    const roles = rolesByEmail.get(email) ?? new Set<ApplicantRole>();
+    roles.add(role);
+    rolesByEmail.set(email, roles);
+  }
+  const conflictingEmails = new Set(
+    Array.from(rolesByEmail, ([email, roles]) => (roles.size > 1 ? [email] : [])).flat(),
+  );
+  const conflictingNames = new Set<string>();
+  for (const { cells, email } of named) {
+    if (email && conflictingEmails.has(email)) conflictingNames.add(plain(cells, 'name'));
+  }
+  if (conflictingEmails.size) {
+    const names = Array.from(conflictingNames).slice(0, 5);
+    const more = conflictingNames.size > names.length ? ` and ${conflictingNames.size - names.length} more` : '';
+    result.warnings.push(
+      `${conflictingEmails.size} applicant ${conflictingEmails.size === 1 ? 'identity has' : 'identities have'} both Big and Little submissions. Excluded from matching until the Chair verifies the role: ${names.join(', ')}${more}.`,
+    );
+  }
+
   // Responses are in submission order, so the last one per email is the latest.
   const seen = new Set<string>();
   const kept: typeof named = [];
   for (let i = named.length - 1; i >= 0; i -= 1) {
     const { email } = named[i];
+    if (email && conflictingEmails.has(email)) continue;
     if (email && seen.has(email)) {
       result.repeatsReplaced += 1;
       continue;
