@@ -114,7 +114,7 @@ describe('Ask VSA knowledge freshness', () => {
     renderPage('/admin/ai-knowledge?category=events');
     expect(await screen.findByRole('heading', { name: 'Public event times', level: 3 })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Who is VSA?', level: 3 })).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Category')).toHaveValue('events');
+    expect(screen.getAllByLabelText('Category')[0]).toHaveValue('events');
     expect(repo.listAdminSnippets).toHaveBeenCalledTimes(1);
   });
 
@@ -122,9 +122,9 @@ describe('Ask VSA knowledge freshness', () => {
     repo.listAdminSnippets.mockResolvedValue([snippet({ id: 'general', title: 'Campus information', category: 'general' })]);
     renderPage('/admin/ai-knowledge?category=unrecognized');
     await waitFor(() => expect(repo.listAdminSnippets).toHaveBeenCalled());
-    expect(screen.getByLabelText('Category')).toHaveValue('unrecognized');
+    expect(screen.getAllByLabelText('Category')[0]).toHaveValue('unrecognized');
     expect(screen.queryByRole('heading', { name: 'Campus information', level: 3 })).not.toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'all' } });
+    fireEvent.change(screen.getAllByLabelText('Category')[0], { target: { value: 'all' } });
     expect(await screen.findByRole('heading', { name: 'Campus information', level: 3 })).toBeInTheDocument();
   });
 
