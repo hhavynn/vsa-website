@@ -76,7 +76,7 @@ export function uniqueTreeNodes(nodes: TreeNode[]): TreeNode[] {
   });
 }
 
-export function layoutTree(rawNodes: TreeNode[]): LayoutResult {
+export function layoutTree(rawNodes: TreeNode[], options: { mode?: 'year' | 'generation' } = {}): LayoutResult {
   const nodes = uniqueTreeNodes(rawNodes);
   const issues: LayoutIssue[] = [];
   if (nodes.length < rawNodes.length) {
@@ -149,14 +149,20 @@ export function layoutTree(rawNodes: TreeNode[]): LayoutResult {
   roots.sort(compareNode);
 
   const known = nodes.map(verifiedYear).filter((year): year is number => year !== null);
-  const mode: 'year' | 'generation' = known.length > 0 &&
-    known.length / nodes.length >= ACE_YEAR_LAYOUT_MIN_KNOWN_SHARE ? 'year' : 'generation';
+  // A filtered admin preview must keep the full family's row mode even when
+  // the filtered slice has fewer dated nodes. The default public heuristic is unchanged.
+  const mode: 'year' | 'generation' = options.mode ?? (
+    known.length > 0 && known.length / nodes.length >= ACE_YEAR_LAYOUT_MIN_KNOWN_SHARE
+      ? 'year' : 'generation'
+  );
   const bandKeyById: Record<string, BandKey> = {};
   const yearBands: YearBand[] = [];
   const rowById: Record<string, number> = {};
   if (mode === 'year') {
-    const min = Math.min(...known);
-    const max = Math.max(...known);
+    // A year-mode slice can contain only undated draft/ancestor nodes.
+    // It still needs its honest Unknown band, never fabricated calendar rows.
+    const min = known.length > 0 ? Math.min(...known) : 0;
+    const max = known.length > 0 ? Math.max(...known) : -1;
     const hasUnknown = known.length < nodes.length;
     const keys: BandKey[] = [];
     if (hasUnknown && UNKNOWN_BAND_FIRST) keys.push('unknown');
