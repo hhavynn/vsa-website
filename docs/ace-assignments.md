@@ -174,9 +174,13 @@ fixed.
 - Littles attach to rows by the linked member's email (looked up once, never
   stored), then by normalized name or preferred + last name; Bigs attach to
   tree nodes by normalized name. Ambiguous matches are left alone.
-- Checks (gender preference, capacity, year preference, substance comfort,
-  do-not-pair) and the suggestion score are **advisory**. They never block
-  Lock or Publish. Picking a suggestion just sets the Big like the picker does.
+- Pair checks (gender preference, capacity, year preference, substance comfort,
+  do-not-pair) are **advisory**: they do not block Lock or Publish, so the Chair
+  must review any warnings before making a decision. Suggestions are shown
+  only when there is at least one meaningful non-gender shared-answer reason;
+  the UI shows those reasons, **not** a numeric fit/compatibility rating.
+  Gender agreement is not a suggestion score bonus. Picking a suggestion just
+  sets the Big like the regular picker does, and still requires an explicit click.
 
 ## Database
 
