@@ -106,9 +106,9 @@ it('supports quoted CSV export and resets stale spelling approvals when the file
   const possible = section(/Possible matches/);
   fireEvent.click(within(possible).getByRole('button', { name: 'Same person' }));
   expect(within(possible).getByRole('button', { name: 'Same person' })).toHaveAttribute('aria-pressed', 'true');
-  const csv = PASTE.split('\\n')
-    .map((line) => line.split('\\t').map((cell) => `"${cell.replace(/"/g, '""')}"`).join(','))
-    .join('\\n');
+  const csv = PASTE.split('\n')
+    .map((line) => line.split('\t').map((cell) => `"${cell.replace(/"/g, '""')}"`).join(','))
+    .join('\n');
   fireEvent.change(screen.getByLabelText('Upload mutual request CSV or TSV'), {
     target: { files: [new File([csv], 'mutual-responses.CSV', { type: 'text/csv' })] },
   });
@@ -116,7 +116,7 @@ it('supports quoted CSV export and resets stale spelling approvals when the file
   expect(screen.getByTestId('mutual-summary')).toHaveTextContent('4 people · 1 Big · 3 Littles');
 });
 
-it('rejects .xlsx and oversized exports without erasing an existing paste', async () => {
+it('rejects unsupported .xlsx exports without erasing an existing paste', async () => {
   setup();
   fireEvent.change(screen.getByLabelText('Upload mutual request CSV or TSV'), {
     target: { files: [new File(['binary'], 'mutual.xlsx')] },
