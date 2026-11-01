@@ -28,6 +28,7 @@ import {
 } from '../../../lib/adminActivity';
 import { planAceLinkExactMatches, planMarkReviewed, pruneSelection, selectedRows, setSelection, toggleSelected } from '../../../lib/adminBulk';
 import { findAceLittleDuplicates } from '../../../lib/adminConflicts';
+import { planAceDraftImport } from '../../../lib/aceDraftImportPlan';
 import { aceEligibilityIssues } from '../../../lib/adminPreflight';
 import { applyQuickFilter, countByFilter } from '../../../lib/adminFilters';
 import { NextStep, nextStepFor } from '../../../lib/adminNextSteps';
@@ -302,21 +303,35 @@ export function AceAssignmentsWorkspace() {
 
   const importLittles = async (resolution: ImportResolution) => {
     if (!cycleId) return;
-    await aceAssignmentsRepository.addDrafts(cycleId, resolution.seeds, nextOrder());
+    const plan = planAceDraftImport(resolution.seeds, drafts);
+    if (plan.needsReview > 0) {
+      throw new Error(
+        `${plan.needsReview} incoming Little rows have ambiguous names or member links. No changes made. Review those rows in the original sheet before retrying.`,
+      );
+    }
+    if (plan.seeds.length === 0) {
+      toast('No new Littles to add; all were already in this draft.');
+      return;
+    }
+    await aceAssignmentsRepository.addDrafts(cycleId, plan.seeds, nextOrder());
     await refreshDrafts();
-    const parts = [`Added ${resolution.seeds.length} to the draft.`];
-    if (resolution.emailLinked > 0) parts.push(`${resolution.emailLinked} linked by email.`);
-    if (resolution.bigUnresolved > 0) parts.push(`${resolution.bigUnresolved} Bigs need a manual pick (see notes).`);
+    const parts = [`Added ${plan.seeds.length} to the draft.`];
+    const linked = plan.seeds.filter((seed) => seed.little_member_id).length;
+    const unassigned = plan.seeds.filter((seed) => !seed.big_ace_member_id).length;
+    if (linked > 0) parts.push(`${linked} linked to members.`);
+    if (unassigned > 0) parts.push(`${unassigned} need a Big assignment.`);
+    if (plan.skippedExisting > 0) parts.push(`${plan.skippedExisting} already in the draft; skipped.`);
+    if (plan.skippedRepeated > 0) parts.push(`${plan.skippedRepeated} exact repeat rows skipped.`);
     toast.success(parts.join(' '));
     logAdminActivity({
       action: ACTIVITY_ACTIONS.aceImportAdded,
       entityType: 'ace_assignment_cycle',
       entityId: cycleId,
       academicYearStart: yearStart,
-      summary: `Imported ${resolution.seeds.length} ${resolution.seeds.length === 1 ? 'Little' : 'Littles'} into the ${yearStart ? formatAcademicYear(yearStart) : ''} ACE draft`,
+      summary: `Imported ${plan.seeds.length} ${plan.seeds.length === 1 ? 'Little' : 'Littles'} into the ${yearStart ? formatAcademicYear(yearStart) : ''} ACE draft`,
     });
-    const needsLook = resolution.seeds.filter((seed) => !seed.little_member_id || !seed.big_ace_member_id).length;
-    setNextStep(nextStepFor({ type: 'ace_imported', count: resolution.seeds.length, issues: needsLook }));
+    const needsLook = plan.seeds.filter((seed) => !seed.little_member_id || !seed.big_ace_member_id).length;
+    setNextStep(nextStepFor({ type: 'ace_imported', count: plan.seeds.length, issues: needsLook }));
     setImportOpen(false);
   };
 
