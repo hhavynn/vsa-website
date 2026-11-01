@@ -60,7 +60,7 @@ const codes = (list: ReturnType<typeof computePreflight>['issues']) => list.map(
 
 describe('ACE Big picker search (#647)', () => {
   it('prioritizes an exact full name ahead of the first eight partial matches', () => {
-    const partials = Array.from({ length: 12 }, (_, i) => node(`partial-${i}`, `Avery ${String(i).padStart(2, '0')} Nguyen`));
+    const partials = Array.from({ length: 12 }, (_, i) => node(`partial-${i}`, `Avery Nguyen ${String(i).padStart(2, '0')}`));
     const exact = node('canonical-exact', 'Avery Nguyen', { familyName: 'Night Fam' });
     const result = searchAceBigNodes([...partials, exact], 'Avery Nguyen');
     expect(result.total).toBe(13);
