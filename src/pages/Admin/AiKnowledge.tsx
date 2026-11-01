@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { FilterChips } from '../../components/features/admin/ops';
 import { FreshnessBadge, FreshnessCard } from '../../components/features/admin/KnowledgeFreshness';
@@ -216,11 +216,18 @@ function StatusBadge({ active }: { active: boolean }) {
 }
 
 export default function AdminAiKnowledge() {
+  const location = useLocation();
+  // Private feedback can direct an admin to a *category*, never claim the
+  // model used any specific knowledge row without persisted citation evidence.
+  const [incomingCategory] = useState(() => {
+    const value = new URLSearchParams(location.search).get('category')?.trim();
+    return value && value.length <= 80 && /^[a-z0-9 _/-]+$/i.test(value) ? value : 'all';
+  });
   const [snippets, setSnippets] = useState<AiKnowledgeSnippet[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [form, setForm] = useState<SnippetFormState>(DEFAULT_FORM);
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState(incomingCategory);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -568,6 +575,9 @@ export default function AdminAiKnowledge() {
                       style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
                     >
                       <option value="all">All categories</option>
+                      {categoryFilter !== 'all' && !categories.includes(categoryFilter) && (
+                        <option value={categoryFilter}>Requested category not found</option>
+                      )}
                       {categories.map(category => (
                         <option key={category} value={category}>
                           {category}

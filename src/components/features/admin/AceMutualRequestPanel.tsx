@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { memberLookupRepository } from '../../../data/repos/memberLookup';
 import { toUserMessage } from '../../../data/errors';
@@ -12,6 +12,7 @@ import {
   planMutualImport,
 } from '../../../lib/aceMutualRequests';
 import { problemRowsToCsv } from '../../../lib/adminImportReview';
+import { readAceFormFile } from '../../../lib/aceFormFile';
 import { downloadCsv } from '../../../lib/housePlacementExport';
 import { pluralize } from '../../../lib/operationalStatus';
 import { cn } from '../../../lib/utils';
@@ -58,6 +59,38 @@ export function AceMutualRequestPanel({ nodes, existingNames = [], onImport, onC
   const [text, setText] = useState('');
   const [decisions, setDecisions] = useState<ReadonlyMap<string, PossibleDecision>>(new Map());
   const [importing, setImporting] = useState(false);
+  const [readingFile, setReadingFile] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const readVersion = useRef(0);
+  useEffect(() => () => { readVersion.current += 1; }, []);
+
+  const editPaste = (value: string) => {
+    readVersion.current += 1;
+    setReadingFile(false);
+    setFileError(null);
+    setDecisions(new Map());
+    setText(value);
+  };
+
+  const loadFile = async (file: File | undefined) => {
+    if (!file || importing) return;
+    const version = ++readVersion.current;
+    setReadingFile(true);
+    setFileError(null);
+    try {
+      const content = await readAceFormFile(file);
+      if (version !== readVersion.current) return;
+      setDecisions(new Map());
+      setText(content);
+    } catch (error) {
+      if (version === readVersion.current) {
+        setFileError(error instanceof Error ? error.message : 'Could not read the form export.');
+      }
+    } finally {
+      if (version === readVersion.current) setReadingFile(false);
+    }
+  };
+
   useUnsavedChangesGuard(text.trim().length > 0, importing);
 
   const parsed = useMemo(() => parseMutualRequests(text), [text]);
@@ -108,7 +141,7 @@ export function AceMutualRequestPanel({ nodes, existingNames = [], onImport, onC
         <div>
           <h3 className="text-sm font-semibold text-[var(--color-text)]">Check mutual requests</h3>
           <p className="mt-0.5 text-[11px] text-[var(--color-text3)]">
-            Copy the ACE Mutual Request responses from Google Sheets, header row included, and paste them here. A pair
+            Paste the ACE Mutual Request responses from Google Sheets, header row included, or select a CSV/TSV export below. A pair
             counts only when both people requested each other. Phone, social and email columns are ignored, and nothing
             is saved until you add the confirmed pairs to the draft.
           </p>
@@ -122,13 +155,38 @@ export function AceMutualRequestPanel({ nodes, existingNames = [], onImport, onC
         </button>
       </div>
 
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <label htmlFor="ace-mutual-file" className="font-semibold text-[var(--color-text2)]">
+          Upload mutual request CSV or TSV
+        </label>
+        <input
+          id="ace-mutual-file"
+          type="file"
+          accept=".csv,.tsv,text/csv,text/tab-separated-values"
+          disabled={readingFile || importing}
+          aria-describedby="ace-mutual-file-note"
+          onChange={(event) => {
+            const file = event.currentTarget.files?.[0];
+            event.currentTarget.value = '';
+            void loadFile(file);
+          }}
+          className="max-w-full text-xs text-[var(--color-text2)] file:mr-2 file:rounded file:border file:border-[var(--color-border)] file:bg-transparent file:px-2 file:py-1"
+        />
+      </div>
+      <p id="ace-mutual-file-note" className="mt-1 text-[11px] text-[var(--color-text3)]">
+        Only the Form Responses CSV/TSV tab. Excel .xlsx is not supported; export it as CSV first.
+        The file is parsed locally, never uploaded or stored; review results before adding any pair.
+      </p>
+      {readingFile && <p role="status" className="text-[11px] text-[var(--color-text2)]">Reading file locally…</p>}
+      {fileError && <p role="alert" className="mt-1 text-[11px] text-red-600 dark:text-red-400">{fileError}</p>}
+
       <label htmlFor="ace-mutual-requests" className="sr-only">
         Pasted mutual request responses
       </label>
       <textarea
         id="ace-mutual-requests"
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => editPaste(e.target.value)}
         placeholder="Paste the form responses, including the header row"
         spellCheck={false}
         className="mt-3 block min-h-[140px] w-full rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 font-mono text-xs text-[var(--color-text)] placeholder-[var(--color-text3)] focus:border-[var(--brand)] focus:outline-none focus:ring-1 focus:ring-[var(--brand)]"
@@ -213,6 +271,35 @@ export function AceMutualRequestPanel({ nodes, existingNames = [], onImport, onC
             ))}
           </Section>
         </div>
+      )}
+
+      {hasInput && parsed.respondents.length > 0 && check.pairs.length > 0 && (
+        <section aria-label="Mutual Big tree-node preflight" className="mt-3 rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+          <h4 className="font-semibold text-[var(--color-text)]">Big tree-node preflight</h4>
+          <p className="mt-1 text-[11px] text-[var(--color-text2)]">
+            {preview.resolution.bigMatched} ready to assign to a unique existing ACE Big node
+            {' · '}{preview.resolution.bigUnresolved} needing a manual Big pick
+            {' · '}{preview.alreadyInDraft} Littles already in the draft.
+            These are reciprocal form responses, not chair-approved guarantees.
+          </p>
+          {preview.resolution.bigUnresolved > 0 && (
+            <>
+              <p role="note" className="mt-2 text-[11px] text-amber-700 dark:text-amber-400">
+                These Littles can be added to a private draft, but their Big is not assigned.
+                Resolve the correct existing family-tree Big node before Lock or Publish; never infer a family from the form.
+              </p>
+              <ul className="mt-2 divide-y divide-[var(--color-border)]" aria-label="Mutual pairs needing Big tree review">
+                {preview.resolution.seeds.filter((seed) => !seed.big_ace_member_id).map((seed) => (
+                  <li key={seed.little_name} className="flex flex-wrap gap-2 py-2 text-[11px] text-[var(--color-text2)]">
+                    <span className="font-semibold text-[var(--color-text)]">{seed.little_name}</span>
+                    <span>{seed.notes ?? 'No unique ACE Big node found'}</span>
+                    <span>· pick the correct Big manually</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
       )}
 
       {hasInput && parsed.respondents.length > 0 && (

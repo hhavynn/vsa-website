@@ -187,3 +187,54 @@ describe('ACE chronological tree acceptance (#675)', () => {
     expect(await axe(undatedContainer)).toHaveNoViolations();
   });
 });
+
+
+describe('ACE year rail responsive and year-gap DOM proof (#675)', () => {
+  it('keeps the selected year and narrows only the rail on a 320px viewport', () => {
+    const originalWidth = Object.getOwnPropertyDescriptor(window, 'innerWidth');
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 320 });
+    const view = renderTree(golden, { focusNodeId: 'c' });
+    try {
+      const rail = view.container.querySelector('.ace-year-rail') as HTMLDivElement;
+      expect(rail).not.toBeNull();
+      expect(rail.style.width).toBe('56px');
+      expect(view.container.querySelector('.ace-year-label.is-focus'))
+        .toHaveAttribute('data-band-key', '2023');
+      expect(screen.getByRole('button', {
+        name: 'Fictional C, Little, picked up 2023–24',
+      })).toHaveAttribute('aria-pressed', 'true');
+
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: 768 });
+      fireEvent.resize(window);
+      expect((view.container.querySelector('.ace-year-rail') as HTMLElement).style.width).toBe('84px');
+      expect(view.container.querySelector('.ace-year-label.is-focus'))
+        .toHaveAttribute('data-band-key', '2023');
+      expect(screen.getByRole('button', {
+        name: 'Fictional C, Little, picked up 2023–24',
+      })).toHaveAttribute('aria-pressed', 'true');
+      expect(view.container.querySelectorAll('.ace-tree-node')).toHaveLength(golden.length);
+    } finally {
+      view.unmount();
+      if (originalWidth) Object.defineProperty(window, 'innerWidth', originalWidth);
+      else Reflect.deleteProperty(window, 'innerWidth');
+    }
+  });
+
+  it('renders every skipped academic-year band without inventing members', () => {
+    const acrossYears = [
+      node('old-big', 'Fictional Old Big', null, 2015, 'FA15'),
+      node('new-little', 'Fictional New Little', 'old-big', 2023, 'FA23'),
+    ];
+    const { container } = renderTree(acrossYears);
+    const years = Array.from(container.querySelectorAll('[data-band-key]'),
+      (element) => element.getAttribute('data-band-key'));
+    expect(years).toEqual(Array.from({ length: 9 }, (_, index) => String(2015 + index)));
+    const guides = Array.from(container.querySelectorAll('svg [data-year-band]'),
+      (element) => element.getAttribute('data-year-band'));
+    expect(guides).toEqual(years);
+    expect(container.querySelectorAll('.ace-tree-node')).toHaveLength(2);
+    expect(screen.getByRole('button', {
+      name: 'Fictional New Little, Little, picked up 2023–24',
+    })).toBeInTheDocument();
+  });
+});

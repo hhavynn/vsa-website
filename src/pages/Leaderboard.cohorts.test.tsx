@@ -46,36 +46,25 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 
-describe('Board vs Members segmented leaderboard (#628)', () => {
-  it('splits only canonical-linked published Board IDs and recalculates ranks within each cohort', async () => {
+describe('Members-only leaderboard (#628)', () => {
+  it('lists only non-Board members and recalculates ranks without a Board toggle', async () => {
     mount();
     const membersTable = await screen.findByRole('table', { name: 'Members standings for 2026-2027' });
     expect(within(membersTable).getByRole('row', { name: 'Rank #1: Bao Two' })).toBeInTheDocument();
     expect(within(membersTable).getByRole('row', { name: 'Rank #2: Cai Three' })).toBeInTheDocument();
     expect(within(membersTable).queryByText('Ada One')).not.toBeInTheDocument();
     expect(within(membersTable).queryByText('Cam Four')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'BOARD' }));
-    const boardTable = screen.getByRole('table', { name: 'Board standings for 2026-2027' });
-    expect(within(boardTable).getByRole('row', { name: 'Rank #1: Ada One' })).toBeInTheDocument();
-    expect(within(boardTable).getByRole('row', { name: 'Rank #2: Cam Four' })).toBeInTheDocument();
-    expect(within(boardTable).queryByText('Bao Two')).not.toBeInTheDocument();
-    expect(screen.getByTestId('url')).toHaveTextContent('cohort=board');
-    expect(screen.getByTestId('url')).toHaveTextContent('year=2026');
-    expect(within(boardTable).getByText('40')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'BOARD' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'MEMBERS' })).not.toBeInTheDocument();
   });
 
-  it('keeps selected cohort/year/metric in shareable URLs and respects deep links', async () => {
+  it('ignores a stale cohort=board link and keeps year/metric deep links', async () => {
     mount('/leaderboard?year=2026&cohort=board&metric=events');
-    expect(await screen.findByRole('table', { name: 'Board standings for 2026-2027' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'BOARD' })).toHaveAttribute('aria-pressed', 'true');
+    const table = await screen.findByRole('table', { name: 'Members standings for 2026-2027' });
+    expect(within(table).queryByText('Ada One')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'EVENTS' })).toHaveAttribute('aria-pressed', 'true');
-    fireEvent.click(screen.getByRole('button', { name: 'MEMBERS' }));
-    expect(screen.getByTestId('url').textContent).not.toMatch(/cohort=board/);
     fireEvent.change(screen.getByRole('combobox', { name: 'Select academic year' }), { target: { value: 'all' } });
     expect(screen.getByTestId('url')).toHaveTextContent('year=all');
-    expect(screen.queryByRole('button', { name: 'BOARD' })).not.toBeInTheDocument();
-    expect(screen.getByText(/All-Time combines everyone/)).toBeInTheDocument();
   });
 
   it('does not falsely exclude officers when the Board read fails', async () => {
@@ -85,8 +74,5 @@ describe('Board vs Members segmented leaderboard (#628)', () => {
     const table = screen.getByRole('table', { name: 'Full member standings for 2026-2027' });
     expect(within(table).getByRole('row', { name: 'Rank #1: Ada One' })).toBeInTheDocument();
     expect(within(table).getByRole('row', { name: 'Rank #4: Cam Four' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'BOARD' }));
-    expect(screen.getByText(/Board rankings cannot be verified right now/)).toBeInTheDocument();
-    expect(screen.getByText(/Board rankings are unavailable until a verified published roster/)).toBeInTheDocument();
   });
 });

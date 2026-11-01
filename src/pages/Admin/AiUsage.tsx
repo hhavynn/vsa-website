@@ -15,6 +15,17 @@ export function summarizeAiUsage(days: AiUsageDay[]) {
   return { ...totals, requests: Object.values(totals).reduce((total, count) => total + count, 0) };
 }
 
+/**
+ * Ratio of logged outcome counts only. Zero recorded attempts do not imply a
+ * 0% rate; there is no valid denominator, so return null to show N/A.
+ */
+export function loggedOutcomePercent(outcome: number, requests: number): string | null {
+  if (!Number.isSafeInteger(outcome) || outcome < 0 || !Number.isSafeInteger(requests) || requests <= 0 || outcome > requests) {
+    return null;
+  }
+  return `${((outcome / requests) * 100).toFixed(1)}%`;
+}
+
 export default function AdminAiUsage() {
   const [period, setPeriod] = useState<ReportDays>(30);
   const { data: rows = [], isLoading: loading, isError: error } = useQuery({
@@ -75,10 +86,46 @@ export default function AdminAiUsage() {
                 </div>
               ))}
             </section>
+            <section aria-labelledby="ai-usage-outcome-share" className="space-y-3">
+              <h2 id="ai-usage-outcome-share" className="font-serif text-xl text-text-primary">Share of recorded attempts</h2>
+              <p className="text-xs leading-relaxed text-text-secondary">
+                These shares use the {totals.requests.toLocaleString()} logged attempt{totals.requests === 1 ? '' : 's'} in this period,
+                including fallback and unknown outcomes in the denominator. They are not percentages of students or of billable model calls.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {([
+                  ['Rate-limited', totals.rate_limited, 'Requests rejected by a recorded rate limit.'],
+                  ['Errors', totals.errors, 'Requests recorded as an error.'],
+                  ['Answered', totals.answered, 'Requests recorded as answered, not necessarily helpful.'],
+                ] as const).map(([label, count, hint]) => (
+                  <div key={label} className="rounded-lg border border-[var(--color-border)] bg-surface p-4">
+                    <h3 className="font-sans text-xs font-semibold text-text-secondary">{label}</h3>
+                    <p className="mt-1 font-serif text-2xl tabular-nums text-text-primary">
+                      {loggedOutcomePercent(count, totals.requests) ?? 'N/A'}
+                    </p>
+                    <p className="mt-1 text-xs text-text-secondary">
+                      {count.toLocaleString()} of {totals.requests.toLocaleString()} logged attempts
+                    </p>
+                    <p className="mt-2 text-xs text-text-muted">{hint}</p>
+                  </div>
+                ))}
+              </div>
+              {totals.rate_limited > 0 && (
+                <p className="text-sm text-text-secondary">
+                  Recorded rate-limit rejections warrant checking when students encounter limits before considering any quota change.
+                  This report cannot identify who was affected or prove a 5-per-session limit was the cause.
+                </p>
+              )}
+              {totals.errors > 0 && (
+                <p className="text-sm text-text-secondary">
+                  Recorded errors warrant an operations review; the aggregate does not include diagnostic traces or root causes.
+                </p>
+              )}
+            </section>
             <p className="text-xs leading-relaxed text-text-secondary">
-              Rate-limited counts help identify whether the current 5-per-session daily limit may be affecting students.
-              Some older log rows have unknown status and are included in Requests but not the named outcome cards ({totals.other} unknown).
-              These are logged attempts, not unique students; unsuccessful quota reservations may not have a completed log entry.
+              Rate-limited and error shares are directional only. Some older log rows have unknown status ({totals.other} unknown)
+              and are included in Requests. These are logged attempts, not unique students; unsuccessful quota reservations
+              may have no completed log entry. No new tracking or raw usage-log access was added.
             </p>
             <section aria-labelledby="ai-usage-by-day">
               <h2 id="ai-usage-by-day" className="mb-3 font-serif text-xl text-text-primary">Daily breakdown</h2>

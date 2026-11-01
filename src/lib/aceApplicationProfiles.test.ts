@@ -407,6 +407,23 @@ describe('suggestBigs', () => {
     ]);
     expect(selected).toHaveLength(1);
     expect(selected[0].reasons).toContain('Similar introvert/extrovert (5 and 5)');
+    // The only positive explanation must never be gender. A completely
+    // mismatched non-gender answer does not establish an explainable pairing.
+    const incompatibleBig = { ...withScale, scales: { ...withScale.scales, introExtro: 1 } };
+    const incompatibleLittle = { ...littleWithScale, scales: { ...littleWithScale.scales, introExtro: 10 } };
+    expect(suggestBigs({ profile: incompatibleLittle, name: 'Fictional Little' }, [
+      { ...candidate, profile: incompatibleBig },
+    ])).toEqual([]);
+
+    // Gender can be a separately reviewed preference/conflict, but it cannot
+    // boost ranking or appear as the sole recommendation rationale.
+    const neutralBig = { ...withScale, genderIdentity: null, genderPreference: null };
+    const neutralSuggestion = suggestBigs({ profile: littleWithScale, name: 'Fictional Little' }, [
+      { ...candidate, profile: neutralBig },
+    ]);
+    expect(selected[0].score).toBe(neutralSuggestion[0].score);
+    expect(selected[0].reasons).toEqual(neutralSuggestion[0].reasons);
+    expect(selected[0].reasons.every((reason) => !/gender/i.test(reason))).toBe(true);
   });
 
   it('ranks closer answers higher, explains why, and leaves out conflicts and full Bigs', () => {

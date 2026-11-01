@@ -74,7 +74,13 @@ async function readCount(label: string, query: PromiseLike<unknown>): Promise<nu
       console.error(`Admin overview: failed to count ${label}`, error);
       return null;
     }
-    return count ?? 0;
+    // A successful HEAD without an exact count is *unknown*, not zero.
+    // Otherwise a missing Content-Range silently looks like an empty queue.
+    if (typeof count !== 'number' || !Number.isSafeInteger(count) || count < 0) {
+      console.error(`Admin overview: ${label} count was missing or invalid`);
+      return null;
+    }
+    return count;
   } catch (error) {
     console.error(`Admin overview: failed to count ${label}`, error);
     return null;

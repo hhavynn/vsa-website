@@ -6,6 +6,7 @@ import { aceFamiliesRepository } from '../../../data/repos/aceFamilies';
 import type { AceAssignmentCycle, AceAssignmentDraft, AceFamily } from '../../../types';
 import type { AceNodeRef } from '../../../lib/aceAssignments';
 import { buildBranchPreview } from '../../../lib/aceBranchPreview';
+import { layoutTree } from '../../../lib/aceTreeLayout';
 import { FamilyTree } from '../ace/FamilyTree';
 import '../../../styles/ace.css';
 
@@ -44,6 +45,15 @@ export function AceBranchPreviewPanel({ cycle, drafts, nodes, ready }: AceBranch
   );
   const selected = plan?.fams.find((fam) => fam.familyId === selectedFamily) ?? plan?.fams[0] ?? null;
   const visibleNodes = selected ? (fullAncestry ? selected.fullNodes : selected.newOnlyNodes) : [];
+  // Preview subsets can fall below the public chronological-layout threshold.
+  // Always classify from the *full* family, then keep that mode while toggling.
+  const fullLayout = useMemo(() => selected ? layoutTree(selected.fullNodes) : null, [selected]);
+  const visibleLayout = useMemo(() =>
+    selected && fullLayout
+      ? fullAncestry ? fullLayout : layoutTree(selected.newOnlyNodes, { mode: fullLayout.mode })
+      : null,
+    [selected, fullLayout, fullAncestry],
+  );
   const draftCount = selected?.fullNodes.filter((node) => node.isDraft).length ?? 0;
 
   return (
@@ -134,7 +144,7 @@ export function AceBranchPreviewPanel({ cycle, drafts, nodes, ready }: AceBranch
                   </p>
                   <div className={`ace-app ${dark ? 'is-dark' : ''} overflow-x-auto rounded border border-[var(--color-border)] bg-[var(--color-surface2)] p-2`}
                     tabIndex={0} role="region" aria-label={`Private ${selected.familyName} family tree preview`}>
-                    <FamilyTree nodes={visibleNodes} dark={dark} focusId={focusId} onSelect={setFocusId} />
+                    <FamilyTree nodes={visibleNodes} layout={visibleLayout ?? undefined} dark={dark} focusId={focusId} onSelect={setFocusId} />
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {selected.byBig.map((group) => (

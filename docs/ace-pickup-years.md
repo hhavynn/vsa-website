@@ -204,9 +204,9 @@ The existing 2026-10-27 counts in `docs/ace-historical-pickup-years-results.md` 
 
 One database transaction locks that node, validates the expected year/term, creates a deduplicated pending admin-year evidence row if no evidence was chosen, asks the existing #669 setter to approve and write only the year fields, then appends a protected `admin_activity_log` entry **only if the approved value changed**. The audit stores the old and new year/term and selected source kind only; no notes, contacts, student names or Drive links. An audit failure rolls back the node change and evidence. The activity year column is deliberately NULL (1998 and earlier ACE year corrections do not satisfy the activity-log 2000 minimum).
 
-**No admin editor is wired in this PR.** #673 follow-up PR2 will implement the per-node form, explicit overwrite/Unknown confirmation, family/year review queue, evidence status and accessible controls. Do not use the old setter for that new UI.
+**The later #673 per-node admin editor is on a separate stacked PR, not part of the backend migration.** Never call the old setter from that editor; the only permitted writer is the audited compare-and-swap RPC.
 
-**Status:** applied to production 2026-10-31 as version 20261031080736, with no staging run because no staging project exists. The admin correction UI is not built yet.
+**Status:** applied to production 2026-10-31 as version 20261031080736, with no staging run because no staging project exists. The admin correction UI is being introduced in a separate, review-gated PR; this migration note does not attest to its deployment.
 
 Migration `20261031080736_ace_pickup_year_correction.sql` must be applied **after** `20261002040000_admin_activity_log_and_review_marks.sql` and `20261027190000_ace_member_pickup_year.sql`. Owner first confirms both prerequisites exist on staging, then manually applies the correction migration. Never run `supabase db push` or apply production SQL from an agent. If an RPC is absent, the client correction must fail closed; never fall back to the unaudited setter.
 
@@ -229,10 +229,49 @@ offers direct navigation to the existing ACE node editor, **not** an automatic f
 bulk date assignment or lineage change. A clean queue is not proof of historical
 source completeness.
 
-**Incomplete:** the per-node correction form, source approval, explicit overwrite
-and Unknown confirmations, and post-save refresh/last-write conflict interactions
-remain #673 follow-up. The UI must use only
-`aceFamiliesRepository.correctPickupYear` (audited compare-and-swap RPC) when
-those controls are added; never wire the legacy `setPickupYear` to a Save button.
-Live admin/anonymous RLS, migration availability, mobile/keyboard and two-tab
-conflict rehearsal must be independently verified before closing #673.
+## Per-node reviewed pickup-year correction editor (#673, stacked PR)
+
+Each node's dedicated **Review pickup year** accordion has its own form, independent
+of the ordinary member Save. The form requires an explicit whole academic-year
+span such as `2023–24`; bare `2023`, blank and `legacy` never become
+approved years. The season selector is optional: keep it empty if the source
+establishes only the academic year. When selected, Fall/Winter/Spring becomes
+the canonical term `FA23`/`WI24`/`SP24` for that 2023–24 year. No current
+date, family start date, generation depth or Big's pickup date is ever a default.
+
+The editor displays Fam, exact node ID, approved year, Big and each recorded
+Little with their own approved years. It previews this node's old → proposed
+year and chronology warnings. It can fill a candidate from private **pending**
+evidence (preserving exact academic year, term, source_kind and evidence UUID);
+changing that draft clears the evidence UUID. Older superseded approvals remain
+visible as a count, not editable records. A sourced candidate still requires a
+confirmation dialog and the atomic server-side audit to become approved.
+
+To save, the admin explicitly confirms the target node and source category.
+A confirmed overwrite or **Set to Unknown** also requires explicit confirmation.
+`correctPickupYear` sends the node's **currently approved** year and term as the
+expected compare-and-swap values and changes only the year columns. A competing
+edit surfaces `Someone else changed this pickup year. Refresh and try again.`,
+re-fetches the member data and **never** retries with overwritten expectations.
+A correction committed successfully remains committed even if subsequent
+refresh fails; the UI locks inputs, source selection and further RPC submissions
+until a fresh approved node snapshot reflects that correction. Evidence-only
+approvals without a year change additionally wait until the selected evidence
+row has `review_status = 'approved'`. A stale compare-and-swap conflict stays
+locked until the approved node has changed from the editor's stale expected
+snapshot. On failed refetch the UI instructs the admin to reload, never to
+resubmit a potentially already-committed correction.
+
+The normal member Save still excludes the two pickup columns and cannot undo
+this correction. Do not auto-reimport a Fam or bulk-move year bands to fix
+historical dates. Office-handoff rule: approve only source-grounded academic
+years, leave Unknown if historical evidence is ambiguous, reconcile after
+Reveal through this audited correction path (not by republishing) and verify the
+approved year in the public projection once the authorized rollout has completed.
+
+**Remaining before issue closure:** exact-head CI; staging/hosted anon and
+non-admin denial of the correction RPC and private evidence, two-admin-tab CAS
+rehearsal, activity history integrity, 320px and keyboard/screen-reader checks,
+and a before/after hash proving Big/Little edges, membership links, avatars and
+publication fields are unchanged. No bulk edits or live data changes are authorized.
+

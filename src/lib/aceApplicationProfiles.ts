@@ -880,22 +880,19 @@ export function suggestBigs(little: PairSide & { profile: ApplicationProfile }, 
       activityComponent('Big is as active as the Little wants', activityLevel(l.wantedActivity), activityLevel(b.activity)),
       activityComponent('Little is as active as the Big wants', activityLevel(b.wantedActivity), activityLevel(l.activity)),
     ].filter((c): c is Component => c !== null);
-    if (basis.length === 0) continue;
-    const components: Component[] = [
-      ...basis,
-      // Stated gender preferences can only supplement a non-gender basis, never create one.
-      ...(genderPreferenceOf(l.genderPreference, l.genderIdentity) && genderOf(b.genderIdentity)
-        ? [{ value: 1, reason: 'Fits the Little’s gender preference' }] : []),
-      ...(genderPreferenceOf(b.genderPreference, b.genderIdentity) && genderOf(l.genderIdentity)
-        ? [{ value: 1, reason: 'Fits the Big’s gender preference' }] : []),
-    ];
-
-    const score = Math.round((components.reduce((sum, c) => sum + c.value, 0) / components.length) * 100);
-    const reasons = components
+    // Every visible suggestion must explain an actual non-sensitive alignment.
+    // An answered but mismatched scale (or an "any" preference) is not evidence
+    // on its own, and gender alignment cannot become its only positive reason.
+    const reasons = basis
       .filter((c) => c.reason)
       .sort((x, y) => y.value - x.value)
       .slice(0, 3)
       .map((c) => c.reason as string);
+    if (reasons.length === 0) continue;
+
+    // Score remains private for stable suggestion ordering; it is neither
+    // displayed as a compatibility rating nor influenced by gender identity.
+    const score = Math.round((basis.reduce((sum, c) => sum + c.value, 0) / basis.length) * 100);
     suggestions.push({ nodeId: candidate.nodeId, name: candidate.name, score, reasons });
   }
   return suggestions.sort((a, b) => b.score - a.score || a.name.localeCompare(b.name)).slice(0, limit);

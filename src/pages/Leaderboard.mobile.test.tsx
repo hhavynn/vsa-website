@@ -120,6 +120,19 @@ describe('Leaderboard mobile layout contract', () => {
     expect(screen.queryByRole('heading', { level: 3, name: /Top Performers|Full Standings/ })).not.toBeInTheDocument();
   });
 
+  it('still stages the podium when a tie for 3rd runs past the podium', async () => {
+    jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard').mockResolvedValue([
+      member('a', 'Ada', 'First', 13, 11),
+      member('b', 'Bao', 'Second', 12, 10),
+      member('c', 'Cam', 'Third', 10, 10),
+      member('d', 'Dee', 'Third', 10, 10),
+      member('e', 'Eli', 'Third', 10, 10),
+    ]);
+    await renderLoaded();
+    expect(screen.getByRole('heading', { level: 2, name: 'Top Performers' })).toBeInTheDocument();
+    expect(screen.getByText(/2 more members are tied for T3/)).toBeInTheDocument();
+  });
+
   it('keeps rank, name and points on every compact podium row', async () => {
     await renderLoaded();
     // Each top-3 member renders once in the phone podium, once in the desktop

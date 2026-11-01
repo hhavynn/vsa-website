@@ -71,6 +71,11 @@ export function useAceApplicationProfiles(
     const forCycle = cycleRef.current;
     const request = ++requestRef.current;
     const parsed = parseApplicationProfiles(text);
+    // Never replace a previously usable review with a malformed, header-only,
+    // or otherwise all-skipped import. No raw answer or contact data is logged.
+    if (parsed.profiles.length === 0) {
+      throw new Error('No valid Big or Little applications found. Check the Form Responses header, role answers, and selected CSV tab. Earlier answers are unchanged.');
+    }
     const emails = parsed.profiles.flatMap((profile) => (profile.role === 'little' && profile.email ? [profile.email] : []));
     let memberIdsByEmail = new Map<string, string[]>();
     let emailLookupFailed = false;

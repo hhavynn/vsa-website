@@ -19,7 +19,7 @@ jest.mock('../../../data/repos/housePayments', () => ({
   housePaymentsRepository: { listApplicants: jest.fn() },
 }));
 jest.mock('../../../data/repos/houseMembershipWrites', () => ({
-  houseMembershipsWriteRepository: { listMembershipsForYear: jest.fn() },
+  houseMembershipsWriteRepository: { listMembershipsForYear: jest.fn(), applyMembership: jest.fn() },
 }));
 jest.mock('../../../data/repos/memberLookup', () => ({
   memberLookupRepository: { listMemberDirectory: jest.fn() },
@@ -128,3 +128,85 @@ it('retains a published row-only review when the payment roster is not associate
   expect(housePaymentsRepository.listApplicants).not.toHaveBeenCalled();
 });
 
+
+it('puts a blank House row with an active interval in the admin exception list, not Unassigned', async () => {
+  (getCompleteHouseBatchCoverage as jest.Mock).mockResolvedValue([{
+    ...row, house_profile_id: null, source_house: null,
+  }]);
+  (houseMembershipsWriteRepository.listMembershipsForYear as jest.Mock).mockResolvedValue(new Map([[
+    'canonical-one', [{
+      id: 'fictional-membership', house_profile_id: 'hp-one',
+      effective_start_date: '2026-10-01', effective_end_date: null,
+    }],
+  ]]));
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Check coverage' }));
+  expect(await screen.findByText(/Fictional Applicant one · conflicting-membership/)).toBeInTheDocument();
+  expect(screen.getByText(/Roster says no House/)).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Review draft row' })).toHaveAttribute(
+    'href', '/admin/houses?batch=fictional-batch&row=fictional-row',
+  );
+  expect(getCompleteHouseBatchCoverage).toHaveBeenCalledWith('fictional-batch');
+});
+
+it('does not silently accept a blank House when the linked canonical member is missing', async () => {
+  (getCompleteHouseBatchCoverage as jest.Mock).mockResolvedValue([{
+    ...row, member_id: 'fictional-removed', house_profile_id: null, source_house: null,
+  }]);
+  (housePaymentsRepository.listApplicants as jest.Mock).mockResolvedValue([
+    applicant('one', 'fictional-removed'),
+  ]);
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Check coverage' }));
+  expect(await screen.findByText(/Fictional Applicant one · missing-member/)).toBeInTheDocument();
+  expect(screen.getByText(/Canonical member is absent/)).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Review draft row' })).toBeInTheDocument();
+});
+
+it('lists linked draft rows outside the Paid/Waived roster as reviewable exceptions', async () => {
+  (getCompleteHouseBatchCoverage as jest.Mock).mockResolvedValue([
+    row,
+    {
+      ...row,
+      id: 'fictional-outside-row',
+      applicant_id: 'fictional-ineligible',
+      source_name: 'Fictional outside applicant',
+      source_order: 1,
+      member_id: 'canonical-other',
+    },
+  ]);
+  (housePaymentsRepository.listApplicants as jest.Mock).mockResolvedValue([
+    applicant('one', 'canonical-one'),
+    { ...applicant('fictional-ineligible', 'canonical-other'), payment_status: 'unpaid' },
+  ]);
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Check coverage' }));
+  expect(await screen.findByText(/Fictional outside applicant · outside-eligible-roster/))
+    .toBeInTheDocument();
+  expect(screen.getByText(/outside the final Paid\/Waived non-withdrawn roster/)).toBeInTheDocument();
+  expect(screen.getByLabelText('Outside eligible roster count')).toHaveTextContent('1');
+  expect(screen.getByLabelText('Needs review count')).toHaveTextContent('1');
+  expect(screen.getByLabelText('Eligible count')).toHaveTextContent('1');
+  expect(screen.getByLabelText('Excluded count')).toHaveTextContent('1');
+  expect(screen.getByRole('link', { name: 'Review draft row' })).toHaveAttribute(
+    'href', '/admin/houses?batch=fictional-batch&row=fictional-outside-row',
+  );
+  expect(houseMembershipsWriteRepository.applyMembership).not.toHaveBeenCalled();
+});
+
+it('retains the outside-roster exception under search, without moving it into eligible counts', async () => {
+  (getCompleteHouseBatchCoverage as jest.Mock).mockResolvedValue([
+    row,
+    { ...row, id: 'fictional-unassociated-row', applicant_id: null,
+      source_order: 1, source_name: 'Fictional unmatched row', member_id: 'canonical-other' },
+  ]);
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Check coverage' }));
+  expect(await screen.findByText(/Fictional unmatched row · outside-eligible-roster/)).toBeInTheDocument();
+  fireEvent.change(screen.getByRole('searchbox', { name: /Search exceptions/ }), {
+    target: { value: 'outside-eligible-roster' },
+  });
+  expect(screen.getByText(/Fictional unmatched row · outside-eligible-roster/)).toBeInTheDocument();
+  expect(screen.getByLabelText('Eligible count')).toHaveTextContent('1');
+  expect(screen.getByLabelText('Outside eligible roster count')).toHaveTextContent('1');
+});

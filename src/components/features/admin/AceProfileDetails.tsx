@@ -115,13 +115,12 @@ export function AceProfileDetails({ application, littleName, editable, busy, onP
       {suggestions.length > 0 && (
         <div>
           <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text3)]">
-            Suggested Bigs · a suggestion only, based on scale and preference answers
+            Suggested Bigs · review the reasons and full applications before choosing
           </p>
           <ul className="mt-1 space-y-1" aria-label={`Suggested Bigs for ${littleName}`}>
             {suggestions.map((suggestion) => (
               <li key={suggestion.nodeId} className="flex flex-wrap items-baseline gap-x-2">
                 <span className="font-medium text-[var(--color-text)]">{suggestion.name}</span>
-                <span className="text-[11px] text-[var(--color-text3)]">fit {suggestion.score}/100</span>
                 {suggestion.reasons.length > 0 && <span className="text-[11px] text-[var(--color-text2)]">{suggestion.reasons.join(' · ')}</span>}
                 {editable && (
                   <button
