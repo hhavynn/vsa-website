@@ -63,18 +63,50 @@ describe('VCN overview related links', () => {
   });
 
   it.each(['closed', 'not_open', 'disabled'] as const)(
-    'hides the application CTA, and exposes no URL, while the window is %s',
+    'keeps VCN interest guidance visible without any form URL while the window is %s',
     (status) => {
       // Even if a stale/leaky row carried a URL, nothing may render for a non-open window.
       mockLinks = [
         link('vcn_stage_ninja_interest', status, 'https://forms.example.test/should-never-render'),
         link('vcn_props_team_interest', status, null),
       ];
-      renderPage();
-      expect(screen.queryByRole('link', { name: /Join/ })).not.toBeInTheDocument();
+      const { container } = renderPage();
+      expect(screen.getByText('Get involved in VCN')).toBeInTheDocument();
+      expect(screen.getByText('VCN Stage Ninja Interest')).toBeInTheDocument();
+      expect(screen.getByText('VCN Props Team Interest')).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /Join Stage Ninjas|Join Props Team/ })).not.toBeInTheDocument();
+      expect(screen.getAllByRole('link', { name: /VSA on Instagram/ })).toHaveLength(2);
+      expect(screen.getAllByRole('link', { name: /explore VSA programs/ })).toHaveLength(2);
+      expect(container.innerHTML).not.toContain('should-never-render');
       const hrefs = screen.getAllByRole('link').map((anchor) => anchor.getAttribute('href') ?? '');
       expect(hrefs.filter((href) => href.includes('forms.example.test'))).toEqual([]);
       expect(screen.getByRole('link', { name: /Compare programs/ })).toBeInTheDocument();
     },
   );
+
+  it('highlights genuinely open alternatives while VCN interest forms are closed', () => {
+    mockLinks = [
+      link('vcn_stage_ninja_interest', 'closed', 'https://forms.example.test/hidden-vcn'),
+      link('vcn_props_team_interest', 'closed', null),
+      link('ace_application', 'open', 'https://forms.example.test/other-application'),
+    ];
+    const { container } = renderPage();
+    const alternatives = screen.getByRole('complementary', { name: 'Other open VSA opportunities' });
+    expect(alternatives).toHaveTextContent('ACE Application');
+    expect(screen.getByRole('link', { name: 'ACE Application' })).toHaveAttribute('href', '/ace');
+    expect(container.innerHTML).not.toContain('hidden-vcn');
+    expect(container.innerHTML).not.toContain('other-application');
+  });
+
+  it('does not invent a reopening date when both VCN forms have closed', () => {
+    mockLinks = [
+      link('vcn_stage_ninja_interest', 'closed', null),
+      link('vcn_props_team_interest', 'closed', null),
+    ];
+    renderPage();
+    expect(screen.getAllByText('Closed for this round')).toHaveLength(2);
+    expect(screen.getByText('Stage Ninja interest forms have closed for this cycle.')).toBeInTheDocument();
+    expect(screen.getByText('Props team interest forms have closed for this cycle.')).toBeInTheDocument();
+    expect(screen.queryByText(/Scheduled to open/)).not.toBeInTheDocument();
+  });
 });
