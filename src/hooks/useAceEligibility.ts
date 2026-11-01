@@ -26,6 +26,8 @@ export interface AceEligibilityState {
   readiness: AttendanceReadiness | null;
   result: AceEligibilityResult | null;
   loading: boolean;
+  /** A background refetch is running, so the rows on screen may be stale. */
+  refreshing: boolean;
   error: string | null;
 }
 
@@ -101,6 +103,7 @@ export function useAceEligibility(
     readiness,
     result,
     loading: eventsQuery.isLoading || readinessQuery.isLoading || (needsAttendance && attendanceQuery.isLoading),
+    refreshing: eventsQuery.isFetching || readinessQuery.isFetching || (needsAttendance && attendanceQuery.isFetching),
     error: rawError ? toUserMessage(rawError, 'Could not check attendance eligibility') : null,
   };
 }

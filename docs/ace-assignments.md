@@ -81,6 +81,7 @@ Per cycle, the ACE Chair saves:
   and ignored, and is removed on the next save. Malformed dates are **never**
   treated as completed events or as verified attendance evidence.
 - The panel shows counts at the top and filters by status, role and name.
+- **Needs attention** shows Short, Unknown, and Needs identity review together. **Download visible eligibility CSV** exports exactly the currently filtered rows as a private local download, with saved-year/snapshot context and no emails, IDs or application answers. It is disabled while refreshing or if source evidence is unavailable. The Chair must keep the file private; it is not a decision or a verified copy of self-reports.
 
 ### Warnings, not blockers
 
@@ -95,7 +96,7 @@ the final say.
 ### Privacy
 
 Admin-only and read-only apart from the policy. Eligibility is computed in the
-admin's browser from `member_event_attendance` and is never stored, published,
+admin's browser from `member_event_attendance` and is never stored in the database, published,
 exposed through a `published_*` view or turned into points. No emails are read,
 shown or stored.
 
