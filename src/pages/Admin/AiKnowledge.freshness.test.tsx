@@ -106,6 +106,28 @@ describe('Ask VSA knowledge freshness', () => {
     expect(titles.slice(0, 3)).toEqual(['Secret mixer', 'GBM 1 location', 'Quarterly points rules']);
   });
 
+  it('limits a feedback handoff to candidate snippets in the requested category', async () => {
+    repo.listAdminSnippets.mockResolvedValue([
+      snippet({ id: 'event', title: 'Public event times', category: 'events' }),
+      snippet({ id: 'plain', title: 'Who is VSA?', category: 'general' }),
+    ]);
+    renderPage('/admin/ai-knowledge?category=events');
+    expect(await screen.findByRole('heading', { name: 'Public event times', level: 3 })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Who is VSA?', level: 3 })).not.toBeInTheDocument();
+    expect(screen.getAllByLabelText('Category')[0]).toHaveValue('events');
+    expect(repo.listAdminSnippets).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not silently show unrelated snippets for an unknown feedback category', async () => {
+    repo.listAdminSnippets.mockResolvedValue([snippet({ id: 'general', title: 'Campus information', category: 'general' })]);
+    renderPage('/admin/ai-knowledge?category=unrecognized');
+    await waitFor(() => expect(repo.listAdminSnippets).toHaveBeenCalled());
+    expect(screen.getAllByLabelText('Category')[0]).toHaveValue('unrecognized');
+    expect(screen.queryByRole('heading', { name: 'Campus information', level: 3 })).not.toBeInTheDocument();
+    fireEvent.change(screen.getAllByLabelText('Category')[0], { target: { value: 'all' } });
+    expect(await screen.findByRole('heading', { name: 'Campus information', level: 3 })).toBeInTheDocument();
+  });
+
   it('marks a row reviewed without rewriting it, and the row stops being due', async () => {
     const reviewedAt = new Date().toISOString();
     repo.markReviewed.mockImplementation(async (row: AiKnowledgeSnippet) => ({ ...row, last_verified_at: reviewedAt }));
