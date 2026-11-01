@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AceApplicationSummary } from '../../../hooks/useAceApplicationProfiles';
 
 interface AceApplicationProfilesPanelProps {
@@ -17,13 +17,58 @@ export const APPLICATION_PRIVACY_NOTE = 'Application answers stay in this browse
 export function AceApplicationProfilesPanel({ summary, onLoad, onClear, onClose }: AceApplicationProfilesPanelProps) {
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fileReading, setFileReading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const fileVersion = useRef(0);
+  useEffect(() => () => { fileVersion.current += 1; }, []);
+
+  const changePaste = (value: string) => {
+    fileVersion.current += 1;
+    setFileReading(false);
+    setMessage(null);
+    setText(value);
+  };
+
+  const chooseFile = (file: File | undefined) => {
+    if (!file || loading) return;
+    const current = ++fileVersion.current;
+    setMessage(null);
+    if (!/\.(csv|tsv)$/i.test(file.name) || file.size === 0 || file.size > 5 * 1024 * 1024) {
+      setMessage('Choose a nonempty CSV or TSV export of the Form Responses tab (5 MB maximum). Export Excel .xlsx as CSV first.');
+      return;
+    }
+    setFileReading(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (current !== fileVersion.current) return;
+      if (typeof reader.result !== 'string') {
+        setMessage('Could not decode the selected file as text.');
+      } else {
+        setText(reader.result.replace(/^\uFEFF/, ''));
+      }
+      setFileReading(false);
+    };
+    reader.onerror = () => {
+      if (current === fileVersion.current) {
+        setMessage('Could not read that file. Try exporting the Form Responses tab again.');
+        setFileReading(false);
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
 
   const load = async () => {
+    fileVersion.current += 1;
+    setFileReading(false);
     setLoading(true);
+    setMessage(null);
     try {
       await onLoad(text);
       // The parsed profiles are all that is kept; drop the raw paste.
       setText('');
+    } catch (error) {
+      // Leave the paste and previous loaded application summary available.
+      setMessage(error instanceof Error ? error.message : 'Could not parse application responses. Earlier answers are unchanged.');
     } finally {
       setLoading(false);
     }
@@ -40,7 +85,7 @@ export function AceApplicationProfilesPanel({ summary, onLoad, onClear, onClose 
         <div>
           <h3 className="text-sm font-semibold text-[var(--color-text)]">Application answers</h3>
           <p className="mt-0.5 text-[11px] text-[var(--color-text3)]">
-            Copy the ACE application responses from Google Sheets, including the header row, and paste them here. Only
+            Paste the ACE application responses from Google Sheets, or choose a local CSV/TSV export, including the header row. Only
             the answers that help with matching are read; contact details, birthdays, allergies, sizes, and similar
             columns are ignored.
           </p>
@@ -54,13 +99,36 @@ export function AceApplicationProfilesPanel({ summary, onLoad, onClear, onClose 
         </button>
       </div>
 
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <label htmlFor="ace-application-file" className="font-semibold text-[var(--color-text2)]">Application responses CSV/TSV</label>
+        <input
+          id="ace-application-file"
+          type="file"
+          accept=".csv,.tsv,text/csv,text/tab-separated-values"
+          disabled={loading || fileReading}
+          aria-describedby="ace-application-file-note"
+          onChange={(event) => {
+            const file = event.currentTarget.files?.[0];
+            event.currentTarget.value = '';
+            chooseFile(file);
+          }}
+          className="max-w-full text-xs text-[var(--color-text2)]"
+        />
+      </div>
+      <p id="ace-application-file-note" className="mt-1 text-[11px] text-[var(--color-text3)]">
+        File is read locally into the paste field; click Load answers to apply. Excel .xlsx must be exported to CSV first.
+        Nothing is uploaded or saved in the browser.
+      </p>
+      {fileReading && <p role="status" className="mt-1 text-[11px] text-[var(--color-text3)]">Reading file locally…</p>}
+      {message && <p role="alert" className="mt-1 text-[11px] text-red-600 dark:text-red-400">{message}</p>}
+
       <label htmlFor="ace-application-paste" className="sr-only">
         Pasted application responses
       </label>
       <textarea
         id="ace-application-paste"
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => changePaste(e.target.value)}
         placeholder={summary ? 'Paste again to replace the loaded answers.' : 'Paste the application responses…'}
         spellCheck={false}
         autoComplete="off"
@@ -79,7 +147,7 @@ export function AceApplicationProfilesPanel({ summary, onLoad, onClear, onClose 
         <button
           type="button"
           onClick={load}
-          disabled={loading || !text.trim()}
+          disabled={loading || fileReading || !text.trim()}
           className="rounded border-0 bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-50 dark:bg-brand-300 dark:text-brand-950 dark:hover:bg-brand-200"
         >
           {loading ? 'Loading…' : 'Load answers'}
