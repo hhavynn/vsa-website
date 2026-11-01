@@ -198,17 +198,38 @@ export class AceAssignmentsRepository {
     }, 'Failed to save the eligibility policy');
   }
 
+  /**
+   * The entire private working draft is required for duplicate checks, capacity,
+   * Lock and Publish preflight. PostgREST's default row limit must never silently
+   * omit later Littles. A failed page invalidates the whole snapshot.
+   */
   async listDrafts(cycleId: string): Promise<AceAssignmentDraft[]> {
     return withErrorHandling(async () => {
-      const { data, error } = await supabase
-        .from('ace_assignment_drafts')
-        .select('*')
-        .eq('cycle_id', cycleId)
-        .order('display_order', { ascending: true })
-        .order('created_at', { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as AceAssignmentDraft[];
-    }, 'Failed to load assignments');
+      const pageSize = 500;
+      const drafts: AceAssignmentDraft[] = [];
+      const seen = new Set<string>();
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+          .from('ace_assignment_drafts')
+          .select('*')
+          .eq('cycle_id', cycleId)
+          .order('display_order', { ascending: true })
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const page = (data ?? []) as AceAssignmentDraft[];
+        for (const row of page) {
+          if (row.cycle_id !== cycleId || typeof row.id !== 'string' || seen.has(row.id)) {
+            throw new ValidationError('ACE draft pages are inconsistent. Refresh before reviewing or publishing.');
+          }
+          seen.add(row.id);
+          drafts.push(row);
+        }
+        if (page.length < pageSize) break;
+      }
+      return drafts;
+    }, 'Failed to load complete ACE assignment drafts');
   }
 
   /** Adds draft rows after `startOrder`; imports create drafts only. */

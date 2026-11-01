@@ -63,15 +63,15 @@ describe('uvsaSchoolsRepository public/admin read paths (#291)', () => {
     }
   });
 
-  it('a missing record reports the existing not-found message instead of inventing a school', async () => {
+  it('a missing record preserves the typed not-found error instead of inventing a school', async () => {
     supabaseMock.queueResult('uvsa_schools', { data: null, error: null });
-    await expect(uvsaSchoolsRepository.getSchoolById('missing')).rejects.toThrow(
-      'Failed to fetch school: School not found'
-    );
+    await expect(uvsaSchoolsRepository.getSchoolById('missing')).rejects.toMatchObject({
+      name: 'NotFoundError', resource: 'uvsa_schools', id: 'missing',
+    });
     supabaseMock.queueResult('uvsa_schools', { data: null, error: null });
-    await expect(uvsaSchoolsRepository.getSchoolBySlug('missing')).rejects.toThrow(
-      'Failed to fetch school by slug: School not found'
-    );
+    await expect(uvsaSchoolsRepository.getSchoolBySlug('missing')).rejects.toMatchObject({
+      name: 'NotFoundError', resource: 'uvsa_schools', id: 'missing',
+    });
   });
 
   it('pins the server-side error path for slug reads and writes', async () => {

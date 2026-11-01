@@ -115,11 +115,13 @@ export class MemberLookupRepository {
     const matches = new Map<string, MemberOption[]>();
     if (wanted.length === 0) return matches;
     return withErrorHandling(async () => {
-      const requested = new Set(wanted);
       // POST RPC body, not URL query string. No private email column is returned
       // in MemberOption: the matched address is used only as the Map key.
       for (let from = 0; from < wanted.length; from += 100) {
         const chunk = wanted.slice(from, from + 100);
+        // Validate each response against *that* RPC request, never the whole
+        // batch. A later page's address must not be accepted on an earlier page.
+        const requested = new Set(chunk);
         const { data, error } = await supabase.rpc('admin_match_members_by_email', {
           p_emails: chunk,
         });
