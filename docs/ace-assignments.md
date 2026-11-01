@@ -148,6 +148,7 @@ responses, header row included. Logic: `src/lib/aceMutualRequests.ts`.
   several Bigs, or both roles) are listed separately; conflicts stay out of
   the confirmed pairs. **Download follow-ups CSV** has names and request text
   only.
+- **Big tree-node preflight** reports how many reciprocal requests have one unique, existing ACE Big node and names the Littles whose Big is missing or ambiguous, before importing. A missing/duplicate Big remains unassigned in the private draft and must be resolved manually before Lock/Publish. The form cannot establish the canonical family branch; reciprocal interest is not chair approval.
 - **Add N confirmed pairs to draft** uses the same import path as above: the
   member links only by a unique email match, the Big is assigned only when
   exactly one tree node has that name (otherwise the note says
