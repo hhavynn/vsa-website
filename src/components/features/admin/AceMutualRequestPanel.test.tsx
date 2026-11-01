@@ -90,6 +90,38 @@ it('skips Littles already in the draft and says so', async () => {
   expect(onImport.mock.calls[0][0].seeds.map((seed) => seed.little_name)).toEqual(['Tamsin Vale']);
 });
 
+it('previews a missing Big node before a mutual-only Little is added to the draft', async () => {
+  const { onImport } = setup([], []);
+  const preview = screen.getByRole('region', { name: 'Mutual Big tree-node preflight' });
+  expect(within(preview).getByText(/0 ready to assign to a unique existing ACE Big node/)).toBeInTheDocument();
+  expect(within(preview).getByText(/1 needing a manual Big pick/)).toBeInTheDocument();
+  expect(within(preview).getByRole('list', { name: 'Mutual pairs needing Big tree review' })).toHaveTextContent('Orrin Pike');
+  expect(within(preview).getByText(/Resolve the correct existing family-tree Big node before Lock or Publish/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Add 1 confirmed pair to draft' }));
+  await waitFor(() => expect(onImport).toHaveBeenCalledTimes(1));
+  expect(onImport.mock.calls[0][0]).toMatchObject({
+    seeds: [expect.objectContaining({ little_name: 'Orrin Pike', big_ace_member_id: null, notes: expect.stringContaining('not on tree') })],
+    bigMatched: 0,
+    bigUnresolved: 1,
+  });
+});
+
+it('never guesses between two ACE tree nodes with the same Big name', () => {
+  setup([], [...nodes, { ...nodes[0], id: 'node-wren-other', familyId: 'other-fam', familyName: 'Another Fam' }]);
+  const preview = screen.getByRole('region', { name: 'Mutual Big tree-node preflight' });
+  expect(within(preview).getByText(/1 needing a manual Big pick/)).toBeInTheDocument();
+  expect(within(preview).getByRole('list')).toHaveTextContent('several on tree');
+  expect(within(preview).getByText(/never infer a family from the form/i)).toBeInTheDocument();
+});
+
+it('shows an existing unique Big node as ready without implying a guarantee', () => {
+  setup();
+  const preview = screen.getByRole('region', { name: 'Mutual Big tree-node preflight' });
+  expect(within(preview).getByText(/1 ready to assign to a unique existing ACE Big node/)).toBeInTheDocument();
+  expect(within(preview).getByText(/0 needing a manual Big pick/)).toBeInTheDocument();
+  expect(within(preview).queryByRole('list', { name: 'Mutual pairs needing Big tree review' })).not.toBeInTheDocument();
+  expect(preview).toHaveTextContent('not chair-approved guarantees');
+});
 
 it('loads a local TSV mutual form without writing drafts or reading contacts into a database', async () => {
   setup();
@@ -123,36 +155,4 @@ it('rejects unsupported .xlsx exports without erasing an existing paste', async 
   });
   expect(await screen.findByRole('alert')).toHaveTextContent(/export the Form Responses tab as CSV first/i);
   expect(screen.getByTestId('mutual-summary')).toHaveTextContent('4 people · 1 Big · 3 Littles');
-});
-it('previews a missing Big node before a mutual-only Little is added to the draft', async () => {
-  const { onImport } = setup([], []);
-  const preview = screen.getByRole('region', { name: 'Mutual Big tree-node preflight' });
-  expect(within(preview).getByText(/0 ready to assign to a unique existing ACE Big node/)).toBeInTheDocument();
-  expect(within(preview).getByText(/1 needing a manual Big pick/)).toBeInTheDocument();
-  expect(within(preview).getByRole('list', { name: 'Mutual pairs needing Big tree review' })).toHaveTextContent('Orrin Pike');
-  expect(within(preview).getByText(/Resolve the correct existing family-tree Big node before Lock or Publish/)).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Add 1 confirmed pair to draft' }));
-  await waitFor(() => expect(onImport).toHaveBeenCalledTimes(1));
-  expect(onImport.mock.calls[0][0]).toMatchObject({
-    seeds: [expect.objectContaining({ little_name: 'Orrin Pike', big_ace_member_id: null, notes: expect.stringContaining('not on tree') })],
-    bigMatched: 0,
-    bigUnresolved: 1,
-  });
-});
-
-it('never guesses between two ACE tree nodes with the same Big name', () => {
-  setup([], [...nodes, { ...nodes[0], id: 'node-wren-other', familyId: 'other-fam', familyName: 'Another Fam' }]);
-  const preview = screen.getByRole('region', { name: 'Mutual Big tree-node preflight' });
-  expect(within(preview).getByText(/1 needing a manual Big pick/)).toBeInTheDocument();
-  expect(within(preview).getByRole('list')).toHaveTextContent('several on tree');
-  expect(within(preview).getByText(/never infer a family from the form/i)).toBeInTheDocument();
-});
-
-it('shows an existing unique Big node as ready without implying a guarantee', () => {
-  setup();
-  const preview = screen.getByRole('region', { name: 'Mutual Big tree-node preflight' });
-  expect(within(preview).getByText(/1 ready to assign to a unique existing ACE Big node/)).toBeInTheDocument();
-  expect(within(preview).getByText(/0 needing a manual Big pick/)).toBeInTheDocument();
-  expect(within(preview).queryByRole('list', { name: 'Mutual pairs needing Big tree review' })).not.toBeInTheDocument();
-  expect(preview).toHaveTextContent('not chair-approved guarantees');
 });
