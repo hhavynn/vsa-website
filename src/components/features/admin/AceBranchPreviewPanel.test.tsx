@@ -1,3 +1,6 @@
+/* eslint-disable testing-library/no-node-access */
+// The SVG's year-band rectangles are non-interactive and aria-hidden;
+// querying their data-band-key is intentional geometry-mode coverage.
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { MemoryRouter } from 'react-router-dom';
