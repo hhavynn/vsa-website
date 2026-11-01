@@ -45,6 +45,17 @@ describe('planAceDraftImport', () => {
     expect(plan.skippedExisting).toBe(0);
   });
 
+  it('holds a linked applicant whose name matches an unlinked draft', () => {
+    const plan = planAceDraftImport([seed('An Nguyen', 'member-two')], [existing('An Nguyen')]);
+    expect(plan).toEqual({ seeds: [], skippedExisting: 0, skippedRepeated: 0, needsReview: 1 });
+
+    const twoPeople = planAceDraftImport(
+      [seed('Ari Lee', 'm1'), seed('Ari Lee', 'm2')],
+      [existing('Ari Lee')],
+    );
+    expect(twoPeople).toEqual({ seeds: [], skippedExisting: 0, skippedRepeated: 0, needsReview: 2 });
+  });
+
   it('deduplicates repeated rows only when their canonical member identity agrees', () => {
     const plan = planAceDraftImport([seed('Ari Lee', 'm1'), seed('ARI LEE', 'm1')], []);
     expect(plan.seeds).toEqual([seed('Ari Lee', 'm1')]);

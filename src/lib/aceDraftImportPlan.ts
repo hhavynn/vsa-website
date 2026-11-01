@@ -16,8 +16,8 @@ export interface AceDraftImportPlan {
  * mutual requests (or an earlier paste). This is a client-side safety net;
  * the existing server-side publish preflight remains authoritative.
  *
- * Exact canonical member links win. A name collision with two *different*
- * linked members, or ambiguous identities within one paste, is held for
+ * Exact canonical member links win. A name collision with a *different* or
+ * still-unlinked draft, or ambiguous identities within one paste, is held for
  * manual review rather than silently merging two people.
  */
 export function planAceDraftImport(
@@ -50,7 +50,7 @@ export function planAceDraftImport(
     const existingWithName = existingByName.get(name) ?? [];
     if (!name || (
       seed.little_member_id &&
-      existingWithName.some((row) => row.little_member_id && row.little_member_id !== seed.little_member_id)
+      existingWithName.some((row) => row.little_member_id !== seed.little_member_id)
     )) {
       result.needsReview += 1;
       continue;
