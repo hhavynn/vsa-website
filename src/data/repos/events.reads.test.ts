@@ -49,9 +49,11 @@ describe('EventsRepository.getEvents: failure and filter paths', () => {
   it('rejects with a wrapped error (not a silent empty list) when the query returns null data without an error', async () => {
     supabaseMock.queueResult('events', { data: null, error: null });
 
-    // NotFoundError is thrown inside withErrorHandling, which re-wraps it as a
-    // plain Error with the context prefix (see errors.test.ts).
-    await expect(eventsRepository.getEvents()).rejects.toThrow('Failed to fetch events: No events found');
+    // Missing data is not a genuine empty result; preserve the repository's typed error.
+    await expect(eventsRepository.getEvents()).rejects.toMatchObject({
+      name: 'NotFoundError',
+      message: 'No events found',
+    });
   });
 
   it('ignores an interest-count query error and returns events with null counts', async () => {
