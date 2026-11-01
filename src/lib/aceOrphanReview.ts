@@ -44,8 +44,8 @@ export function littleState(row: Pick<AceOrphanReviewRow,
   'role' | 'operationalStatus' | 'littleOutcome' | 'pairingStatus'>): LittleReviewState {
   if (row.role !== 'little') return 'needs_review';
   if (row.littleOutcome === 'orphan' && LIVE_PAIRINGS.has(row.pairingStatus)) return 'needs_review';
-  if ((row.operationalStatus === 'withdrawn' || row.operationalStatus === 'not_eligible') &&
-      LIVE_PAIRINGS.has(row.pairingStatus)) return 'needs_review';
+  if ((row.operationalStatus === 'withdrawn' || row.operationalStatus === 'not_eligible' ||
+       row.littleOutcome === 'declined') && LIVE_PAIRINGS.has(row.pairingStatus)) return 'needs_review';
   if (row.operationalStatus === 'withdrawn' || row.littleOutcome === 'declined') return 'declined_withdrawn';
   if (row.littleOutcome === 'orphan') return 'orphan';
   if (row.pairingStatus === 'confirmed') return 'confirmed_pairing';
@@ -75,8 +75,8 @@ export function buildOrphanCsv(rows: readonly AceOrphanReviewRow[], cycleId: str
     }
     seen.add(row.participantId);
     if (row.littleOutcome !== 'orphan') continue;
-    if (row.role !== 'little' || row.operationalStatus === 'withdrawn' ||
-        row.operationalStatus === 'not_eligible' || LIVE_PAIRINGS.has(row.pairingStatus)) {
+    if (row.role !== 'little' || row.operationalStatus !== 'eligible' ||
+        LIVE_PAIRINGS.has(row.pairingStatus)) {
       throw new Error('An Orphan has conflicting role, eligibility or pairing state. Review before export.');
     }
     if (!row.displayName.trim() || !row.cycleLabel.trim() ||
