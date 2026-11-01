@@ -65,6 +65,24 @@ describe('aiFeedbackRepository query and write boundaries (#291)', () => {
     });
   });
 
+  it('reopens only the selected resolved feedback without clearing its notes', async () => {
+    supabaseMock.queueResult('ai_feedback', { data: null, error: null });
+    await aiFeedbackRepository.markUnresolved('feedback-1');
+    const queries = supabaseMock.queriesFor('ai_feedback');
+    expect(queries).toHaveLength(1);
+    expect(queries[0].calls.find(c => c.method === 'update')?.args[0]).toEqual({ resolved_at: null });
+    expect(supabaseMock.filtersFor('ai_feedback')).toEqual([['id', 'feedback-1']]);
+    expect(queries[0].calls.find(c => c.method === 'select')).toBeUndefined();
+  });
+
+  it('rejects a failed admin reopen instead of treating it as a successful status change', async () => {
+    supabaseMock.queueResult('ai_feedback', { data: null, error: postgrestError('permission denied', '42501') });
+    await expect(aiFeedbackRepository.markUnresolved('feedback-2')).rejects.toMatchObject({
+      name: 'DatabaseError',
+      message: 'Failed to reopen AI feedback: permission denied',
+    });
+  });
+
   it('scopes resolution and notes updates to the selected row and trims notes', async () => {
     supabaseMock.queueResult('ai_feedback', { data: null, error: null });
     supabaseMock.queueResult('ai_feedback', { data: null, error: null });
