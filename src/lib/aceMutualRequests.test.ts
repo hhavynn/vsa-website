@@ -125,6 +125,16 @@ describe('mutual source identity safety', () => {
       expect.objectContaining({ kind: 'duplicate_name', person: expect.objectContaining({ name: 'Tamsin Vale' }) }),
     ]);
     expect(check.conflicts[0].others).toHaveLength(1);
+    const followUps = followUpReviewRows(check);
+    expect(followUps).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        label: 'Tamsin Vale',
+        category: 'needs_review',
+        reason: expect.stringContaining('distinct/unverified identities'),
+      }),
+    ]));
+    expect(JSON.stringify(followUps)).not.toContain('@ucsd.edu');
+    expect(JSON.stringify(followUps)).not.toContain('555-0100');
   });
 
   it('still replaces genuine repeat submissions sharing one normalized UCSD email', () => {
