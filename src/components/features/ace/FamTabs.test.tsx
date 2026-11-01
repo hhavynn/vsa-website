@@ -116,8 +116,7 @@ describe('ACE Fam image delivery (#303)', () => {
   it('reserves fixed intrinsic sizes and lazy loads decorative tabs and selected fam icon', () => {
     render(<Harness />);
     const tabs = screen.getAllByRole('tab');
-    const icons = tabs.map((tab) => tab.querySelector('img'));
-    expect(icons.every((icon) => icon !== null)).toBe(true);
+    const icons = tabs.map((tab) => within(tab).getByAltText(''));
     for (const icon of icons) {
       expect(icon).toHaveAttribute('alt', '');
       expect(icon).toHaveAttribute('width', '20');
