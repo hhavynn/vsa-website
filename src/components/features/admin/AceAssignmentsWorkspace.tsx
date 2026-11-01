@@ -303,7 +303,11 @@ export function AceAssignmentsWorkspace() {
 
   const importLittles = async (resolution: ImportResolution) => {
     if (!cycleId) return;
-    const plan = planAceDraftImport(resolution.seeds, drafts);
+    // Re-read before writing: another admin may have imported mutual pairs
+    // since this tab last rendered. The server's publish preflight is still
+    // authoritative if two imports race after this read.
+    const currentDrafts = await aceAssignmentsRepository.listDrafts(cycleId);
+    const plan = planAceDraftImport(resolution.seeds, currentDrafts);
     if (plan.needsReview > 0) {
       throw new Error(
         `${plan.needsReview} incoming Little rows have ambiguous names or member links. No changes made. Review those rows in the original sheet before retrying.`,
@@ -313,7 +317,8 @@ export function AceAssignmentsWorkspace() {
       toast('No new Littles to add; all were already in this draft.');
       return;
     }
-    await aceAssignmentsRepository.addDrafts(cycleId, plan.seeds, nextOrder());
+    const startOrder = currentDrafts.reduce((max, draft) => Math.max(max, draft.display_order), -1) + 1;
+    await aceAssignmentsRepository.addDrafts(cycleId, plan.seeds, startOrder);
     await refreshDrafts();
     const parts = [`Added ${plan.seeds.length} to the draft.`];
     const linked = plan.seeds.filter((seed) => seed.little_member_id).length;
