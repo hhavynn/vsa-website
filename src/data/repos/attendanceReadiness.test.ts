@@ -89,6 +89,31 @@ describe('ACE read-only selected-event verified attendance (#649)',()=>{
       .toEqual(['member_id,event_id','member_id,event_id']);
     expect(supabaseMock.queriesFor('members')).toHaveLength(0);
   });
+  it('rejects a null-success attendance page instead of silently reporting zero credit', async () => {
+    supabaseMock.queueResult('member_event_attendance', { data: null, error: null });
+    await expect(attendanceReadinessRepository.getVerifiedSelectedAttendance(['m1'], ['e1']))
+      .rejects.toThrow(/incomplete page/);
+  });
+
+  it('rejects a missing later page without returning partial credited attendance', async () => {
+    supabaseMock.queueResult('member_event_attendance', {
+      data: Array.from({ length: 500 }, () => ({ member_id: 'm1', event_id: 'e1' })),
+      error: null,
+    });
+    supabaseMock.queueResult('member_event_attendance', { data: null, error: null });
+    await expect(attendanceReadinessRepository.getPolicyEventAttendance(['m1'], ['e1']))
+      .rejects.toThrow(/incomplete page/);
+    expect(supabaseMock.queriesFor('member_event_attendance').map((q) =>
+      q.calls.find((call) => call.method === 'range')?.args
+    )).toEqual([[0, 499], [500, 999]]);
+  });
+
+  it('accepts a real empty attendance page as zero credit', async () => {
+    supabaseMock.queueResult('member_event_attendance', { data: [], error: null });
+    const result = await attendanceReadinessRepository.getPolicyEventAttendance(['m1'], ['e1']);
+    expect(result.size).toBe(0);
+  });
+
   it('fails whole cohort when a later attendance page is denied instead of claiming zero',async()=>{
     supabaseMock.queueResult('member_event_attendance',{
       data:Array.from({length:500},()=>({member_id:'m1',event_id:'e1'})),error:null,
