@@ -116,6 +116,29 @@ it('rejects an RPC response containing an unrequested email, never presenting un
     .rejects.toThrow(/unrequested address/);
 });
 
+it('refuses an address returned by the wrong POST chunk, even if later requested', async () => {
+  const emails = Array.from({ length: 101 }, (_, index) => 'fictional-' + index + '@example.edu');
+  // The first request contains emails 0..99, so a row for #100 is invalid.
+  supabaseMock.queueResult('rpc:admin_match_members_by_email', { data: [
+    { ...row('last', 'Fictional', 'Last'), input_email: emails[100] },
+  ], error: null });
+  await expect(memberLookupRepository.matchMembersByEmail(emails))
+    .rejects.toThrow(/unrequested address/);
+  expect(supabaseMock.queriesFor('rpc:admin_match_members_by_email')).toHaveLength(1);
+  expect(supabaseMock.queriesFor('members')).toHaveLength(0);
+});
+
+it('accepts an address only on its own later POST chunk', async () => {
+  const emails = Array.from({ length: 101 }, (_, index) => 'fictional-' + index + '@example.edu');
+  supabaseMock.queueResult('rpc:admin_match_members_by_email', { data: [], error: null });
+  supabaseMock.queueResult('rpc:admin_match_members_by_email', { data: [
+    { ...row('last', 'Fictional', 'Last'), input_email: emails[100] },
+  ], error: null });
+  const matches = await memberLookupRepository.matchMembersByEmail(emails);
+  expect(matches.get(emails[100])).toEqual([expect.objectContaining({ id: 'last' })]);
+  expect(supabaseMock.queriesFor('rpc:admin_match_members_by_email')).toHaveLength(2);
+});
+
 it('does not call the RPC when there are no emails to match', async () => {
   await expect(memberLookupRepository.matchMembersByEmail(['', '  '])).resolves.toEqual(new Map());
   expect(supabaseMock.queries()).toHaveLength(0);
