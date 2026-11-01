@@ -121,6 +121,20 @@ describe('draft cycle', () => {
     expect(screen.queryByRole('button', { name: /Publish/ })).not.toBeInTheDocument();
   });
 
+  it('imports fresh general-form Littles without duplicating earlier mutual draft rows', async () => {
+    renderWorkspace();
+    fireEvent.click(await screen.findByRole('button', { name: 'Import CSV / TSV' }));
+    fireEvent.change(screen.getByLabelText('Pasted Littles'), {
+      target: { value: 'name\\tbig\\nJohn Nguyen\\tApril Pham\\nNew Person\\tEmily Nguyen' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Add 2 to draft' }));
+    await waitFor(() => expect(callsOf('ace_assignment_drafts', 'insert')).toHaveLength(1));
+    const rows = callsOf('ace_assignment_drafts', 'insert')[0].args[0];
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ little_name: 'New Person', big_ace_member_id: 'big-emily' });
+    expect(rows[0].little_name).not.toBe('John Nguyen');
+  });
+
   it('locking changes only the cycle status and publishes nothing', async () => {
     renderWorkspace();
     fireEvent.click(await screen.findByRole('button', { name: 'Lock assignments' }));
