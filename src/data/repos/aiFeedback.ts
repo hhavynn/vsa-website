@@ -95,6 +95,20 @@ export class AiFeedbackRepository {
     }, 'Failed to resolve feedback');
   }
 
+  /** Reopen previously resolved feedback for further private admin review. */
+  async markUnresolved(id: string): Promise<void> {
+    return withErrorHandling(async () => {
+      const { error } = await supabase
+        .from('ai_feedback')
+        .update({ resolved_at: null })
+        .eq('id', id);
+
+      if (error) {
+        throw new DatabaseError(`Failed to reopen AI feedback: ${error.message}`);
+      }
+    }, 'Failed to reopen feedback');
+  }
+
   async updateAdminNotes(id: string, notes: string): Promise<void> {
     return withErrorHandling(async () => {
       const { error } = await supabase
