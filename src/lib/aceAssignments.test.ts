@@ -12,6 +12,7 @@ import {
   selectBulkLittleLinks,
 } from './aceAssignments';
 import { buildMemberNameIndex, toMemberOption } from './memberLinkMatching';
+import { searchAceBigNodes } from './aceBigSearch';
 import type { AceAssignmentDraft } from '../types';
 
 const draft = (id: string, name: string, over: Partial<AceAssignmentDraft> = {}): AceAssignmentDraft => ({
@@ -56,6 +57,40 @@ const index = buildMemberNameIndex([
 ]);
 
 const codes = (list: ReturnType<typeof computePreflight>['issues']) => list.map((i) => i.code);
+
+describe('ACE Big picker search (#647)', () => {
+  it('prioritizes an exact full name ahead of the first eight partial matches', () => {
+    const partials = Array.from({ length: 12 }, (_, i) => node(`partial-${i}`, `Avery Nguyen ${String(i).padStart(2, '0')}`));
+    const exact = node('canonical-exact', 'Avery Nguyen', { familyName: 'Night Fam' });
+    const result = searchAceBigNodes([...partials, exact], 'Avery Nguyen');
+    expect(result.total).toBe(13);
+    expect(result.matches).toHaveLength(8);
+    expect(result.matches[0].id).toBe('canonical-exact');
+    expect(result.matches.map((candidate) => candidate.id)).not.toContain('partial-9');
+  });
+
+  it('retains duplicate full-name Big nodes as distinct candidates and breaks ties by family and node ID', () => {
+    const candidates = [
+      node('id-2', 'Emily Nguyen', { familyName: 'Alpha' }),
+      node('id-3', 'Emily Nguyen', { familyName: 'Beta' }),
+      node('id-1', 'Emily Nguyen', { familyName: 'Alpha' }),
+    ];
+    const result = searchAceBigNodes(candidates, 'emily nguyen');
+    expect(result.total).toBe(3);
+    expect(result.matches.map((person) => person.id)).toEqual(['id-1', 'id-2', 'id-3']);
+  });
+
+  it('can search by family and reports every hidden candidate without loading the whole list in the UI', () => {
+    const list = Array.from({ length: 15 }, (_, i) =>
+      node(`member-${i}`, `Person ${String(i).padStart(2, '0')}`, { familyName: 'Night Fam' }));
+    const result = searchAceBigNodes(list, 'night');
+    expect(result.total).toBe(15);
+    expect(result.matches).toHaveLength(8);
+    expect(result.matches.every((person) => person.familyName === 'Night Fam')).toBe(true);
+    expect(searchAceBigNodes(list, 'n').matches).toEqual([]);
+    expect(searchAceBigNodes(list, 'night', 0)).toEqual({ matches: [], total: 15 });
+  });
+});
 
 describe('computePreflight', () => {
   it('counts Littles, links, and assignments', () => {
@@ -315,10 +350,10 @@ describe('parseAssignmentImport with ACE Google Form pastes', () => {
     );
     expect(parsed.rows).toEqual([
       { line: 2, name: 'Dee Sample', email: 'dsa004@ucsd.edu', bigName: null, notes: 'Mutual request: Eli Example' },
-      { line: 4, name: 'Fay Sample', email: 'fsa006@ucsd.edu', bigName: null, notes: null },
     ]);
     expect(parsed.bigsSkipped).toBe(1);
-    expect(parsed.warnings).toContain('1 row does not say Big or Little, so it was kept as Littles.');
+    expect(parsed.unknownRoleSkipped).toBe(1);
+    expect(parsed.warnings).toContain('1 row does not say Big or Little, so it was excluded. Verify the source form roles before importing.');
   });
 
   it('keeps only the latest submission from the same email', () => {
@@ -347,16 +382,37 @@ describe('parseAssignmentImport with ACE Google Form pastes', () => {
     expect(parsed).toMatchObject({ bigsSkipped: 1, repeatsReplaced: 1 });
   });
 
-  it('keeps an answer that names both roles for review instead of guessing', () => {
+  it('never creates a Little draft from an answer that names both roles', () => {
     const parsed = parseAssignmentImport(
       tsv([
         ['Name (First, Middle Initial, Last)', 'Are you mutually requesting a Big or a Little?'],
         ['Max Sample', 'Im a little, requesting a big'],
       ]),
     );
-    expect(parsed.rows.map((row) => row.name)).toEqual(['Max Sample']);
+    expect(parsed.rows).toEqual([]);
     expect(parsed.bigsSkipped).toBe(0);
-    expect(parsed.warnings).toContain('1 row does not say Big or Little, so it was kept as Littles.');
+    expect(parsed.unknownRoleSkipped).toBe(1);
+    expect(parsed.warnings).toContain('1 row does not say Big or Little, so it was excluded. Verify the source form roles before importing.');
+  });
+
+  it('excludes missing and mixed roles but still accepts explicitly named Littles', () => {
+    const parsed = parseAssignmentImport(tsv([
+      ['Name (First, Middle Initial, Last)', 'Are You Applying to be an Anh/Chi (Big) or Em (Little)? '],
+      ['Wren Halloway', 'Anh/Chi (Big)'],
+      ['Tamsin Vale', ''],
+      ['Orrin Pike', 'Big or Little'],
+      ['Juno Marsh', 'Em (Little)'],
+    ]));
+    expect(parsed.rows.map((row) => row.name)).toEqual(['Juno Marsh']);
+    expect(parsed.bigsSkipped).toBe(1);
+    expect(parsed.unknownRoleSkipped).toBe(2);
+    expect(parsed.warnings).toContain('2 rows do not say Big or Little, so they were excluded. Verify the source form roles before importing.');
+  });
+
+  it('still accepts plain name-only import files without a role column', () => {
+    const parsed = parseAssignmentImport(['name', 'Wren Halloway', 'Tamsin Vale'].join('\n'));
+    expect(parsed.rows.map((row) => row.name)).toEqual(['Wren Halloway', 'Tamsin Vale']);
+    expect(parsed.unknownRoleSkipped).toBe(0);
   });
 
   it('prefers UCSD Email over the sign-in Email Address', () => {

@@ -83,7 +83,13 @@ async function readSelectedAttendance(memberIds: readonly string[], events: read
           .order('event_id',{ascending:true})
           .range(from,from+499);
         if(error)throw error;
-        const page=(data??[]) as Array<{member_id:string;event_id:string}>;
+        // A successful list read must return an array, even if it is empty.
+        // Treating null as [] could silently drop every remaining attendance
+        // credit and falsely label an ACE applicant Short.
+        if (!Array.isArray(data) || data.length > 500) {
+          throw new ValidationError('ACE attendance returned an incomplete page. Retry the eligibility check.');
+        }
+        const page=data as Array<{member_id:string;event_id:string}>;
         for(const row of page) {
           if(!memberSet.has(row.member_id)||!eventSet.has(row.event_id))throw new Error('Attendance returned a row outside approved scope');
           const prior=records.get(row.member_id)??new Set<string>();
@@ -106,11 +112,30 @@ export const attendanceReadinessRepository = {
       }
       const result = (data ?? {}) as { events?: ReadinessEvent[]; total_events?: number; truncated?: boolean; checked_at?: string };
       if (!Array.isArray(result.events)) throw new ValidationError('The attendance status check returned no result.', 'year');
+      // The ACE eligibility hook relies on these facts to reject truncated
+      // event lists and to evaluate future events at the server snapshot time.
+      // Missing metadata must never become "not truncated" or "checked now".
+      if (
+        !Number.isSafeInteger(result.total_events) ||
+        (result.total_events as number) < result.events.length ||
+        typeof result.truncated !== 'boolean' ||
+        typeof result.checked_at !== 'string' ||
+        !Number.isFinite(Date.parse(result.checked_at))
+      ) {
+        throw new ValidationError('Attendance status returned incomplete snapshot metadata. Refresh or ask an administrator to check the attendance service.', 'year');
+      }
+      const seen = new Set<string>();
+      for (const event of result.events) {
+        if (!event || typeof event.id !== 'string' || !event.id || seen.has(event.id)) {
+          throw new ValidationError('Attendance status returned duplicated or invalid events. Refresh before checking ACE eligibility.', 'year');
+        }
+        seen.add(event.id);
+      }
       return {
         events: result.events,
-        totalEvents: result.total_events ?? result.events.length,
-        truncated: result.truncated === true,
-        checkedAt: result.checked_at ?? new Date().toISOString(),
+        totalEvents: result.total_events as number,
+        truncated: result.truncated,
+        checkedAt: result.checked_at,
       };
     }, 'Failed to read attendance status');
   },

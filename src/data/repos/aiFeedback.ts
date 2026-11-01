@@ -84,15 +84,34 @@ export class AiFeedbackRepository {
 
   async markResolved(id: string): Promise<void> {
     return withErrorHandling(async () => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('ai_feedback')
         .update({ resolved_at: new Date().toISOString() })
-        .eq('id', id);
+        .eq('id', id)
+        .select('id');
 
       if (error) {
         throw new DatabaseError(`Failed to resolve AI feedback: ${error.message}`);
       }
+      // RLS reports a refused update as success with no rows.
+      if (!data?.length) throw new DatabaseError('Failed to resolve AI feedback: no row was updated');
     }, 'Failed to resolve feedback');
+  }
+
+  /** Reopen previously resolved feedback for further private admin review. */
+  async markUnresolved(id: string): Promise<void> {
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase
+        .from('ai_feedback')
+        .update({ resolved_at: null })
+        .eq('id', id)
+        .select('id');
+
+      if (error) {
+        throw new DatabaseError(`Failed to reopen AI feedback: ${error.message}`);
+      }
+      if (!data?.length) throw new DatabaseError('Failed to reopen AI feedback: no row was updated');
+    }, 'Failed to reopen feedback');
   }
 
   async updateAdminNotes(id: string, notes: string): Promise<void> {

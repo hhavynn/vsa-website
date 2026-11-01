@@ -34,6 +34,40 @@ it('surfaces a permission error and a malformed result', async () => {
   await expect(attendanceReadinessRepository.getReadiness(2026, null)).rejects.toThrow(/returned no result/);
 });
 
+it('rejects missing or invalid snapshot metadata rather than claiming a complete ACE attendance review', async () => {
+  const complete = { events: [{ id: 'event-1' }], total_events: 1, truncated: false, checked_at: '2026-10-30T00:00:00Z' };
+  for (const malformed of [
+    { ...complete, total_events: undefined },
+    { ...complete, total_events: 0 },
+    { ...complete, total_events: 1.5 },
+    { ...complete, truncated: undefined },
+    { ...complete, truncated: 'false' },
+    { ...complete, checked_at: undefined },
+    { ...complete, checked_at: 'not-a-date' },
+  ]) {
+    supabaseMock.queueResult('rpc:admin_event_attendance_readiness', { data: malformed, error: null });
+    await expect(attendanceReadinessRepository.getReadiness(2026, null)).rejects.toThrow(/incomplete snapshot metadata/);
+  }
+});
+
+it('rejects repeated or malformed event IDs before eligibility can count events', async () => {
+  const base = { total_events: 2, truncated: false, checked_at: '2026-10-30T00:00:00Z' };
+  supabaseMock.queueResult('rpc:admin_event_attendance_readiness', { data: { ...base, events: [{ id: 'e1' }, { id: 'e1' }] }, error: null });
+  await expect(attendanceReadinessRepository.getReadiness(2026, null)).rejects.toThrow(/duplicated or invalid events/);
+
+  supabaseMock.queueResult('rpc:admin_event_attendance_readiness', { data: { ...base, events: [{ id: 'e1' }, { id: '' }] }, error: null });
+  await expect(attendanceReadinessRepository.getReadiness(2026, null)).rejects.toThrow(/duplicated or invalid events/);
+});
+
+it('preserves an explicitly truncated readiness snapshot so ACE can refuse incomplete coverage', async () => {
+  supabaseMock.queueResult('rpc:admin_event_attendance_readiness', {
+    data: { events: [{ id: 'e1' }], total_events: 3, truncated: true, checked_at: '2026-10-30T00:00:00Z' }, error: null,
+  });
+  const snapshot = await attendanceReadinessRepository.getReadiness(2026, null);
+  expect(snapshot).toMatchObject({ totalEvents: 3, truncated: true, checkedAt: '2026-10-30T00:00:00Z' });
+  expect(snapshot.events).toHaveLength(1);
+});
+
 it('records a statement through the admin RPC', async () => {
   supabaseMock.queueResult('rpc:admin_attest_event_attendance', { data: {}, error: null });
   await attendanceReadinessRepository.attest('ev', 'no_signin', 'Rained out');
@@ -55,6 +89,31 @@ describe('ACE read-only selected-event verified attendance (#649)',()=>{
       .toEqual(['member_id,event_id','member_id,event_id']);
     expect(supabaseMock.queriesFor('members')).toHaveLength(0);
   });
+  it('rejects a null-success attendance page instead of silently reporting zero credit', async () => {
+    supabaseMock.queueResult('member_event_attendance', { data: null, error: null });
+    await expect(attendanceReadinessRepository.getVerifiedSelectedAttendance(['m1'], ['e1']))
+      .rejects.toThrow(/incomplete page/);
+  });
+
+  it('rejects a missing later page without returning partial credited attendance', async () => {
+    supabaseMock.queueResult('member_event_attendance', {
+      data: Array.from({ length: 500 }, () => ({ member_id: 'm1', event_id: 'e1' })),
+      error: null,
+    });
+    supabaseMock.queueResult('member_event_attendance', { data: null, error: null });
+    await expect(attendanceReadinessRepository.getPolicyEventAttendance(['m1'], ['e1']))
+      .rejects.toThrow(/incomplete page/);
+    expect(supabaseMock.queriesFor('member_event_attendance').map((q) =>
+      q.calls.find((call) => call.method === 'range')?.args
+    )).toEqual([[0, 499], [500, 999]]);
+  });
+
+  it('accepts a real empty attendance page as zero credit', async () => {
+    supabaseMock.queueResult('member_event_attendance', { data: [], error: null });
+    const result = await attendanceReadinessRepository.getPolicyEventAttendance(['m1'], ['e1']);
+    expect(result.size).toBe(0);
+  });
+
   it('fails whole cohort when a later attendance page is denied instead of claiming zero',async()=>{
     supabaseMock.queueResult('member_event_attendance',{
       data:Array.from({length:500},()=>({member_id:'m1',event_id:'e1'})),error:null,

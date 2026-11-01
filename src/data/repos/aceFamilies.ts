@@ -272,6 +272,7 @@ export class AceFamiliesRepository {
     return withErrorHandling(async () => {
       const pageSize = 1000;
       const nodes: AceNodeRef[] = [];
+      let previousId: string | null = null;
       for (let from = 0; ; from += pageSize) {
         const { data, error } = await supabase
           .from('ace_family_members')
@@ -279,7 +280,22 @@ export class AceFamiliesRepository {
           .order('id', { ascending: true })
           .range(from, from + pageSize - 1);
         if (error) throw error;
-        for (const row of data ?? []) {
+        // A successful PostgREST list response is always an array. Null or
+        // overlapping/out-of-order pages cannot be interpreted as a complete
+        // ACE Big picker or family-tree index.
+        if (!Array.isArray(data)) {
+          throw new ValidationError('ACE tree nodes returned an incomplete page. Refresh before choosing a Big.');
+        }
+        for (const row of data) {
+          if (
+            !row || typeof row.id !== 'string' || !row.id ||
+            typeof row.name !== 'string' || !row.name.trim() ||
+            typeof row.family_id !== 'string' || !row.family_id ||
+            (previousId !== null && row.id <= previousId)
+          ) {
+            throw new ValidationError('ACE tree node pages are inconsistent. Refresh before choosing a Big.');
+          }
+          previousId = row.id;
           const family = Array.isArray(row.ace_families) ? row.ace_families[0] : row.ace_families;
           nodes.push({
             id: row.id,
@@ -294,7 +310,7 @@ export class AceFamiliesRepository {
             pickupTerm: row.pickup_term,
           });
         }
-        if (!data || data.length < pageSize) return nodes;
+        if (data.length < pageSize) return nodes;
       }
     }, 'Failed to fetch ACE tree nodes');
   }

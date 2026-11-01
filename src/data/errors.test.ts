@@ -299,16 +299,12 @@ describe('withErrorHandling: class mapping gaps (#291)', () => {
     expect(error.message).toBe('Failed to load: Unknown error occurred');
   });
 
-  it('characterization: a thrown NotFoundError is re-wrapped as a plain Error with the context prefix', async () => {
-    // withErrorHandling only passes DatabaseError / ValidationError / NetworkError
-    // through, so a NotFoundError thrown inside an operation reaches the caller as
-    // a generic Error ("<context>: <message>"), losing its class, resource and id.
-    // Pinned as current behaviour; see the final report.
-    const error = await run(new NotFoundError('Event not found', 'event', 'event-1'), 'Failed to fetch event').catch(
-      (e) => e as Error
-    );
-    expect(error.message).toBe('Failed to fetch event: Event not found');
-    expect(error).not.toBeInstanceOf(NotFoundError);
+  it('preserves the same NotFoundError instance, message, resource and ID', async () => {
+    const original = new NotFoundError('Event not found', 'event', 'event-1');
+    await expect(run(original, 'Failed to fetch event')).rejects.toBe(original);
+    expect(original.message).toBe('Event not found');
+    expect(original.resource).toBe('event');
+    expect(original.id).toBe('event-1');
   });
 });
 

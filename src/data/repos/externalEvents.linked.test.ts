@@ -156,7 +156,7 @@ describe('external event read paths — public/admin safety (#291)', () => {
 
     supabaseMock.queueResult('external_events', { data: null, error: null });
     await expect(externalEventsRepository.getEventById('missing-event'))
-      .rejects.toThrow('Failed to fetch external event: External event not found');
+      .rejects.toMatchObject({ name: 'NotFoundError', resource: 'external_events', id: 'missing-event' });
     supabaseMock.queueResult('external_events', {
       data: null, error: postgrestError('permission denied', '42501'),
     });

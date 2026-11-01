@@ -9,6 +9,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '../../../context/ThemeContext';
 import { logAdminActivity } from '../../../data/repos/adminActivity';
 import { AceAssignmentsWorkspace } from './AceAssignmentsWorkspace';
+import { AceApplicationProfilesPanel } from './AceApplicationProfilesPanel';
 import { supabaseMock } from '../../../test-utils/supabaseMock';
 
 jest.mock('../../../data/repos/adminActivity', () => ({
@@ -210,4 +211,35 @@ describe('application answers while sorting', () => {
     expect(screen.queryByText('1 check to review')).not.toBeInTheDocument();
     expect(screen.queryAllByRole('button', { name: 'Show answers' })).toHaveLength(0);
   });
+});
+
+it('stages a local general-application CSV without persisting it or auto-assigning anyone', async () => {
+  const onLoad = jest.fn().mockResolvedValue({ profiles: [] });
+  render(<AceApplicationProfilesPanel summary={null} onLoad={onLoad} onClear={jest.fn()} onClose={jest.fn()} />);
+  const csv = [HEADERS, ...ROWS].map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\\n');
+  fireEvent.change(screen.getByLabelText('Application responses CSV/TSV'), {
+    target: { files: [new File([csv], 'application.csv', { type: 'text/csv' })] },
+  });
+  await waitFor(() => expect(screen.getByLabelText('Pasted application responses')).toHaveValue(csv));
+  expect(onLoad).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Load answers' }));
+  await waitFor(() => expect(onLoad).toHaveBeenCalledWith(csv));
+});
+
+it('rejects invalid Excel files without erasing a staged application paste', async () => {
+  render(<AceApplicationProfilesPanel summary={null} onLoad={jest.fn()} onClear={jest.fn()} onClose={jest.fn()} />);
+  fireEvent.change(screen.getByLabelText('Pasted application responses'), { target: { value: PASTE } });
+  fireEvent.change(screen.getByLabelText('Application responses CSV/TSV'), {
+    target: { files: [new File(['binary'], 'application.xlsx')] },
+  });
+  expect(await screen.findByRole('alert')).toHaveTextContent(/export the Form Responses tab as CSV first/i);
+  expect(screen.getByLabelText('Pasted application responses')).toHaveValue(PASTE);
+});
+
+it('reports a failed application load while retaining the original paste', async () => {
+  render(<AceApplicationProfilesPanel summary={null} onLoad={jest.fn().mockRejectedValue(new Error('No valid Big or Little applications found'))} onClear={jest.fn()} onClose={jest.fn()} />);
+  fireEvent.change(screen.getByLabelText('Pasted application responses'), { target: { value: 'wrong sheet' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Load answers' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('No valid Big or Little applications found');
+  expect(screen.getByLabelText('Pasted application responses')).toHaveValue('wrong sheet');
 });

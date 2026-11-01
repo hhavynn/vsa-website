@@ -20,6 +20,10 @@ const NOW = new Date('2026-10-02T12:00:00Z');
 
 beforeEach(() => {
   supabaseMock.reset();
+  // Real successful HEAD count probes return count: 0 for empty tables.
+  for (const table of ['members', 'academic_terms', 'member_photo_requests', 'data_rights_requests', 'ai_feedback']) {
+    supabaseMock.setDefault(table, { data: null, error: null, count: 0 });
+  }
   (academicTermsRepository.getActiveTerm as jest.Mock).mockResolvedValue({ academic_year_start: 2026 });
 });
 

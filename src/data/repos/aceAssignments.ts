@@ -134,13 +134,29 @@ export class AceAssignmentsRepository {
         throw new ValidationError('ACE cycle is not published for the chosen year.');
       }
       const roster: PublishedAceLittle[] = [];
+      const seenIds = new Set<string>();
       for (let from=0;;from+=500) {
         const {data,error} = await supabase.from('ace_assignment_drafts')
           .select('id,little_name,little_member_id,big_ace_member_id,published_ace_member_id')
           .eq('cycle_id',cycleId).order('id',{ascending:true}).range(from,from+499);
         if (error) throw error;
-        const page=(data??[]) as PublishedAceLittle[];
-        roster.push(...page);
+        // This published roster drives participation review. A missing or
+        // overlapping page must not silently omit/duplicate Littles.
+        if (!Array.isArray(data) || data.length > 500) {
+          throw new ValidationError('The published ACE roster is incomplete. Refresh before reviewing participation.');
+        }
+        const page = data as PublishedAceLittle[];
+        for (const row of page) {
+          if (
+            !row || typeof row.id !== 'string' || !row.id ||
+            typeof row.little_name !== 'string' || !row.little_name.trim() ||
+            seenIds.has(row.id)
+          ) {
+            throw new ValidationError('The published ACE roster has inconsistent identities. Refresh before reviewing participation.');
+          }
+          seenIds.add(row.id);
+          roster.push(row);
+        }
         if (page.length<500) break;
       }
       return roster;
@@ -198,17 +214,38 @@ export class AceAssignmentsRepository {
     }, 'Failed to save the eligibility policy');
   }
 
+  /**
+   * The entire private working draft is required for duplicate checks, capacity,
+   * Lock and Publish preflight. PostgREST's default row limit must never silently
+   * omit later Littles. A failed page invalidates the whole snapshot.
+   */
   async listDrafts(cycleId: string): Promise<AceAssignmentDraft[]> {
     return withErrorHandling(async () => {
-      const { data, error } = await supabase
-        .from('ace_assignment_drafts')
-        .select('*')
-        .eq('cycle_id', cycleId)
-        .order('display_order', { ascending: true })
-        .order('created_at', { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as AceAssignmentDraft[];
-    }, 'Failed to load assignments');
+      const pageSize = 500;
+      const drafts: AceAssignmentDraft[] = [];
+      const seen = new Set<string>();
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+          .from('ace_assignment_drafts')
+          .select('*')
+          .eq('cycle_id', cycleId)
+          .order('display_order', { ascending: true })
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const page = (data ?? []) as AceAssignmentDraft[];
+        for (const row of page) {
+          if (row.cycle_id !== cycleId || typeof row.id !== 'string' || seen.has(row.id)) {
+            throw new ValidationError('ACE draft pages are inconsistent. Refresh before reviewing or publishing.');
+          }
+          seen.add(row.id);
+          drafts.push(row);
+        }
+        if (page.length < pageSize) break;
+      }
+      return drafts;
+    }, 'Failed to load complete ACE assignment drafts');
   }
 
   /** Adds draft rows after `startOrder`; imports create drafts only. */
