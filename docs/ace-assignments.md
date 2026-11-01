@@ -150,9 +150,10 @@ responses, header row included. Logic: `src/lib/aceMutualRequests.ts`.
   match until the chair accepts it. Ties are never guessed.
 - A pair counts only when both people requested each other. One-sided
   requests, unresolved names, and conflicts (a Little mutually matched with
-  several Bigs, or both roles) are listed separately; conflicts stay out of
-  the confirmed pairs. **Download follow-ups CSV** has names and request text
-  only.
+  several Bigs, both roles, or a duplicate source identity) are listed separately;
+  conflicts stay out of the confirmed pairs. **Download follow-ups CSV** includes
+  one-sided requests, unresolved names, and conflicts; it has names and request
+  text only, with no emails, phone numbers, or other contact fields.
 - **Add N confirmed pairs to draft** uses the same import path as above: the
   member links only by a unique email match, the Big is assigned only when
   exactly one tree node has that name (otherwise the note says
