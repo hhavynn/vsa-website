@@ -188,8 +188,11 @@ is enabled by this change.**
 
 A Chair must explicitly review a Big's maximum and, when they have mutual
 guarantees, choose whether it means **total Littles including mutual** or
-**additional Littles beyond mutual**. Until then, `remaining = null`; a
-conditional/ranged form answer cannot authorize a seat count.
+**additional Littles beyond mutual**. Until a maximum is reviewed,
+`needsCapacity` is set and no additional seat is authorized, so a `remaining`
+of 0 or below is not a real limit. A reviewed maximum with no interpretation
+gives `remaining = null`. A conditional/ranged form answer cannot authorize a
+seat count.
 
 Within the same academic cycle, each canonical Little participant ID counts
 once regardless of whether they submitted mutual, regular or both forms.
