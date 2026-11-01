@@ -93,6 +93,52 @@ const node = (id: string, name: string): AceNodeRef => ({
 
 const member = (id: string): MemberOption => ({ id, fullName: 'x', college: null, year: null, displayName: 'x' });
 
+describe('mutual source identity safety', () => {
+  it('never deduplicates email-less rows solely because names are identical', () => {
+    const parsed = parseMutualRequests(tsv([
+      { name: 'Wren Halloway', email: 'wren', wants: 'Little', request: 'Tamsin Vale' },
+      { name: 'Tamsin Vale', email: '', wants: 'Big', request: 'Wren Halloway' },
+      { name: 'Tamsin Vale', email: '', wants: 'Big', request: 'Someone Else' },
+    ]));
+    expect(parsed.respondents).toHaveLength(3);
+    expect(parsed.repeatsReplaced).toBe(0);
+    const twins = parsed.respondents.filter((item) => item.name === 'Tamsin Vale');
+    expect(twins).toHaveLength(2);
+    expect(twins[0].id).not.toBe(twins[1].id);
+    expect(parsed.warnings).toEqual([expect.stringContaining('multiple submissions without a UCSD email')]);
+    expect(classifyMutualRequests(parsed.respondents).pairs).toEqual([]);
+    expect(classifyMutualRequests(parsed.respondents).conflicts).toEqual([
+      expect.objectContaining({ kind: 'duplicate_name', person: { name: 'Tamsin Vale' } }),
+    ]);
+  });
+
+  it('withholds reciprocal pairs where a duplicate full name spans distinct source identities', () => {
+    const parsed = parseMutualRequests(tsv([
+      { name: 'Wren Halloway', email: 'wren', wants: 'Little', request: 'Tamsin Vale' },
+      { name: 'Tamsin Vale', email: 'tamsin', wants: 'Big', request: 'Wren Halloway' },
+      { name: 'Tamsin Vale', email: '', wants: 'Little', request: 'Nobody' },
+    ]));
+    expect(parsed.respondents).toHaveLength(3);
+    const check = classifyMutualRequests(parsed.respondents);
+    expect(check.pairs).toEqual([]);
+    expect(check.conflicts).toEqual([
+      expect.objectContaining({ kind: 'duplicate_name', person: { name: 'Tamsin Vale' } }),
+    ]);
+    expect(check.conflicts[0].others).toHaveLength(1);
+  });
+
+  it('still replaces genuine repeat submissions sharing one normalized UCSD email', () => {
+    const parsed = parseMutualRequests(tsv([
+      { name: 'Tamsin Vale', email: 'TVALE', wants: 'Big', request: 'Wren Halloway' },
+      { name: 'Tamsin Vale', email: 'tvale@ucsd.edu', wants: 'Big', request: 'Wren Halloway' },
+    ]));
+    expect(parsed.respondents).toHaveLength(1);
+    expect(parsed.repeatsReplaced).toBe(1);
+    expect(parsed.warnings.every((warning) => !warning.includes('multiple submissions without a UCSD email'))).toBe(true);
+    expect(classifyMutualRequests(parsed.respondents).conflicts).toEqual([]);
+  });
+});
+
 describe('splitRequestedNames', () => {
   it.each([
     ['Im a little, requesting Wren Halloway to be my big', ['Wren Halloway']],
