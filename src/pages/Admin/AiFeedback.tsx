@@ -215,16 +215,27 @@ export default function AdminAiFeedback() {
                     <label htmlFor={'feedback-note-' + item.id} className="font-sans text-xs font-semibold text-text-secondary">
                       Internal review note
                     </label>
-                    <Link
-                      to="/admin/ai-knowledge"
-                      className="font-sans text-xs font-semibold text-brand-700 underline hover:no-underline dark:text-brand-300"
-                    >
-                      Review knowledge base →
-                    </Link>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1">
+                      {item.category?.trim() && item.category.length <= 80 && (
+                        <Link
+                          to={`/admin/ai-knowledge?category=${encodeURIComponent(item.category)}`}
+                          className="font-sans text-xs font-semibold text-brand-700 underline hover:no-underline dark:text-brand-300"
+                        >
+                          Browse {item.category} knowledge candidates →
+                        </Link>
+                      )}
+                      <Link
+                        to="/admin/ai-knowledge"
+                        className="font-sans text-xs font-semibold text-brand-700 underline hover:no-underline dark:text-brand-300"
+                      >
+                        Review knowledge base →
+                      </Link>
+                    </div>
                   </div>
                   <p className="mt-1 font-sans text-[11px] text-text-muted">
                     Describe what to verify or change. Do not include names, emails, hashed identifiers or raw chats.
                     This note does not automatically mark the feedback resolved.
+                    The category link shows possible knowledge to review, not the source of this answer.
                   </p>
                   <textarea
                     id={'feedback-note-' + item.id}

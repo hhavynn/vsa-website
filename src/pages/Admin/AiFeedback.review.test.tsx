@@ -59,6 +59,26 @@ describe('Ask VSA feedback: private review notes (#237)', () => {
     expect(aiFeedbackRepository.markResolved).not.toHaveBeenCalled();
   });
 
+  it('links a feedback category to matching knowledge candidates without claiming source attribution', async () => {
+    renderPage();
+    await screen.findByRole('textbox', { name: 'Internal review note' });
+    const category = screen.getByRole('link', { name: 'Browse events knowledge candidates →' });
+    expect(category).toHaveAttribute('href', '/admin/ai-knowledge?category=events');
+    expect(screen.getByText(/not the source of this answer/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Review knowledge base/ })).toHaveAttribute('href', '/admin/ai-knowledge');
+  });
+
+  it('does not put arbitrary or oversized feedback categories in review links', async () => {
+    list.mockResolvedValue([
+      { ...example, id: 'weird', category: 'x'.repeat(81) },
+      { ...example, id: 'other', category: null },
+    ]);
+    renderPage();
+    await screen.findAllByRole('textbox', { name: 'Internal review note' });
+    expect(screen.queryByRole('link', { name: /knowledge candidates/ })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /Review knowledge base/ })).toHaveLength(2);
+  });
+
   it('keeps an unsaved note when a filter reloads the same feedback', async () => {
     renderPage();
     const note = await screen.findByRole('textbox', { name: 'Internal review note' });
