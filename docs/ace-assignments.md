@@ -146,8 +146,11 @@ the name).
 
 ## Checking mutual requests
 
-**Check mutual requests** takes a paste of the "ACE Mutual Request" Google Form
-responses, header row included. Logic: `src/lib/aceMutualRequests.ts`.
+**Check mutual requests** accepts a paste of the "ACE Mutual Request" Google Form
+responses, header row included, or a local CSV/TSV file exported from the **Form Responses** tab.
+Excel `.xlsx` must first be exported as CSV; only `.csv`/`.tsv` files up to 5 MB are supported.
+Reading a file replaces the current paste and clears manual name decisions so previous confirmations cannot carry onto a changed form. File contents stay in this admin browser tab, with no network upload or persistence. Actual pair addition still requires clicking **Add confirmed pair to draft**.
+Logic: `src/lib/aceMutualRequests.ts`.
 
 - "Requesting a Big" means the respondent is a Little. Repeat submissions are
   keyed on UCSD email (a bare username means `@ucsd.edu`); the latest
