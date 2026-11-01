@@ -232,7 +232,7 @@ it('rejects invalid Excel files without erasing a staged application paste', asy
   fireEvent.change(screen.getByLabelText('Application responses CSV/TSV'), {
     target: { files: [new File(['binary'], 'application.xlsx')] },
   });
-  expect(screen.getByRole('alert')).toHaveTextContent(/export Excel .xlsx as CSV first/i);
+  expect(await screen.findByRole('alert')).toHaveTextContent(/export the Form Responses tab as CSV first/i);
   expect(screen.getByLabelText('Pasted application responses')).toHaveValue(PASTE);
 });
 
