@@ -202,7 +202,9 @@ export function parseMutualRequests(text: string): ParsedMutualRequests {
       line: offset + 2,
       order: offset,
       time: Number.isNaN(parsedTime) ? null : parsedTime,
-      key: email ?? `name:${normalizeMemberName(name)}`,
+      // A name alone is not a submission identity. Never collapse two
+      // email-less rows as a single person just because the names agree.
+      key: email ?? `name:${normalizeMemberName(name)}:row:${offset + 2}`,
       email,
       name,
       preferredName: cleanPersonName(cell('preferred')) || null,
@@ -211,6 +213,19 @@ export function parseMutualRequests(text: string): ParsedMutualRequests {
       requestText: (cells[columnIndex.get('request') ?? -1] ?? '').trim(),
     });
   });
+
+  const missingEmailByName = new Map<string, number>();
+  for (const submission of submissions) {
+    if (submission.email) continue;
+    const key = normalizeMemberName(submission.name);
+    missingEmailByName.set(key, (missingEmailByName.get(key) ?? 0) + 1);
+  }
+  const duplicateEmailLess = Array.from(missingEmailByName.values()).filter((count) => count > 1).length;
+  if (duplicateEmailLess > 0) {
+    result.warnings.push(
+      `${pluralize(duplicateEmailLess, 'name')} appear on multiple submissions without a UCSD email. Kept separate for chair identity review; do not assume these are repeat responses.`,
+    );
+  }
 
   const byKey = new Map<string, RawSubmission[]>();
   for (const submission of submissions) byKey.set(submission.key, [...(byKey.get(submission.key) ?? []), submission]);
@@ -396,7 +411,7 @@ export interface PossibleMatch {
 }
 
 export interface MutualConflict {
-  kind: 'multiple_bigs' | 'both_roles';
+  kind: 'multiple_bigs' | 'both_roles' | 'duplicate_name';
   person: MutualRespondent;
   /** For multiple_bigs: the Bigs this Little matched with. */
   others: MutualRespondent[];
@@ -507,6 +522,26 @@ export function classifyMutualRequests(
       });
     }
   }
+  // One displayed name may refer to several different people. Even with
+  // separate emails, that name is not sufficient proof of who is meant.
+  // Prevent all affected respondents from producing "confirmed" pairs until
+  // the chair resolves the canonical identity outside this paste-only preview.
+  const respondentsByName = new Map<string, MutualRespondent[]>();
+  for (const respondent of respondents) {
+    const nameKey = normalizeMemberName(respondent.name);
+    respondentsByName.set(nameKey, [...(respondentsByName.get(nameKey) ?? []), respondent]);
+  }
+  for (const group of respondentsByName.values()) {
+    if (group.length < 2) continue;
+    for (const person of group) conflicted.add(person.id);
+    check.conflicts.push({
+      kind: 'duplicate_name',
+      person: group[0],
+      others: group.slice(1),
+      message: `${group.length} responses share the name ${group[0].name} but have distinct/unverified identities. Resolve the name and source submission identities manually before accepting a pairing.`,
+    });
+  }
+
   const bigsByLittle = new Map<string, MutualPair[]>();
   for (const pair of mutual) bigsByLittle.set(pair.little.id, [...(bigsByLittle.get(pair.little.id) ?? []), pair]);
   for (const group of Array.from(bigsByLittle.values())) {
