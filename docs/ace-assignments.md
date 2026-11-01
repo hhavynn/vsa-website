@@ -130,6 +130,12 @@ the name).
   else is kept in the draft's notes ("Requested Big: … (not found)").
 - Name-only matches are never auto-linked on import. Use **Link N obvious member
   matches** (unique exact names only) or the per-row picker.
+- A form export with a Big/Little role column only imports rows explicitly marked
+  Little (including respondents explicitly requesting a Big in the mutual form).
+  Missing, contradictory or unreadable role answers are **excluded**, never
+  silently turned into Little drafts. The import preview reports their count
+  and asks the Chair to verify the form source. Plain name-only lists without
+  a role column remain supported as deliberate Little lists.
 
 ## Checking mutual requests
 
