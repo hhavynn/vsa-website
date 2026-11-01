@@ -213,3 +213,40 @@ describe('shared year rail coordinates (#672)', () => {
     expect(bandRect(band, treeMetrics(true)).height).toBe(236);
   });
 });
+
+
+describe('ACE branch preview filtered layout mode (#665)', () => {
+  it('keeps the full family year mode in a filtered slice with too few dated nodes', () => {
+    const full = layoutTree(goldenPABC);
+    expect(full.mode).toBe('year');
+
+    // A valid preview slice can have no approved dates even when the full
+    // family has sufficient evidence to use chronological rows.
+    const slice = legacyAllUnknown;
+    expect(layoutTree(slice).mode).toBe('generation');
+    const retained = layoutTree(slice, { mode: full.mode });
+    expect(retained.mode).toBe('year');
+    expect(retained.yearBands.map((band) => band.key)).toEqual(['unknown']);
+    expect(retained.positions.Little.y).toBeGreaterThan(retained.positions.Root.y);
+    expect(Object.values(retained.positions).every((p) => Number.isFinite(p.x) && Number.isFinite(p.y))).toBe(true);
+  });
+
+  it('can intentionally retain generation layout even when the subset has verified years', () => {
+    const original = layoutTree(goldenPABC);
+    expect(original.mode).toBe('year');
+    const forced = layoutTree(goldenPABC, { mode: 'generation' });
+    expect(forced.mode).toBe('generation');
+    expect(forced.yearBands).toEqual([]);
+    expect(forced.positions.C.y).toBeGreaterThan(forced.positions.B.y);
+    // The default public behavior remains chronological.
+    expect(layoutTree(goldenPABC).positions.C.y).toBe(original.positions.C.y);
+  });
+
+  it('does not fabricate a band for an empty forced-year preview', () => {
+    const empty = layoutTree([], { mode: 'year' });
+    expect(empty.mode).toBe('year');
+    expect(empty.yearBands).toEqual([]);
+    expect(empty.positions).toEqual({});
+    expect(empty.rowCount).toBe(1);
+  });
+});
