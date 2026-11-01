@@ -116,6 +116,34 @@ export function AceApplicationProfilesPanel({ summary, onLoad, onClear, onClose 
               Could not check emails against member records, so Littles were matched by name only.
             </p>
           )}
+          <details className="mt-2 rounded border border-[var(--color-border)] p-3">
+            <summary className="cursor-pointer font-semibold text-[var(--color-text)]">
+              Potential two-way named preferences · {summary.reciprocalPreferences.length}
+            </summary>
+            <p className="mt-1 text-[11px] text-[var(--color-text3)]">
+              These names were found in both applicants' general-form preference answers, not verified in the separate
+              mutual request form. They are not guarantees, approved pairs or assignments. Confirm identities and
+              preferences directly before making any decision.
+            </p>
+            {summary.reciprocalPreferences.length === 0 ? (
+              <p className="mt-2 text-[11px] text-[var(--color-text3)]">
+                No two-way named preferences detected. This does not rule out requests written another way.
+              </p>
+            ) : (
+              <ul className="mt-2 max-h-60 divide-y divide-[var(--color-border)] overflow-y-auto" aria-label="Potential two-way named preferences">
+                {summary.reciprocalPreferences.map((signal) => (
+                  <li key={`${signal.bigId}:${signal.littleId}`} className="flex flex-wrap items-center gap-2 py-2 text-xs text-[var(--color-text)]">
+                    <span className="font-semibold">{signal.bigName}</span>
+                    <span aria-hidden="true">↔</span>
+                    <span className="font-semibold">{signal.littleName}</span>
+                    <span className="text-[11px] text-[var(--color-text3)]">
+                      {signal.needsNameReview ? 'First-name mention — confirm identity' : 'Full names mentioned both ways'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </details>
           {summary.unmatched.length > 0 && (
             <details className="mt-2">
               <summary className="cursor-pointer font-medium text-[var(--color-text)]">

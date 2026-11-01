@@ -177,6 +177,7 @@ fixed.
 - Checks (gender preference, capacity, year preference, substance comfort,
   do-not-pair) and the suggestion score are **advisory**. They never block
   Lock or Publish. Picking a suggestion just sets the Big like the picker does.
+- The application-answer panel also highlights **potential two-way named preferences** when each applicant explicitly names the other in the general form's role-specific "Any preferences for Bigs/Littles?" answer. Duplicate full/first names are never guessed; a unique first-name-only mention is flagged for identity review. Separate do-not-pair answers suppress the positive signal. This is not the separate mutual form, an approved guarantee, an assigned Big, or a publish gate. No answer text or review decision is saved.
 
 ## Database
 
