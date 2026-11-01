@@ -119,6 +119,7 @@ export function AceAssignmentImportPanel({ nodes, nameIndex, existingNames = [],
           <p>
             {parsed.rows.length} {parsed.rows.length === 1 ? 'Little' : 'Littles'} found
             {parsed.skipped > 0 && ` · ${parsed.skipped} blank ${parsed.skipped === 1 ? 'row' : 'rows'} skipped`}
+            {parsed.unknownRoleSkipped > 0 && ` · ${parsed.unknownRoleSkipped} ambiguous-role ${parsed.unknownRoleSkipped === 1 ? 'row' : 'rows'} excluded`}
             {parsed.columns.length > 0 && ` · columns: ${parsed.columns.join(', ')}`}
           </p>
           {parsed.warnings.map((warning) => (
