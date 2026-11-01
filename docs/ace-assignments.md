@@ -183,14 +183,15 @@ Logic: `src/lib/aceMutualRequests.ts`.
 
 ## Application answers while sorting
 
-**Load application answers** (draft or locked cycles) takes a paste of the ACE
-application responses from Google Sheets and shows the matching-relevant
+**Load application answers** (draft or locked cycles) takes a paste or locally selected CSV/TSV
+export of the ACE application responses from Google Sheets and shows the matching-relevant
 answers beside each row: year and warning chips, an expandable profile for the
 Little and the chosen Big, the Big's planned number of Littles against their
 load in this draft, and, for an unassigned Little, up to three suggested Bigs.
 Applicants that matched no draft row or tree node are listed so names can be
 fixed.
 
+- **Local CSV/TSV.** Choose a nonempty 5 MB or smaller Form Responses CSV/TSV; the file is read into the paste field, not submitted automatically. Excel .xlsx must be exported as CSV first. The Chair must still click **Load answers**. If the new file has no valid Big or Little applicants (including a wrong tab or missing header), the old loaded answers remain in place and a safe error appears. A successful load replaces the existing in-memory set; partial valid files do **not** reconcile with previously loaded answers.
 - **In memory only.** The answers live in React state for this browser tab.
   Nothing is written to a table, browser storage, logs, toasts, or analytics,
   and nothing goes into a draft's notes. Leaving or refreshing clears them.
