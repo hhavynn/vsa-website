@@ -125,7 +125,7 @@ describe('draft cycle', () => {
     renderWorkspace();
     fireEvent.click(await screen.findByRole('button', { name: 'Import CSV / TSV' }));
     fireEvent.change(screen.getByLabelText('Pasted Littles'), {
-      target: { value: 'name\\tbig\\nJohn Nguyen\\tApril Pham\\nNew Person\\tEmily Nguyen' },
+      target: { value: 'name\tbig\nJohn Nguyen\tApril Pham\nNew Person\tEmily Nguyen' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Add 2 to draft' }));
     await waitFor(() => expect(callsOf('ace_assignment_drafts', 'insert')).toHaveLength(1));
