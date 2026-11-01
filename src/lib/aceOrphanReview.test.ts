@@ -38,6 +38,9 @@ describe('private ACE Little review states (#646)', () => {
     expect(littleState(orphan({ littleOutcome: 'none', operationalStatus: 'withdrawn', pairingStatus: 'confirmed' })))
       .toBe('needs_review');
     expect(littleState(orphan({ role: 'big' }))).toBe('needs_review');
+    expect(littleState(orphan({ operationalStatus: 'pending_review' }))).toBe('needs_review');
+    expect(littleState(orphan({ pairingStatus: 'unknown' } as unknown as Partial<AceOrphanReviewRow>)))
+      .toBe('needs_review');
     // A revoked pairing no longer makes an Orphan appear paired.
     expect(littleState(orphan({ pairingStatus: 'revoked' }))).toBe('orphan');
   });
@@ -93,6 +96,8 @@ describe('private, reviewed Orphan CSV (#646)', () => {
     ['a missing display name', { displayName: '  ' }],
     ['an unsupported follow-up code', { orphanFollowUp: 'sensitive notes' }],
     ['an unknown continuation field', { orphanContinues: null }],
+    ['an unsupported pairing status', { pairingStatus: 'unknown' }],
+    ['an unsupported operational status', { operationalStatus: 'unknown' }],
   ] as const)('fails closed on %s rather than exporting partial sensitive data', (_label, fields) => {
     expect(() => buildOrphanCsv([
       orphan({ participantId: 'safe' }), orphan({ participantId: 'other', ...fields } as Partial<AceOrphanReviewRow>),
