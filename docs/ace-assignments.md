@@ -178,6 +178,34 @@ fixed.
   do-not-pair) and the suggestion score are **advisory**. They never block
   Lock or Publish. Picking a suggestion just sets the Big like the picker does.
 
+## Big capacity foundation (#646/#663 — not connected to live intake)
+
+`src/lib/aceCapacity.ts` is the **shared, pure calculation** for reviewed
+Big capacity and guaranteed mutual Littles. It does not create a second
+capacity planner, a matching decision, an orphan draft, a tree writer, an RPC
+or a database migration. **No new admin capacity UI or production behavior
+is enabled by this change.**
+
+A Chair must explicitly review a Big's maximum and, when they have mutual
+guarantees, choose whether it means **total Littles including mutual** or
+**additional Littles beyond mutual**. Until then, `remaining = null`; a
+conditional/ranged form answer cannot authorize a seat count.
+
+Within the same academic cycle, each canonical Little participant ID counts
+once regardless of whether they submitted mutual, regular or both forms.
+Approved mutual guarantees are reserved first; confirmed and tentative
+regular pairings consume the unreserved seats; provisional requests are
+display-only; historical children do **not** consume this cycle's capacity.
+A withdrawn Big or overloaded plan requires explicit review, never an
+automatic deletion of a guaranteed pairing. Orphans stay in the private
+intake workflow, **not** `ace_assignment_drafts`.
+
+**Still blocked:** #644 participant storage and review status, #646 private
+capacity/orphan RPCs and panel, #662 verified guarantee approvals, #663
+interpretation UI, #647 matching integrations. The older
+`aceApplicationProfiles.ts` free-text capacity advisory is unchanged and
+must **not** be treated as a reviewed capacity.
+
 ## Database
 
 Migration `20261001213356_ace_assignment_workspace.sql` adds
