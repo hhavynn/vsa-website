@@ -50,6 +50,11 @@ export function useUnsavedChangesGuard(dirty: boolean, saving = false, message: 
 
     const onClick = (event: MouseEvent) => {
       if (!warnRef.current) return;
+      // Several dirty editors can be mounted on one admin page. Only the
+      // oldest active guard may prompt for this click; otherwise the same
+      // navigation asks the admin to confirm once per unsaved editor.
+      // Removing that guard promotes the next token automatically.
+      if (dirtyGuards.values().next().value !== token) return;
       const anchor = (event.target as Element | null)?.closest?.('a[href]') as HTMLAnchorElement | null;
       if (!anchor) return;
       if (!isLeavingNavigation(event, anchor, window.location.href)) return;

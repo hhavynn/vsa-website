@@ -8,6 +8,7 @@ jest.mock('../../data/repos/aiFeedback', () => ({
     listAdminFeedback: jest.fn(),
     updateAdminNotes: jest.fn(),
     markResolved: jest.fn(),
+    markUnresolved: jest.fn(),
   },
 }));
 
@@ -26,14 +27,15 @@ const example = {
   admin_notes: null,
 };
 
-function renderPage() {
-  return render(<MemoryRouter initialEntries={['/admin/ai-feedback']}><AdminAiFeedback /></MemoryRouter>);
+function renderPage(path = '/admin/ai-feedback') {
+  return render(<MemoryRouter initialEntries={[path]}><AdminAiFeedback /></MemoryRouter>);
 }
 
 beforeEach(() => {
   list.mockReset().mockResolvedValue([example]);
   update.mockReset().mockResolvedValue(undefined);
   (aiFeedbackRepository.markResolved as jest.Mock).mockReset().mockResolvedValue(undefined);
+  (aiFeedbackRepository.markUnresolved as jest.Mock).mockReset().mockResolvedValue(undefined);
 });
 
 describe('Ask VSA feedback: private review notes (#237)', () => {
@@ -99,6 +101,57 @@ describe('Ask VSA feedback: private review notes (#237)', () => {
     fireEvent.change(screen.getByLabelText('Rating'), { target: { value: 'not_helpful' } });
     await waitFor(() => expect(list).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Internal review note' })).toHaveValue('Updated by another admin'));
+  });
+
+  it('removes a just-resolved item from the unresolved inbox without a stale action', async () => {
+    renderPage();
+    expect(await screen.findByRole('button', { name: 'Mark Resolved' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Mark Resolved' }));
+    await waitFor(() => expect(aiFeedbackRepository.markResolved).toHaveBeenCalledWith('synthetic-feedback-1'));
+    expect(await screen.findByText('No feedback found for these filters.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mark Resolved' })).not.toBeInTheDocument();
+  });
+
+  it('reopens resolved feedback for continued review while keeping the item in All', async () => {
+    renderPage();
+    expect(await screen.findByRole('button', { name: 'Mark Resolved' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'all' } });
+    await waitFor(() => expect(list).toHaveBeenCalledWith({ status: 'all', rating: 'all' }));
+    // Changing the URL filter triggers a request and temporarily hides the
+    // list. Wait for the new filtered view before exercising its action.
+    fireEvent.click(await screen.findByRole('button', { name: 'Mark Resolved' }));
+    expect(await screen.findByRole('button', { name: 'Reopen for review' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen for review' }));
+    await waitFor(() => expect(aiFeedbackRepository.markUnresolved).toHaveBeenCalledWith('synthetic-feedback-1'));
+    expect(await screen.findByRole('button', { name: 'Mark Resolved' })).toBeInTheDocument();
+  });
+
+  it('removes a reopened item from the resolved-only inbox', async () => {
+    list.mockResolvedValue([{ ...example, resolved_at: '2026-10-02T18:00:00Z' }]);
+    renderPage('/admin/ai-feedback?filter=resolved');
+    fireEvent.click(await screen.findByRole('button', { name: 'Reopen for review' }));
+    await waitFor(() => expect(aiFeedbackRepository.markUnresolved).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText('No feedback found for these filters.')).toBeInTheDocument();
+  });
+
+  it('keeps status unchanged with an accessible retry if reopening fails', async () => {
+    list.mockResolvedValue([{ ...example, resolved_at: '2026-10-02T18:00:00Z' }]);
+    (aiFeedbackRepository.markUnresolved as jest.Mock).mockRejectedValueOnce(new Error('permission denied'));
+    renderPage('/admin/ai-feedback?filter=resolved');
+    fireEvent.click(await screen.findByRole('button', { name: 'Reopen for review' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not update feedback status');
+    expect(screen.getByRole('button', { name: 'Reopen for review' })).toBeEnabled();
+    expect(screen.queryByText('No feedback found for these filters.')).not.toBeInTheDocument();
+  });
+
+  it('does not allow status changes while an unsaved review note is present', async () => {
+    list.mockResolvedValue([{ ...example, resolved_at: '2026-10-02T18:00:00Z' }]);
+    renderPage('/admin/ai-feedback?filter=resolved');
+    const note = await screen.findByRole('textbox', { name: 'Internal review note' });
+    fireEvent.change(note, { target: { value: 'Investigating which published answer needs correction' } });
+    expect(screen.getByRole('button', { name: 'Reopen for review' })).toBeDisabled();
+    fireEvent.change(note, { target: { value: '' } });
+    expect(screen.getByRole('button', { name: 'Reopen for review' })).toBeEnabled();
   });
 
   it('keeps the note editable and exposes a retry message when saving fails', async () => {
