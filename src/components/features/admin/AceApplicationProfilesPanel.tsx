@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AceApplicationSummary } from '../../../hooks/useAceApplicationProfiles';
+import { readAceFormFile } from '../../../lib/aceFormFile';
 
 interface AceApplicationProfilesPanelProps {
   summary: AceApplicationSummary | null;
@@ -33,28 +34,17 @@ export function AceApplicationProfilesPanel({ summary, onLoad, onClear, onClose 
     if (!file || loading) return;
     const current = ++fileVersion.current;
     setMessage(null);
-    if (!/\.(csv|tsv)$/i.test(file.name) || file.size === 0 || file.size > 5 * 1024 * 1024) {
-      setMessage('Choose a nonempty CSV or TSV export of the Form Responses tab (5 MB maximum). Export Excel .xlsx as CSV first.');
-      return;
-    }
     setFileReading(true);
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (current !== fileVersion.current) return;
-      if (typeof reader.result !== 'string') {
-        setMessage('Could not decode the selected file as text.');
-      } else {
-        setText(reader.result.replace(/^\uFEFF/, ''));
-      }
-      setFileReading(false);
-    };
-    reader.onerror = () => {
-      if (current === fileVersion.current) {
-        setMessage('Could not read that file. Try exporting the Form Responses tab again.');
-        setFileReading(false);
-      }
-    };
-    reader.readAsText(file, 'UTF-8');
+    readAceFormFile(file)
+      .then((content) => {
+        if (current === fileVersion.current) setText(content);
+      })
+      .catch((err: Error) => {
+        if (current === fileVersion.current) setMessage(err.message);
+      })
+      .finally(() => {
+        if (current === fileVersion.current) setFileReading(false);
+      });
   };
 
   const load = async () => {
