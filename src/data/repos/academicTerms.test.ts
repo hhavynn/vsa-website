@@ -22,6 +22,18 @@ const WI27 = {
   updated_at: '2026-09-26T00:00:00Z',
 };
 
+const CREATE_TERM_INPUT: Parameters<typeof academicTermsRepository.createTerm>[0] = {
+  code: 'WI27',
+  label: 'Winter 2027',
+  quarter: 'winter',
+  academic_year_start: 2026,
+  academic_year_end: 2027,
+  starts_on: '2027-01-04',
+  ends_on: '2027-03-20',
+  is_active: false,
+  display_order: 20262,
+};
+
 describe('academicTermsRepository.ensureTermForDate', () => {
   beforeEach(() => supabaseMock.reset());
 
@@ -137,10 +149,7 @@ describe('academicTermsRepository: remaining read/write boundaries (#291)', () =
 
   it('creates a term with its supplied dates and an updated timestamp', async () => {
     supabaseMock.queueResult('academic_terms', { data: WI27, error: null });
-    const { id, created_at, updated_at, ...termInput } = WI27;
-    await expect(academicTermsRepository.createTerm(
-      termInput as Parameters<typeof academicTermsRepository.createTerm>[0]
-    )).resolves.toEqual(WI27);
+    await expect(academicTermsRepository.createTerm(CREATE_TERM_INPUT)).resolves.toEqual(WI27);
     const calls = supabaseMock.queriesFor('academic_terms')[0].calls;
     expect(calls).toContainEqual({
       method: 'insert',
@@ -158,10 +167,8 @@ describe('academicTermsRepository: remaining read/write boundaries (#291)', () =
     supabaseMock.queueResult('academic_terms', {
       data: null, error: postgrestError('synthetic create denied', '42501'),
     });
-    const { id, created_at, updated_at, ...termInput } = WI27;
-    await expect(academicTermsRepository.createTerm(
-      termInput as Parameters<typeof academicTermsRepository.createTerm>[0]
-    )).rejects.toMatchObject({ name: 'DatabaseError', code: '42501' });
+    await expect(academicTermsRepository.createTerm(CREATE_TERM_INPUT))
+      .rejects.toMatchObject({ name: 'DatabaseError', code: '42501' });
   });
 
   it('updates only the specified term and surfaces update failures', async () => {
