@@ -82,11 +82,11 @@ it('refuses to replace a loaded application with a missing-header or all-skipped
   await act(async () => { await result.current.load(PASTE); });
   expect(result.current.summary?.littleCount).toBe(1);
 
-  await expect(result.current.load('Name,Email\\nUnrelated Person,nobody')).rejects.toThrow(/No valid Big or Little applications/);
+  await expect(result.current.load('Name,Email\nUnrelated Person,nobody')).rejects.toThrow(/No valid Big or Little applications/);
   expect(result.current.summary?.littleCount).toBe(1);
   expect(result.current.rowFor(drafts[0])?.little?.displayName).toBe('Ben Ho');
 
-  const headerOnly = PASTE.split('\\n')[0];
+  const headerOnly = PASTE.split('\n')[0];
   await expect(result.current.load(headerOnly)).rejects.toThrow(/No valid Big or Little applications/);
   expect(result.current.summary?.littleCount).toBe(1);
   expect(matchMembersByEmail).toHaveBeenCalledTimes(1);
