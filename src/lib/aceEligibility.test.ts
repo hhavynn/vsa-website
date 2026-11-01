@@ -151,21 +151,38 @@ describe('pre-sort ACE eligibility', () => {
       event('e3'),
       event('future', { date: '2026-11-15T19:00:00Z' }),
       event('undated', { date: null as unknown as string }),
+      event('invalid', { date: 'not-a-date' }),
       event('hidden', { is_published: false }),
     ];
     const result = check({
       drafts: [draft('a', 'm-a')],
-      policy: { littleMin: 4, bigMin: 3, eventIds: ['e1', 'e2', 'e3', 'future', 'undated', 'hidden', 'gone'] },
+      policy: { littleMin: 4, bigMin: 3, eventIds: ['e1', 'e2', 'e3', 'future', 'undated', 'invalid', 'hidden', 'gone'] },
       events,
-      attendance: attended({ 'm-a': ['e1', 'e2', 'e3', 'future', 'hidden'] }),
+      attendance: attended({ 'm-a': ['e1', 'e2', 'e3', 'future', 'invalid', 'hidden'] }),
     });
     expect(result.rejectedEvents.map((rejected) => [rejected.id, rejected.reason])).toEqual([
       ['future', 'Has not happened yet'],
       ['undated', 'Has no date'],
+      ['invalid', 'Has an invalid date'],
       ['hidden', 'Not published'],
       ['gone', "No longer one of this academic year's events"],
     ]);
     expect(result.littles[0]).toMatchObject({ status: 'short', attended: 3, remaining: 1 });
+  });
+
+  it('keeps invalid date strings out of both verified and unverified policy evidence', () => {
+    const result = check({
+      drafts: [draft('a', 'm-a')],
+      policy: { littleMin: 1, bigMin: 1, eventIds: ['bad', 'valid'] },
+      events: [event('bad', { date: 'definitely-not-a-date' }), event('valid', { date: '2026-10-10' })],
+      attendance: attended({ 'm-a': ['bad'] }),
+    });
+    expect(result.rejectedEvents).toEqual([
+      { id: 'bad', name: 'Synthetic bad', reason: 'Has an invalid date' },
+    ]);
+    expect(result.verifiedEventIds).toEqual(['valid']);
+    expect(result.unverifiedEventIds).toEqual([]);
+    expect(result.littles[0]).toMatchObject({ status: 'short', attended: 0, remaining: 1 });
   });
 
   it('refuses to run without a saved, valid policy', () => {
