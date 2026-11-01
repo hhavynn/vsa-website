@@ -165,6 +165,7 @@ load in this draft, and, for an unassigned Little, up to three suggested Bigs.
 Applicants that matched no draft row or tree node are listed so names can be
 fixed.
 
+- **Conflicting application roles:** if the same UCSD email was submitted as both Big and Little in one export, neither version enters the in-memory matching/suggestion set. The panel flags the conflicting applicant name for chair verification; it never guesses that the newest role cancels the older one. Re-export the corrected source after resolving it. Repeats that consistently specify one role still use the latest submission.
 - **In memory only.** The answers live in React state for this browser tab.
   Nothing is written to a table, browser storage, logs, toasts, or analytics,
   and nothing goes into a draft's notes. Leaving or refreshing clears them.
