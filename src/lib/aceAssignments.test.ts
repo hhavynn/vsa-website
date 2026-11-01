@@ -375,7 +375,7 @@ describe('parseAssignmentImport with ACE Google Form pastes', () => {
   });
 
   it('still accepts plain name-only import files without a role column', () => {
-    const parsed = parseAssignmentImport('name\\nWren Halloway\\nTamsin Vale');
+    const parsed = parseAssignmentImport(['name', 'Wren Halloway', 'Tamsin Vale'].join('\n'));
     expect(parsed.rows.map((row) => row.name)).toEqual(['Wren Halloway', 'Tamsin Vale']);
     expect(parsed.unknownRoleSkipped).toBe(0);
   });
