@@ -4,7 +4,7 @@ import { type IconBaseProps } from 'react-icons';
 import { FiArrowUpRight, FiStar } from 'react-icons/fi';
 import { cn } from '../../../lib/utils';
 import { Link } from 'react-router-dom';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { eventsRepository, PublicEventPreview } from '../../../data/repos/events';
 import { houseEventsRepository } from '../../../data/repos/houseEvents';
@@ -87,7 +87,7 @@ function NextEventCard() {
     queryKey: ['home', 'upcoming-event-preview', today],
     queryFn: () => eventsRepository.getPublicUpcomingPreview(today, 4),
     staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
   const todayDateOnly = today;
@@ -96,7 +96,7 @@ function NextEventCard() {
     // A few, so one that already ended today can be skipped.
     queryFn: () => houseEventsRepository.getPublicUpcomingPreview(todayDateOnly, null, 3),
     staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
@@ -380,7 +380,7 @@ function LatestMemoryCard() {
     queryKey: ['home', 'latest-memory-preview'],
     queryFn: getLatestMemory,
     staleTime: 10 * 60 * 1000,
-    cacheTime: 20 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
   const useSummerEmptyState = shouldUseSummerEmptyState(Boolean(memory));

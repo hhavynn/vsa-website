@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../context/ThemeContext';
 import { aceFamiliesRepository } from '../../../data/repos/aceFamilies';
 import type { AceAssignmentCycle, AceAssignmentDraft, AceFamily } from '../../../types';

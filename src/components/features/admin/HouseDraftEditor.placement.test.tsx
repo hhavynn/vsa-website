@@ -7,7 +7,7 @@
  */
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { HouseDraftEditor } from './HouseDraftEditor';
 import { houseAssignmentsRepository } from '../../../data/repos/houseAssignments';
@@ -20,6 +20,7 @@ import toast from 'react-hot-toast';
 
 import { academicTermsRepository } from '../../../data/repos/academicTerms';
 import { houseParentsRepository } from '../../../data/repos/houseParents';
+import { adminReviewRepository } from '../../../data/repos/adminReview';
 import { applicationLinksRepository } from '../../../data/repos/applicationLinks';
 jest.mock('../../../data/repos/academicTerms', () => ({ academicTermsRepository: { getActiveTerm: jest.fn() } }));
 jest.mock('../../../data/repos/houseParents', () => ({ houseParentsRepository: { listForYear: jest.fn() } }));
@@ -125,6 +126,7 @@ async function settle() {
 const download = downloadCsv as jest.MockedFunction<typeof downloadCsv>;
 
 beforeEach(() => {
+  (adminReviewRepository.listReviewed as jest.Mock).mockResolvedValue(new Set());
   (academicTermsRepository.getActiveTerm as jest.Mock).mockResolvedValue({ academic_year_start: 2026 });
   (houseParentsRepository.listForYear as jest.Mock).mockResolvedValue([]);
   (applicationLinksRepository.listAdminApplicationLinks as jest.Mock).mockResolvedValue([]);

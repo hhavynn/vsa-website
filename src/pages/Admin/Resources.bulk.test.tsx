@@ -7,7 +7,7 @@ import { resourceLinksRepository } from '../../data/repos/resourceLinks';
 import { ResourceLink } from '../../types';
 
 jest.mock('react-hot-toast', () => ({ __esModule: true, default: Object.assign(jest.fn(), { success: jest.fn(), error: jest.fn() }) }));
-jest.mock('react-query', () => ({ useQueryClient: () => ({ invalidateQueries: jest.fn() }) }));
+jest.mock('@tanstack/react-query', () => ({ useQueryClient: () => ({ invalidateQueries: jest.fn() }) }));
 jest.mock('../../data/repos/resourceLinks', () => ({
   RESOURCE_LINK_CATEGORIES: ['Marketing', 'Templates'],
   resourceLinksRepository: { setArchived: jest.fn(), delete: jest.fn(), create: jest.fn(), update: jest.fn(), markVerified: jest.fn() },

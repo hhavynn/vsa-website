@@ -350,7 +350,7 @@ export function HouseImagesManager({ selectedYear, onYearChange }: HouseImagesMa
       setHouseParentFile(id, null);
       savedSnapshotRef.current[id] = JSON.stringify(draft);
       toast.success(`${draft.display_name} saved.`);
-      await refetch();
+      await refetch({ cancelRefetch: false });
     } catch (err) {
       console.error(err);
       toast.error(`Failed to save changes.`);
@@ -391,7 +391,7 @@ export function HouseImagesManager({ selectedYear, onYearChange }: HouseImagesMa
       toast.success('House profile created.');
       setNewHouseDraft(emptyDraft());
       setShowAddForm(false);
-      await refetch();
+      await refetch({ cancelRefetch: false });
     } catch (err) {
       console.error(err);
       toast.error('Failed to create house.');

@@ -5,7 +5,7 @@
 // the attendance status read (#653). Never shown publicly (#692).
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { HOUSE_OVERVIEW_UNAVAILABLE, HouseOverviewHouse, houseOverviewRepository } from '../../../data/repos/houseOverview';
 import { HouseRosterPanel } from './HouseRosterPanel';
 import { attendanceReadinessRepository } from '../../../data/repos/attendanceReadiness';
@@ -55,17 +55,23 @@ export function HouseOverviewPanel({ selectedYear }: { selectedYear: number | nu
     return next;
   });
 
-  const overview = useQuery(
-    ['admin', 'house-overview', selectedYear, termId],
-    () => houseOverviewRepository.getOverview(selectedYear as number, termId),
-    { enabled: selectedYear !== null, retry: false, staleTime: 0, refetchOnWindowFocus: false },
-  );
+  const overview = useQuery({
+    queryKey: ['admin', 'house-overview', selectedYear, termId],
+    queryFn: () => houseOverviewRepository.getOverview(selectedYear as number, termId),
+    enabled: selectedYear !== null,
+    retry: false,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+  });
   // Shares the Attendance status tab's cache (same key).
-  const readiness = useQuery(
-    ['admin', 'attendance-readiness', selectedYear, termId],
-    () => attendanceReadinessRepository.getReadiness(selectedYear as number, termId),
-    { enabled: selectedYear !== null, retry: false, staleTime: 60 * 1000, refetchOnWindowFocus: false },
-  );
+  const readiness = useQuery({
+    queryKey: ['admin', 'attendance-readiness', selectedYear, termId],
+    queryFn: () => attendanceReadinessRepository.getReadiness(selectedYear as number, termId),
+    enabled: selectedYear !== null,
+    retry: false,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
   const outstanding = useMemo(() => {
     // A cut-off read cannot vouch for every event.
     if (!readiness.data || readiness.data.truncated) return null;
@@ -94,7 +100,7 @@ export function HouseOverviewPanel({ selectedYear }: { selectedYear: number | nu
               {yearTerms.map((term) => <option key={term.id} value={term.id}>{term.label}</option>)}
             </select>
           </div>
-          <button type="button" onClick={() => { overview.refetch(); readiness.refetch(); }} disabled={overview.isFetching} className="min-h-[36px] rounded border bg-transparent px-3 py-1 text-xs font-semibold border-[var(--color-border)] text-text-primary hover:bg-[var(--color-surface2)] disabled:opacity-50">
+          <button type="button" onClick={() => { overview.refetch({ cancelRefetch: false }); readiness.refetch({ cancelRefetch: false }); }} disabled={overview.isFetching} className="min-h-[36px] rounded border bg-transparent px-3 py-1 text-xs font-semibold border-[var(--color-border)] text-text-primary hover:bg-[var(--color-surface2)] disabled:opacity-50">
             {overview.isFetching ? 'Refreshing…' : 'Refresh'}
           </button>
         </div>

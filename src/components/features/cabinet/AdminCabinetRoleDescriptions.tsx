@@ -182,7 +182,7 @@ export function AdminCabinetRoleDescriptions() {
 
           <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:justify-between">
             <div className="flex gap-3">
-              <button type="submit" disabled={updateRole.isLoading || createRole.isLoading} className="vsa-btn-primary sm:px-8 disabled:opacity-50">
+              <button type="submit" disabled={updateRole.isPending || createRole.isPending} className="vsa-btn-primary sm:px-8 disabled:opacity-50">
                 {isCreating ? 'Create Role' : 'Save Changes'}
               </button>
               <button type="button" onClick={handleCancel} className="rounded border bg-transparent px-6 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
@@ -190,7 +190,7 @@ export function AdminCabinetRoleDescriptions() {
               </button>
             </div>
             {!isCreating && (
-              <button type="button" onClick={() => setDeleteOpen(true)} className="rounded border border-red-900/30 px-6 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-600 hover:text-white" disabled={deleteRole.isLoading}>
+              <button type="button" onClick={() => setDeleteOpen(true)} className="rounded border border-red-900/30 px-6 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-600 hover:text-white" disabled={deleteRole.isPending}>
                 Delete
               </button>
             )}

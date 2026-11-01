@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { useMutation, useQuery, useQueryClient } from 'react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { adminActivityRepository } from '../data/repos/adminActivity';
 import { undoActivity } from '../data/repos/adminUndo';
@@ -22,23 +22,21 @@ export function useAdminActivity(options: { filter?: ActivityFilterKey; limit?: 
   const undone = useMemo(() => undoneEntryIds(entries), [entries]);
   const canUndo = useCallback((entry: ActivityEntry) => isUndoable(entry, { undoneIds: undone }), [undone]);
 
-  const undo = useMutation(
-    async (entry: ActivityEntry) => {
+  const undo = useMutation({
+    mutationFn: async (entry: ActivityEntry) => {
       const result = await undoActivity(entry, { undoneIds: undone });
       if (!result.ok) throw new Error(result.reason);
     },
-    {
-      onSuccess: () => {
-        toast.success('Change undone.');
-        void queryClient.invalidateQueries(ADMIN_ACTIVITY_QUERY_KEY);
-        // The edited rows live in other pages' caches.
-        void queryClient.invalidateQueries();
-      },
-      onError: (error) => {
-        toast.error(error instanceof Error ? error.message : 'Could not undo.');
-      },
+    onSuccess: () => {
+      toast.success('Change undone.');
+      void queryClient.invalidateQueries({ queryKey: [ADMIN_ACTIVITY_QUERY_KEY] });
+      // The edited rows live in other pages' caches.
+      void queryClient.invalidateQueries();
     },
-  );
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Could not undo.');
+    },
+  });
 
-  return { entries, loading: query.isLoading, error: query.isError, undone, canUndo, undo: undo.mutate, undoing: undo.isLoading };
+  return { entries, loading: query.isLoading, error: query.isError, undone, canUndo, undo: undo.mutate, undoing: undo.isPending };
 }

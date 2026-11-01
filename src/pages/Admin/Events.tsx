@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useUrlFilter } from '../../hooks/useUrlFilter';
 import toast from 'react-hot-toast';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useEvents } from '../../hooks/useEvents';
 import { useAcademicTerms } from '../../hooks/useAcademicTerms';
@@ -457,8 +457,8 @@ export default function AdminEvents() {
       today: getLosAngelesDateOnly(),
     });
     await externalEventsRepository.applySyncPlan(eventId, plan);
-    queryClient.invalidateQueries(['external-events']);
-    queryClient.invalidateQueries(['admin-external-events']);
+    queryClient.invalidateQueries({ queryKey: ['external-events'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-external-events'] });
   }
 
   const handleCreateEvent = async (e: React.FormEvent) => {
@@ -509,8 +509,8 @@ export default function AdminEvents() {
         toast.success('Event created');
       }
       setNewEvent(EMPTY_EVENT); setNewExternal(EMPTY_EXTERNAL_DETAILS); setImageFile(null); setImagePreview(null); setDuplicatedFrom(null);
-      refreshTerms();
-      refreshEvents(); setActiveTab('manage');
+      refreshTerms({ cancelRefetch: false });
+      refreshEvents({ cancelRefetch: false }); setActiveTab('manage');
     } catch (err) {
       console.error(err); toast.error('Failed to create event');
     } finally { setUploading(false); }
@@ -545,9 +545,9 @@ export default function AdminEvents() {
       );
     }
     try {
-      queryClient.invalidateQueries(['external-events']);
-      queryClient.invalidateQueries(['admin-external-events']);
-      refreshEvents();
+      queryClient.invalidateQueries({ queryKey: ['external-events'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-external-events'] });
+      refreshEvents({ cancelRefetch: false });
       if (selectedEvent?.id === event.id) setSelectedEvent(null);
     } catch (refreshErr) {
       // The delete already happened; a refresh hiccup must not read as a failed delete.
@@ -615,7 +615,7 @@ export default function AdminEvents() {
     if (outcome.tone === 'success') toast.success(outcome.headline);
     else toast.error(outcome.headline);
     selection.clear();
-    refreshEvents();
+    refreshEvents({ cancelRefetch: false });
   }
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -689,8 +689,8 @@ export default function AdminEvents() {
       } else if (pointsChanged) {
         // Invalidate cached point totals so Find My Points and leaderboard
         // show fresh data after the DB trigger has synced attendance rows.
-        queryClient.invalidateQueries(['find-my-points']);
-        queryClient.invalidateQueries(['individual-leaderboard']);
+        queryClient.invalidateQueries({ queryKey: ['find-my-points'] });
+        queryClient.invalidateQueries({ queryKey: ['individual-leaderboard'] });
         toast.success('Event saved — attendance points refreshed.');
       } else {
         toast.success('Event updated.');
@@ -698,8 +698,8 @@ export default function AdminEvents() {
       setEditImageFile(null); setEditImagePreview(null); setSelectedEvent(null);
       setSelectedExternal(EMPTY_EXTERNAL_DETAILS); setSelectedExternalBaseline(EMPTY_EXTERNAL_DETAILS);
       setSelectedEventOriginalImageUrl(null); setSelectedEventOriginalThumbnailUrl(null); setSelectedEventOriginalPoints(0);
-      refreshTerms();
-      refreshEvents();
+      refreshTerms({ cancelRefetch: false });
+      refreshEvents({ cancelRefetch: false });
     } catch (err) {
       console.error(err); toast.error('Failed to update event');
     } finally { setEditUploading(false); }

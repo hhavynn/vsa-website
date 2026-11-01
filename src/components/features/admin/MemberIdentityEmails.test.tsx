@@ -1,6 +1,6 @@
 // Admin identity emails on the Members editor. Synthetic member only.
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemberIdentityEmails } from './MemberIdentityEmails';
 import { supabaseMock } from '../../../test-utils/supabaseMock';
 

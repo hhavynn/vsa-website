@@ -1,6 +1,6 @@
 import { FormEvent, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { PageTitle } from '../../components/common/PageTitle';
 import { PageLoader } from '../../components/common/PageLoader';
@@ -215,9 +215,9 @@ export default function AdminApplications() {
   }, [links, now]);
 
   const refresh = async () => {
-    await queryClient.invalidateQueries(ADMIN_APPLICATION_LINKS_QUERY_KEY);
-    await queryClient.invalidateQueries(PUBLIC_APPLICATION_LINKS_QUERY_KEY);
-    await refetch();
+    await queryClient.invalidateQueries({ queryKey: ADMIN_APPLICATION_LINKS_QUERY_KEY });
+    await queryClient.invalidateQueries({ queryKey: PUBLIC_APPLICATION_LINKS_QUERY_KEY });
+    await refetch({ cancelRefetch: false });
   };
 
   const api = useAdminForm({

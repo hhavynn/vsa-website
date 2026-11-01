@@ -122,7 +122,7 @@ export default function AdminExternalEvents() {
       await upsertMutation.mutateAsync(payload);
       toast.success(editingId ? 'Event updated' : 'Event added');
       handleCancel();
-      refreshEvents();
+      refreshEvents({ cancelRefetch: false });
     } catch (err) {
       console.error(err);
       toast.error('Failed to save event');
@@ -143,7 +143,7 @@ export default function AdminExternalEvents() {
     try {
       await deleteMutation.mutateAsync(eventToDelete.id);
       toast.success(`"${eventToDelete.title}" deleted`);
-      refreshEvents();
+      refreshEvents({ cancelRefetch: false });
     } catch (err) {
       console.error(err);
       toast.error('Failed to delete event');
@@ -363,7 +363,7 @@ export default function AdminExternalEvents() {
             <Button variant="outline" onClick={handleCancel} className="flex gap-2">
               <TimesIcon size={18} /> Cancel
             </Button>
-            <Button onClick={handleSave} className="flex gap-2" loading={upsertMutation.isLoading}>
+            <Button onClick={handleSave} className="flex gap-2" loading={upsertMutation.isPending}>
               <SaveIcon size={18} /> Save Event
             </Button>
           </div>

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HistoricalRecoveryPanel } from './HistoricalRecoveryPanel';
 import { attendanceRecoveryRepository } from '../../../data/repos/attendanceRecovery';
 import { DatabaseError, NetworkError } from '../../../data/errors';
@@ -105,6 +105,13 @@ function renderPanel() {
 }
 
 /** Every row keeps the single-row dialog as Details / Full review. */
+// The review button stays disabled until the identity lookups have finished.
+async function clickReview(dialog: HTMLElement) {
+  const button = within(dialog).getByRole('button', { name: 'Review changes' });
+  await waitFor(() => expect(button).toBeEnabled());
+  fireEvent.click(button);
+}
+
 async function openFinding(name: string) {
   const row = await screen.findByRole('row', { name: new RegExp(`^${name},`) });
   fireEvent.click(within(row).getByRole('button', { name: /Details|Full review/ }));
@@ -186,7 +193,7 @@ it('restores a skipped attendee only after identity and change confirmation, the
   await waitFor(() => expect(repo.listFindingRecords).toHaveBeenCalledTimes(2));
   expect(repo.listActions).toHaveBeenCalledTimes(2);
   // Home's House standings preview and the leaderboards are refreshed too.
-  const invalidated = invalidateSpy.mock.calls.map(([key]) => JSON.stringify(key));
+  const invalidated = invalidateSpy.mock.calls.map(([filters]) => JSON.stringify(filters?.queryKey));
   expect(invalidated).toEqual(expect.arrayContaining(['["home"]', '["individual-leaderboard"]', '["house-detail","standings"]', '["leaderboard-years"]']));
 });
 
@@ -231,7 +238,7 @@ it('creates a separate member only after confirming they differ from every sugge
   expect(await within(dialog).findByLabelText('First name')).toHaveValue('Linh');
   expect(within(dialog).getByLabelText('Email (optional)')).toHaveValue('linh.new@gmail.com');
 
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Review changes' }));
+  await clickReview(dialog);
   expect(await within(dialog).findByRole('alert')).toHaveTextContent('different person from the suggested members');
 
   fireEvent.click(within(dialog).getByRole('checkbox', { name: /different person from every suggested member/ }));
@@ -379,7 +386,7 @@ it('asks for the different-person confirmation when same-name members exist but 
   expect(await within(dialog).findByText('Suggested matches')).toBeInTheDocument();
   expect(within(dialog).queryByText('Baoan Vo')).not.toBeInTheDocument();
 
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Review changes' }));
+  await clickReview(dialog);
   expect(await within(dialog).findByRole('alert')).toHaveTextContent('different person from the suggested members');
   expect(repo.recover).not.toHaveBeenCalled();
 });

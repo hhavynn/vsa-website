@@ -1,6 +1,6 @@
 /* eslint-disable testing-library/no-container, testing-library/no-node-access */
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { FamSheet } from './FamSheet';
 import { AceFamily, AceFamilyMember } from '../../../types';
 import { supabaseMock } from '../../../test-utils/supabaseMock';
@@ -51,7 +51,7 @@ const members = [
 ];
 
 function renderSheet(onClose = () => {}, sheetMembers = members) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <FamSheet family={family} members={sheetMembers} accent="teal" viet={null} dark={false} onClose={onClose} />

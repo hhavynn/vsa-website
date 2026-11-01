@@ -32,8 +32,8 @@ jest.mock('../../hooks/useCabinetYears', () => ({
 jest.mock('../../hooks/useMemberDirectory', () => ({
   useMemberDirectory: () => mockDirectory,
 }));
-jest.mock('react-query', () => ({
-  ...jest.requireActual('react-query'),
+jest.mock('@tanstack/react-query', () => ({
+  ...jest.requireActual('@tanstack/react-query'),
   useQuery: () => ({
     data: mockSources,
     isLoading: false,

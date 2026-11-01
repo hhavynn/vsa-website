@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { House } from './House';
 import { hasRevealedHouseMemberships } from '../data/repos/houseMemberships';
 import { houseEventsRepository } from '../data/repos/houseEvents';
@@ -45,7 +45,7 @@ const assetSearch = () => screen.queryByRole('region', { name: 'Published House 
 
 function mount(url = '/house') {
   const client = new QueryClient({
-    defaultOptions: { queries: { retry: false, cacheTime: 0 } },
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   const view = render(
     <QueryClientProvider client={client}>

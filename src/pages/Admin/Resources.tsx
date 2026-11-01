@@ -10,7 +10,7 @@ import {
   FaTrash,
   FaUndo,
 } from 'react-icons/fa';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { PageTitle } from '../../components/common/PageTitle';
 import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
@@ -231,8 +231,8 @@ export default function AdminResources() {
   };
 
   const refreshResources = async () => {
-    await queryClient.invalidateQueries(RESOURCE_LINKS_QUERY_KEY);
-    await refetch();
+    await queryClient.invalidateQueries({ queryKey: RESOURCE_LINKS_QUERY_KEY });
+    await refetch({ cancelRefetch: false });
   };
 
   const handleSubmit = async (event: FormEvent) => {

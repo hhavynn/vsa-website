@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '../../lib/utils';
 import { PageTitle } from '../../components/common/PageTitle';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
@@ -386,9 +386,9 @@ export default function AdminCabinetRollover() {
   }
 
   function invalidatePublicCabinet() {
-    queryClient.invalidateQueries('cabinet-years');
-    queryClient.invalidateQueries('cabinet-members');
-    queryClient.invalidateQueries('cabinet-member-year-ids');
+    queryClient.invalidateQueries({ queryKey: ['cabinet-years'] });
+    queryClient.invalidateQueries({ queryKey: ['cabinet-members'] });
+    queryClient.invalidateQueries({ queryKey: ['cabinet-member-year-ids'] });
   }
 
   const usedYearIds = new Set(cycles.map((item) => item.cabinet_year_id));
@@ -548,7 +548,7 @@ export default function AdminCabinetRollover() {
     if (!cycle || !cabinetYear) return;
     return run(async () => {
       await cabinetYearsRepository.setActiveYear(cabinetYear.id);
-      await refreshCabinetYears();
+      await refreshCabinetYears({ cancelRefetch: false });
       invalidatePublicCabinet();
       toast.success(`${cabinetYear.label} is now the active Cabinet.`);
       setActivateConfirmed(false);

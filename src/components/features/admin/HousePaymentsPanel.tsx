@@ -7,7 +7,7 @@
 // final sort may include (enforced again by the database).
 import { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useQuery, useQueryClient } from 'react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { houseAssignmentsRepository } from '../../../data/repos/houseAssignments';
 import { PAYMENTS_UNAVAILABLE, housePaymentsRepository } from '../../../data/repos/housePayments';
 import { memberIdentityRepository } from '../../../data/repos/memberIdentity';
@@ -172,15 +172,41 @@ function DeadlineEditor({ cycle, onSaved }: { cycle: HousePaymentCycle; onSaved:
 
 export function HousePaymentsPanel({ selectedYear, houseProfiles, members }: HousePaymentsPanelProps) {
   const queryClient = useQueryClient();
-  const cyclesQuery = useQuery(['admin', 'house-payment-cycles', selectedYear], () => housePaymentsRepository.listCycles(selectedYear as number), { enabled: selectedYear !== null, retry: false });
+  const cyclesQuery = useQuery({
+    queryKey: ['admin', 'house-payment-cycles', selectedYear],
+    queryFn: () => housePaymentsRepository.listCycles(selectedYear as number),
+    enabled: selectedYear !== null,
+    retry: false,
+  });
   const cycles = useMemo(() => cyclesQuery.data ?? [], [cyclesQuery.data]);
   const [cycleChoice, setCycleChoice] = useState<string | null>(null);
   const cycle = cycles.find((item) => item.id === cycleChoice) ?? cycles[0] ?? null;
 
-  const applicantsQuery = useQuery(['admin', 'house-applicants', cycle?.id], () => housePaymentsRepository.listApplicants(cycle?.id as string), { enabled: !!cycle, retry: false, staleTime: 0 });
-  const auditQuery = useQuery(['admin', 'house-payment-audit', cycle?.id], () => housePaymentsRepository.listAudit(cycle?.id as string), { enabled: !!cycle, retry: false });
-  const batchesQuery = useQuery(['admin', 'house-batches', selectedYear], () => houseAssignmentsRepository.listBatches(selectedYear as number), { enabled: selectedYear !== null, retry: false });
-  const aliasesQuery = useQuery(['admin', 'member-identity-emails'], () => memberIdentityRepository.loadIdentityEmails(), { retry: false, staleTime: 5 * 60 * 1000 });
+  const applicantsQuery = useQuery({
+    queryKey: ['admin', 'house-applicants', cycle?.id],
+    queryFn: () => housePaymentsRepository.listApplicants(cycle?.id as string),
+    enabled: !!cycle,
+    retry: false,
+    staleTime: 0,
+  });
+  const auditQuery = useQuery({
+    queryKey: ['admin', 'house-payment-audit', cycle?.id],
+    queryFn: () => housePaymentsRepository.listAudit(cycle?.id as string),
+    enabled: !!cycle,
+    retry: false,
+  });
+  const batchesQuery = useQuery({
+    queryKey: ['admin', 'house-batches', selectedYear],
+    queryFn: () => houseAssignmentsRepository.listBatches(selectedYear as number),
+    enabled: selectedYear !== null,
+    retry: false,
+  });
+  const aliasesQuery = useQuery({
+    queryKey: ['admin', 'member-identity-emails'],
+    queryFn: () => memberIdentityRepository.loadIdentityEmails(),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
   const applicants = useMemo(() => applicantsQuery.data ?? [], [applicantsQuery.data]);
   const counts = useMemo(() => paymentCounts(applicants), [applicants]);
   const state = cycle ? cutoffState(cycle, Date.now()) : null;
@@ -221,10 +247,10 @@ export function HousePaymentsPanel({ selectedYear, houseProfiles, members }: Hou
   const [creating, setCreating] = useState(false);
 
   function refresh() {
-    queryClient.invalidateQueries(['admin', 'house-payment-cycles', selectedYear]);
-    queryClient.invalidateQueries(['admin', 'house-applicants', cycle?.id]);
-    queryClient.invalidateQueries(['admin', 'house-payment-audit', cycle?.id]);
-    queryClient.invalidateQueries(['admin', 'house-payment-cycle', cycle?.id]);
+    queryClient.invalidateQueries({ queryKey: ['admin', 'house-payment-cycles', selectedYear] });
+    queryClient.invalidateQueries({ queryKey: ['admin', 'house-applicants', cycle?.id] });
+    queryClient.invalidateQueries({ queryKey: ['admin', 'house-payment-audit', cycle?.id] });
+    queryClient.invalidateQueries({ queryKey: ['admin', 'house-payment-cycle', cycle?.id] });
   }
 
   async function createCycle(key: HouseApplicationKey) {

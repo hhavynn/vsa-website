@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useUrlFilter } from '../../../hooks/useUrlFilter';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   photoRequestsRepository,
   MemberPhotoRequest,
@@ -56,7 +56,7 @@ export default function PhotoRequestsTab() {
   // the member-avatars query.
   const handleChanged = useCallback(() => {
     load();
-    queryClient.invalidateQueries(MEMBER_AVATARS_QUERY_KEY);
+    queryClient.invalidateQueries({ queryKey: MEMBER_AVATARS_QUERY_KEY });
   }, [load, queryClient]);
 
   const visible = filter === 'pending' ? requests.filter(r => r.status === 'pending') : requests;

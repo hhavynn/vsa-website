@@ -1,6 +1,6 @@
 import { ComponentType, FormEvent, useMemo, useState } from "react";
 import { useServerSeededDraft } from "../../hooks/useServerSeededDraft";
-import { useMutation, useQuery, useQueryClient } from "react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
   FaExternalLinkAlt,
@@ -200,12 +200,16 @@ export default function AdminUVSASchools() {
   const [isEditingSchool, setIsEditingSchool] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<UVSASchool | null>(null);
 
-  const schoolsQuery = useQuery(schoolsQueryKey, () =>
-    uvsaSchoolsRepository.getAllSchools(),
-  );
-  const settingsQuery = useQuery(settingsQueryKey, () =>
-    uvsaNetworkSettingsRepository.getSettings(),
-  );
+  const schoolsQuery = useQuery({
+    queryKey: schoolsQueryKey,
+    queryFn: () =>
+      uvsaSchoolsRepository.getAllSchools(),
+  });
+  const settingsQuery = useQuery({
+    queryKey: settingsQueryKey,
+    queryFn: () =>
+      uvsaNetworkSettingsRepository.getSettings(),
+  });
 
   // Seeded from the saved settings; a background refetch never overwrites
   // unsaved edits.
@@ -230,53 +234,47 @@ export default function AdminUVSASchools() {
     [schoolsQuery.data],
   );
 
-  const saveSchoolMutation = useMutation(
-    (form: SchoolForm) =>
+  const saveSchoolMutation = useMutation({
+    mutationFn: (form: SchoolForm) =>
       uvsaSchoolsRepository.upsertSchool(formToSchool(form)),
-    {
-      onSuccess: () => {
-        toast.success("UVSA school saved");
-        queryClient.invalidateQueries(schoolsQueryKey);
-        queryClient.invalidateQueries(publicSchoolsQueryKey);
-        setSchoolForm(emptySchoolForm);
-        setIsEditingSchool(false);
-      },
-      onError: () => {
-        toast.error("Unable to save UVSA school");
-      },
+    onSuccess: () => {
+      toast.success("UVSA school saved");
+      queryClient.invalidateQueries({ queryKey: schoolsQueryKey });
+      queryClient.invalidateQueries({ queryKey: publicSchoolsQueryKey });
+      setSchoolForm(emptySchoolForm);
+      setIsEditingSchool(false);
     },
-  );
-
-  const deleteSchoolMutation = useMutation(
-    (id: string) => uvsaSchoolsRepository.deleteSchool(id),
-    {
-      onSuccess: () => {
-        toast.success("UVSA school deleted");
-        queryClient.invalidateQueries(schoolsQueryKey);
-        queryClient.invalidateQueries(publicSchoolsQueryKey);
-      },
-      onError: () => {
-        toast.error("Unable to delete UVSA school");
-      },
+    onError: () => {
+      toast.error("Unable to save UVSA school");
     },
-  );
+  });
 
-  const saveSettingsMutation = useMutation(
-    (form: UVSANetworkPageSettingsInput) =>
+  const deleteSchoolMutation = useMutation({
+    mutationFn: (id: string) => uvsaSchoolsRepository.deleteSchool(id),
+    onSuccess: () => {
+      toast.success("UVSA school deleted");
+      queryClient.invalidateQueries({ queryKey: schoolsQueryKey });
+      queryClient.invalidateQueries({ queryKey: publicSchoolsQueryKey });
+    },
+    onError: () => {
+      toast.error("Unable to delete UVSA school");
+    },
+  });
+
+  const saveSettingsMutation = useMutation({
+    mutationFn: (form: UVSANetworkPageSettingsInput) =>
       uvsaNetworkSettingsRepository.updateSettings(form),
-    {
-      onSuccess: () => {
-        markSettingsSaved();
-        toast.success("UVSA network page copy saved");
-        queryClient.invalidateQueries(settingsQueryKey);
-      },
-      onError: () => {
-        toast.error("Unable to save page copy");
-      },
+    onSuccess: () => {
+      markSettingsSaved();
+      toast.success("UVSA network page copy saved");
+      queryClient.invalidateQueries({ queryKey: settingsQueryKey });
     },
-  );
+    onError: () => {
+      toast.error("Unable to save page copy");
+    },
+  });
 
-  useUnsavedChangesGuard(settingsDirty, saveSettingsMutation.isLoading);
+  useUnsavedChangesGuard(settingsDirty, saveSettingsMutation.isPending);
 
   const handleSchoolSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -338,7 +336,7 @@ export default function AdminUVSASchools() {
             onSubmit={handleSettingsSubmit}
             status={saveStatus({
               dirty: settingsDirty,
-              saving: saveSettingsMutation.isLoading,
+              saving: saveSettingsMutation.isPending,
               failed: saveSettingsMutation.isError,
               justSaved: saveSettingsMutation.isSuccess,
             })}
@@ -510,7 +508,7 @@ export default function AdminUVSASchools() {
                 <Button
                   type="submit"
                   className="gap-2"
-                  loading={saveSchoolMutation.isLoading}
+                  loading={saveSchoolMutation.isPending}
                 >
                   {isEditingSchool ? (
                     <SaveIcon size={14} />
@@ -774,7 +772,7 @@ export default function AdminUVSASchools() {
                         size="sm"
                         className="gap-2 text-red-700"
                         onClick={() => setDeleteTarget(school)}
-                        disabled={deleteSchoolMutation.isLoading}
+                        disabled={deleteSchoolMutation.isPending}
                       >
                         <TrashIcon size={12} /> Delete
                       </Button>

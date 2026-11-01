@@ -7,7 +7,7 @@
 // silently.
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useQuery, useQueryClient } from 'react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { houseAssignmentsRepository } from '../../../data/repos/houseAssignments';
 import { housePaymentsRepository } from '../../../data/repos/housePayments';
 import { logAdminActivity } from '../../../data/repos/adminActivity';
@@ -268,11 +268,13 @@ export function HouseDraftEditor({
   );
   // The database's own payment gate (#660). It refuses Lock and Reveal again
   // server-side; showing it here only keeps the buttons honest.
-  const paymentGate = useQuery(
-    ['admin', 'house-batch-payment-blockers', batch.id, batch.status, batch.updated_at, drafts.length],
-    () => housePaymentsRepository.getBatchBlockers(batch.id),
-    { enabled: auto, retry: false, staleTime: 0 },
-  );
+  const paymentGate = useQuery({
+    queryKey: ['admin', 'house-batch-payment-blockers', batch.id, batch.status, batch.updated_at, drafts.length],
+    queryFn: () => housePaymentsRepository.getBatchBlockers(batch.id),
+    enabled: auto,
+    retry: false,
+    staleTime: 0,
+  });
   const preflight = useMemo(() => {
     const blockers = !auto ? []
       : paymentGate.isError ? ['Payment eligibility could not be checked.']
@@ -714,7 +716,7 @@ export function HouseDraftEditor({
           : `Revealed: ${result.applied} membership${result.applied === 1 ? '' : 's'} created${result.skipped ? `, ${result.skipped} already in place` : ''}.`,
       );
       // Public lookups and House pages in this browser show the new Houses at once.
-      queryClient.invalidateQueries('find-my-points');
+      queryClient.invalidateQueries({ queryKey: ['find-my-points'] });
       queryClient.invalidateQueries({ predicate: (query) => {
         const [first, second] = Array.isArray(query.queryKey) ? query.queryKey : [query.queryKey];
         return [first, second].some((part) => typeof part === 'string' && part.startsWith('house'));

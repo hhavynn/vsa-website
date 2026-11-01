@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   EventLifecycleCandidate,
   getNextEventLifecycleTransition,
@@ -43,7 +43,7 @@ export function useEventLifecycleTimer(
       try {
         const keys: unknown[][] = JSON.parse(queryKeysJson);
         for (const key of keys) {
-          queryClient.invalidateQueries(key);
+          queryClient.invalidateQueries({ queryKey: key });
         }
       } catch {
         // Safe fallback
@@ -62,7 +62,7 @@ export function useEventLifecycleTimer(
           try {
             const keys: unknown[][] = JSON.parse(queryKeysJson);
             for (const key of keys) {
-              queryClient.invalidateQueries(key);
+              queryClient.invalidateQueries({ queryKey: key });
             }
           } catch {
             // Safe fallback

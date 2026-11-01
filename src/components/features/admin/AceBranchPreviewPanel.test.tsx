@@ -2,7 +2,7 @@
 // The SVG's year-band rectangles are non-interactive and aria-hidden;
 // querying their data-band-key is intentional geometry-mode coverage.
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '../../../context/ThemeContext';
 import { aceFamiliesRepository } from '../../../data/repos/aceFamilies';
@@ -52,7 +52,7 @@ const nodes: AceNodeRef[] = [
 
 function renderPanel(ready = true) {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false, cacheTime: 0 } },
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   return render(
     <ThemeProvider>

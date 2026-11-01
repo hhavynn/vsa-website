@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -189,11 +189,13 @@ export default function AdminCabinet() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedMemberBaseline, setSelectedMemberBaseline] = useState<CabinetMember | null>(null);
   const linkedMemberId = selectedMember?.member_id ?? null;
-  const { data: resolvedLinkedMember = null, isError: memberLinkReadError } = useQuery(
-    ['cabinet-published-member-link', linkedMemberId],
-    () => memberLookupRepository.findMemberById(linkedMemberId),
-    { enabled: !!linkedMemberId, staleTime: 5 * 60 * 1000, retry: false },
-  );
+  const { data: resolvedLinkedMember = null, isError: memberLinkReadError } = useQuery({
+    queryKey: ['cabinet-published-member-link', linkedMemberId],
+    queryFn: () => memberLookupRepository.findMemberById(linkedMemberId),
+    enabled: !!linkedMemberId,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
 
   // Once cabinet years load, default to the active/most-recent year
   useEffect(() => {

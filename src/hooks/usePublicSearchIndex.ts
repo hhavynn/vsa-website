@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { eventsRepository } from '../data/repos/events';
 import { galleryRepository } from '../data/repos/gallery';
 import {
@@ -44,7 +44,7 @@ export function usePublicSearchIndex(enabled: boolean) {
     },
     enabled,
     staleTime: 10 * 60 * 1000,
-    cacheTime: 30 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: false,
   });

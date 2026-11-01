@@ -1,4 +1,4 @@
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 
 const CABINET_MEMBER_FIELDS =
@@ -41,7 +41,7 @@ export function useCabinetMemberYearIds() {
       return { yearIds: Array.from(yearIds), hasLegacyMembers: hasNullYear };
     },
     staleTime: 10 * 60 * 1000,
-    cacheTime: 20 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
   });
 }
 
@@ -81,6 +81,6 @@ export function useCabinetMembers(yearId: string | null, includeLegacy: boolean)
     },
     enabled: !!yearId,
     staleTime: 5 * 60 * 1000,
-    cacheTime: 15 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
   });
 }

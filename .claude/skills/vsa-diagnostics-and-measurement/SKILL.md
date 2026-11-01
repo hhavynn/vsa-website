@@ -36,7 +36,7 @@ Jargon used below, defined once: **RLS** = Row Level Security, Postgres per-row 
 | "Is the site fast on a phone?" | Lighthouse | `npx lighthouse http://localhost:3000 ...` against a prod build | §6 |
 | "Is the page accessible?" | axe | `npx @axe-core/cli http://localhost:3000` | §6 |
 | "What are real users' Core Web Vitals?" | web-vitals | wired in `src/reportWebVitals.ts` (currently a no-op — see §6) | §6 |
-| "Why is a query refetching / cache stale?" | react-query devtools | not installed by default — see §7 | §7 |
+| "Why is a query refetching / cache stale?" | TanStack Query devtools | not installed by default — see §7 | §7 |
 | "What did the Edge Function do at runtime?" | Supabase logs | `supabase functions logs <name>` or Dashboard → Edge Functions → Logs | §7 |
 | "What happened on the deployed site?" | Vercel logs | `npx vercel logs <deployment-url>` | §7 |
 | "What routes exist right now?" | route inventory helper | `node .claude/skills/vsa-diagnostics-and-measurement/scripts/route-inventory.mjs` | §9 |
@@ -215,12 +215,12 @@ Output lists violations with impact (critical/serious/moderate/minor), the WCAG 
 
 ## 7. Runtime diagnostics
 
-### react-query devtools
+### TanStack Query devtools
 
-`react-query` v3 ships devtools inside the main package (`react-query/devtools`) — no new dependency needed — but they are **not wired in this app** (no `ReactQueryDevtools` anywhere in `src/`, verified 2026-07-06). To inspect cache/refetch behavior during local debugging, temporarily add inside the `QueryClientProvider` in `src/App.tsx`:
+TanStack Query v5 ships devtools as a separate package (`@tanstack/react-query-devtools`), so using them means a temporary local install; they are **not wired in this app** (no `ReactQueryDevtools` anywhere in `src/`, verified 2026-10-31). To inspect cache/refetch behavior during local debugging, temporarily add inside the `QueryClientProvider` in `src/App.tsx`:
 
 ```tsx
-import { ReactQueryDevtools } from 'react-query/devtools';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 // inside the provider tree:
 <ReactQueryDevtools initialIsOpen={false} />
 ```
@@ -293,7 +293,7 @@ Sources (all read in full, repo state as of 2026-07-06, branch `codex/reactbits-
 
 - `scripts/verify-rls-security.mjs` (441 lines — env fallback at L31–32, mutation gate at L361)
 - `docs/rls-verification-checklist.md`, `docs/supabase-usage-audit.sql` (424 lines, 12 sections)
-- `package.json` (scripts block; `web-vitals@^2.1.4`, `source-map-explorer` devDependency, `react-query@^3.39.3`)
+- `package.json` (scripts block; `web-vitals@^2.1.4`, `source-map-explorer` devDependency, `@tanstack/react-query@^5`)
 - `src/reportWebVitals.ts`, `src/index.tsx` (web-vitals wiring), `src/routes/index.tsx` (route shapes)
 - `graphify-out/GRAPH_REPORT.md` ("Built from commit" header), `CLAUDE.md` (graphify-run subcommands)
 
