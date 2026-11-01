@@ -23,7 +23,7 @@ const CAPACITY_WORDS: Record<string, number> = {
 
 function capacityNumber(token: string): number | null {
   const n = /^\d+$/.test(token) ? Number(token) : CAPACITY_WORDS[token.toLowerCase()];
-  return Number.isInteger(n) && n >= 0 && n <= 20 ? n : null;
+  return typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= 20 ? n : null;
 }
 
 /** Extracts possible answers without treating conditions or ranges as approval. */
