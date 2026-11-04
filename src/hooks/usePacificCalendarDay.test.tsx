@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react';
-import { reconcileCalendarMonthCursor, usePacificCalendarDay } from './usePacificCalendarDay';
+import { reconcileCalendarMonthCursor, reconcileCalendarMonthSelection, usePacificCalendarDay } from './usePacificCalendarDay';
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -42,6 +42,20 @@ describe('Pacific day rollover on an already-open calendar (#213)', () => {
 });
 
 describe('calendar month on a Pacific date change', () => {
+  it('clears the mobile agenda date when the current month automatically advances', () => {
+    const oldMonth = { year: 2026, monthIndex: 10 };
+    const next = reconcileCalendarMonthSelection(oldMonth, '2026-11-29', '2026-11-30', '2026-12-01');
+    expect(next.cursor).toEqual({ year: 2026, monthIndex: 11 });
+    expect(next.selectedDay).toBeNull();
+  });
+
+  it('preserves selected-day context for a month the visitor deliberately browsed to', () => {
+    const browsed = { year: 2026, monthIndex: 9 };
+    const next = reconcileCalendarMonthSelection(browsed, '2026-10-15', '2026-11-30', '2026-12-01');
+    expect(next.cursor).toBe(browsed);
+    expect(next.selectedDay).toBe('2026-10-15');
+  });
+
   it('follows a new current month when the viewer was on the old current month', () => {
     expect(reconcileCalendarMonthCursor(
       { year: 2026, monthIndex: 10 },
