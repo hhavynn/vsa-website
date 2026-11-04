@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from 'react-query';
 import { Link } from 'react-router-dom';
 import { ApplicationKey, ApplicationStatus, PublicApplicationLink } from '../../types';
-import { usePublicApplicationLinks } from '../../hooks/useApplicationLinks';
+import { PUBLIC_APPLICATION_LINKS_QUERY_KEY, usePublicApplicationLinks } from '../../hooks/useApplicationLinks';
 import {
   DEFAULT_APPLICATION_MESSAGES,
   applicationKeyLabel,
@@ -77,6 +78,18 @@ export function publicApplicationAtTime(link: PublicApplicationLink, now: Date):
   return live === 'open'
     ? link
     : { ...link, status: live, target_url: null };
+}
+
+/**
+ * An already-open tab may still hold an anonymized "not_open" response when
+ * its scheduled start arrives. Refetch at that boundary; never promote the
+ * cached row or reveal its masked target URL locally.
+ */
+export function openingWindowsNeedingRefresh(links: readonly PublicApplicationLink[], nowMs: number): string[] {
+  return links
+    .filter((link) => link.status === 'not_open' && link.is_enabled &&
+      Number.isFinite(Date.parse(link.open_at)) && Date.parse(link.open_at) <= nowMs)
+    .map((link) => `${link.id}:${link.open_at}`);
 }
 
 function ApplicationButton({ link }: { link: PublicApplicationLink }) {
@@ -241,7 +254,9 @@ export function ApplicationCTA({
     () => (Array.isArray(applicationKeys) ? applicationKeys : [applicationKeys]),
     [applicationKeys],
   );
-  const { links: fetchedLinks, loading, error } = usePublicApplicationLinks();
+  const { links: fetchedLinks, loading, error, refetch } = usePublicApplicationLinks();
+  const queryClient = useQueryClient();
+  const openingRefreshesAttempted = useRef(new Set<string>());
   const [nowMillis, setNowMillis] = useState(() => Date.now());
   // A user may leave a page open past a closing time. Refresh the local
   // mask on a modest cadence and immediately when returning to the tab.
@@ -254,6 +269,18 @@ export function ApplicationCTA({
       window.removeEventListener('focus', refresh);
     };
   }, []);
+  useEffect(() => {
+    if (loading || error) return;
+    const crossed = openingWindowsNeedingRefresh(fetchedLinks, nowMillis)
+      .filter((key) => !openingRefreshesAttempted.current.has(key));
+    if (crossed.length === 0) return;
+    crossed.forEach((key) => openingRefreshesAttempted.current.add(key));
+    // Multiple page CTAs observe one shared query. Never cancel and resend
+    // another CTA's in-flight fetch or poll continuously after the boundary.
+    if (queryClient.isFetching(PUBLIC_APPLICATION_LINKS_QUERY_KEY) === 0) {
+      void refetch();
+    }
+  }, [fetchedLinks, nowMillis, loading, error, queryClient, refetch]);
   const now = new Date(nowMillis);
   const links = fetchedLinks.map((link) => publicApplicationAtTime(link, now));
 
