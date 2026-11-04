@@ -147,6 +147,36 @@ describe('attention queue', () => {
     expect(byId(queue, 'draft-events')?.count).toBe(2);
   });
 
+  it('counts draft events for today and the full 14-day Pacific calendar window', () => {
+    // 6 PM PDT on Nov 3. PostgreSQL event dates have no time zone: parsing
+    // 2026-11-03 as UTC midnight would incorrectly discard today's events.
+    const evening = new Date('2026-11-04T01:00:00Z');
+    const queue = buildAttentionQueue(signals({
+      draftEventDates: [
+        '2026-11-02',
+        '2026-11-03',
+        '2026-11-17',
+        '2026-11-18',
+        'not-a-date',
+        '2026-02-30',
+      ],
+    }), evening);
+    expect(byId(queue, 'draft-events')).toMatchObject({ count: 2 });
+  });
+
+  it('uses calendar days across daylight saving, not a fixed 24-hour horizon', () => {
+    const afterSpringForward = new Date('2026-03-08T20:00:00Z');
+    const queue = buildAttentionQueue(signals({
+      draftEventDates: [
+        '2026-03-08',
+        '2026-03-22',
+        '2026-03-23',
+        '2026-03-07',
+      ],
+    }), afterSpringForward);
+    expect(byId(queue, 'draft-events')).toMatchObject({ count: 2 });
+  });
+
   it('says which sources could not be read instead of reading them as zero', () => {
     const queue = buildAttentionQueue({ ...EMPTY_ATTENTION_SIGNALS, photoRequestsPending: 2 }, NOW);
     expect(queue.items.map((item) => item.id)).toEqual(['photo-requests']);
