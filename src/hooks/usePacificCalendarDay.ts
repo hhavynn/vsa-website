@@ -42,3 +42,14 @@ export function reconcileCalendarMonthCursor(
   const [year, month] = currentMonth.split('-').map(Number);
   return { year, monthIndex: month - 1 };
 }
+
+/** Keep a mobile day selection only while its displayed month stays put. */
+export function reconcileCalendarMonthSelection(
+  cursor: { year: number; monthIndex: number },
+  selectedDay: string | null,
+  previousDay: string,
+  today: string,
+): { cursor: { year: number; monthIndex: number }; selectedDay: string | null } {
+  const nextCursor = reconcileCalendarMonthCursor(cursor, previousDay, today);
+  return { cursor: nextCursor, selectedDay: nextCursor === cursor ? selectedDay : null };
+}
