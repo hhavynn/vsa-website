@@ -29,7 +29,7 @@ function item(overrides: Partial<CalendarItem> = {}): CalendarItem {
 describe('Calendar grid thumbnail shared delivery (#303)', () => {
   it('uses the published thumbnail and reserves dimensions without eager-loading the grid', () => {
     render(<CalendarThumb item={item()} width={420} className="absolute inset-0 h-full w-full" />);
-    const img = screen.getByRole('img', { hidden: true });
+    const img = screen.getByAltText('');
     expect(img).toHaveAttribute('src', 'https://images.example.invalid/thumb.webp');
     expect(img).toHaveAttribute('width', '420');
     expect(img).toHaveAttribute('height', '420');
@@ -40,15 +40,15 @@ describe('Calendar grid thumbnail shared delivery (#303)', () => {
 
   it('falls back to the published full photo when no thumbnail exists', () => {
     render(<CalendarThumb item={item({ thumbnailUrl: null })} />);
-    expect(screen.getByRole('img', { hidden: true }))
+    expect(screen.getByAltText(''))
       .toHaveAttribute('src', 'https://images.example.invalid/full.webp');
   });
 
   it('shows the colored tile backdrop when a photo is missing or fails', () => {
     const { rerender } = render(<CalendarThumb item={item({ imageUrl: null, thumbnailUrl: null })} />);
-    expect(screen.queryByRole('img', { hidden: true })).not.toBeInTheDocument();
+    expect(screen.queryByAltText('')).not.toBeInTheDocument();
     rerender(<CalendarThumb item={item()} />);
-    fireEvent.error(screen.getByRole('img', { hidden: true }));
-    expect(screen.queryByRole('img', { hidden: true })).not.toBeInTheDocument();
+    fireEvent.error(screen.getByAltText(''));
+    expect(screen.queryByAltText('')).not.toBeInTheDocument();
   });
 });
