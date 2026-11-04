@@ -1,4 +1,4 @@
-import { FormEventHandler, ReactNode, useId } from 'react';
+import { FormEventHandler, ReactNode, useId, useRef } from 'react';
 import { FieldErrors, FieldValues } from 'react-hook-form';
 import { SaveStatus } from '../../../../lib/adminDirty';
 import { cn } from '../../../../lib/utils';
@@ -49,12 +49,27 @@ export function AdminFormShell({
   label?: string;
 }) {
   const summaryId = useId();
+  const formRef = useRef<HTMLFormElement>(null);
   const problems = errors ? flattenErrors(errors) : [];
   const show = Boolean(formError) || problems.length > 0;
   const busy = status === 'saving';
 
+  const focusProblem = (name: string) => {
+    // react-hook-form registers each control under its field path, even when
+    // AdminField gives the control a generated ID. namedItem avoids building
+    // a CSS selector from a path containing dots or array brackets.
+    const target = formRef.current?.elements.namedItem(name);
+    if (target instanceof HTMLElement) {
+      target.focus();
+    } else if (target && 'item' in target) {
+      // Radio groups are returned as a RadioNodeList rather than one element.
+      const first = target.item(0);
+      if (first instanceof HTMLElement) first.focus();
+    }
+  };
+
   return (
-    <form onSubmit={onSubmit} noValidate aria-label={label} aria-busy={busy} aria-describedby={show ? summaryId : undefined} className={cn('space-y-4', className)}>
+    <form ref={formRef} onSubmit={onSubmit} noValidate aria-label={label} aria-busy={busy} aria-describedby={show ? summaryId : undefined} className={cn('space-y-4', className)}>
       {show && (
         <div
           id={summaryId}
@@ -69,7 +84,16 @@ export function AdminFormShell({
               </p>
               <ul className="mt-1 list-disc pl-5">
                 {problems.map((problem) => (
-                  <li key={problem.name}>{problem.message}</li>
+                  <li key={problem.name}>
+                    <button
+                      type="button"
+                      onClick={() => focusProblem(problem.name)}
+                      aria-label={`Go to ${problem.name} field: ${problem.message}`}
+                      className="text-left underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 dark:focus-visible:outline-red-300"
+                    >
+                      {problem.message}
+                    </button>
+                  </li>
                 ))}
               </ul>
             </>
