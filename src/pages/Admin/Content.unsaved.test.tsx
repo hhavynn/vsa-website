@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import AdminContent from './Content';
 import { hasUnsavedChanges } from '../../hooks/useUnsavedChangesGuard';
+import { DEFAULT_PRESIDENTS_CONTENT } from '../../data/presidentsContent';
 
 const mockSingle = jest.fn();
 const mockUpsert = jest.fn();
@@ -60,6 +61,26 @@ beforeEach(() => {
 });
 
 describe('Admin Content draft protection (#258)', () => {
+  it('does not mark an unchanged default message dirty after Reset to Default', async () => {
+    mockSingle.mockResolvedValueOnce({
+      data: {
+        ...row,
+        presidents_names: DEFAULT_PRESIDENTS_CONTENT.names,
+        presidents_role: DEFAULT_PRESIDENTS_CONTENT.role,
+        presidents_message: DEFAULT_PRESIDENTS_CONTENT.message,
+      },
+      error: null,
+    });
+    mount();
+    await screen.findByDisplayValue(DEFAULT_PRESIDENTS_CONTENT.names);
+    expect(hasUnsavedChanges()).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Reset to Default' }));
+    expect(hasUnsavedChanges()).toBe(false);
+    const leave = new Event('beforeunload', { cancelable: true });
+    fireEvent(window, leave);
+    expect(leave.defaultPrevented).toBe(false);
+  });
+
   it('guards a typed draft on tab close and on Reset to Default', async () => {
     const confirm = jest.spyOn(window, 'confirm').mockReturnValue(false);
     try {
