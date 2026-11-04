@@ -186,8 +186,8 @@ describe('Resources delete', () => {
 });
 
 describe('Resources unsaved editor guard (#258)', () => {
-  it('does not discard an edited resource when switching rows without confirmation', async () => {
-    const confirm = jest.spyOn(window, 'confirm').mockReturnValue(false);
+  it('keeps edits on Cancel and opens another resource only after dialog confirmation', async () => {
+    const nativeConfirm = jest.spyOn(window, 'confirm');
     try {
       renderPage();
       await userEvent.click(screen.getAllByTitle('Edit resource')[0]);
@@ -197,41 +197,42 @@ describe('Resources unsaved editor guard (#258)', () => {
       await waitFor(() => expect(hasUnsavedChanges()).toBe(true));
 
       await userEvent.click(screen.getAllByTitle('Edit resource')[1]);
-      expect(confirm).toHaveBeenCalledTimes(1);
+      let dialog = screen.getByRole('alertdialog', { name: 'Discard resource edits?' });
+      expect(within(dialog).getByText(/Opening Bravo discards them/)).toBeInTheDocument();
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Keep editing' }));
       expect(screen.getByDisplayValue('Alpha - unfinished')).toBeInTheDocument();
 
-      confirm.mockReturnValue(true);
       await userEvent.click(screen.getAllByTitle('Edit resource')[1]);
+      dialog = screen.getByRole('alertdialog', { name: 'Discard resource edits?' });
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Discard changes' }));
       expect(screen.getByDisplayValue('Bravo')).toBeInTheDocument();
-      expect(hasUnsavedChanges()).toBe(false);
+      await waitFor(() => expect(hasUnsavedChanges()).toBe(false));
+      expect(nativeConfirm).not.toHaveBeenCalled();
     } finally {
-      confirm.mockRestore();
+      nativeConfirm.mockRestore();
     }
   });
 
-  it('warns for tab unload and New Resource while dirty, but not after discarding', async () => {
-    const confirm = jest.spyOn(window, 'confirm').mockReturnValue(false);
-    try {
-      renderPage();
-      await userEvent.click(screen.getAllByTitle('Edit resource')[0]);
-      await userEvent.type(screen.getByDisplayValue('Alpha'), ' draft');
-      await waitFor(() => expect(hasUnsavedChanges()).toBe(true));
+  it('warns for tab unload and uses the dialog before clearing a dirty resource', async () => {
+    renderPage();
+    await userEvent.click(screen.getAllByTitle('Edit resource')[0]);
+    await userEvent.type(screen.getByDisplayValue('Alpha'), ' draft');
+    await waitFor(() => expect(hasUnsavedChanges()).toBe(true));
 
-      const beforeUnload = new Event('beforeunload', { cancelable: true });
-      fireEvent(window, beforeUnload);
-      expect(beforeUnload.defaultPrevented).toBe(true);
+    const beforeUnload = new Event('beforeunload', { cancelable: true });
+    fireEvent(window, beforeUnload);
+    expect(beforeUnload.defaultPrevented).toBe(true);
 
-      await userEvent.click(screen.getByRole('button', { name: 'New Resource' }));
-      expect(screen.getByDisplayValue('Alpha draft')).toBeInTheDocument();
-      expect(confirm).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getByRole('button', { name: 'New Resource' }));
+    let dialog = screen.getByRole('alertdialog', { name: 'Discard resource edits?' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Keep editing' }));
+    expect(screen.getByDisplayValue('Alpha draft')).toBeInTheDocument();
 
-      confirm.mockReturnValue(true);
-      await userEvent.click(screen.getByRole('button', { name: 'New Resource' }));
-      expect(screen.queryByDisplayValue('Alpha draft')).not.toBeInTheDocument();
-      expect(hasUnsavedChanges()).toBe(false);
-    } finally {
-      confirm.mockRestore();
-    }
+    await userEvent.click(screen.getByRole('button', { name: 'New Resource' }));
+    dialog = screen.getByRole('alertdialog', { name: 'Discard resource edits?' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Discard changes' }));
+    expect(screen.queryByDisplayValue('Alpha draft')).not.toBeInTheDocument();
+    await waitFor(() => expect(hasUnsavedChanges()).toBe(false));
   });
 
   it('clears the dirty guard after a successful update', async () => {
