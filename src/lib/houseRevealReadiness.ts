@@ -116,11 +116,28 @@ export function buildRevealReadiness(input: RevealReadinessInput): RevealReadine
   if (input.applicationLinks === undefined) {
     items.push({ id: 'applications', label: 'House applications', state: 'unknown', detail: 'Application windows could not be read.' });
   } else {
-    const open = input.applicationLinks.filter((link) => HOUSE_KEYS.has(link.application_key) && link.is_enabled
-      && Date.parse(link.open_at) <= input.nowMs && Date.parse(link.due_at) > input.nowMs);
-    items.push(open.length > 0
-      ? { id: 'applications', label: 'House applications', state: 'needs_review', detail: `${open.map((link) => link.title).join(', ')} ${open.length === 1 ? 'is' : 'are'} still open. Revealing before applications close means late applicants are not placed.` }
-      : { id: 'applications', label: 'House applications', state: 'complete', detail: 'No House application window is open.' });
+    const houseWindows = input.applicationLinks.filter((link) => HOUSE_KEYS.has(link.application_key) && link.is_enabled);
+    // Invalid dates must not masquerade as a closed window: Date.parse returns
+    // NaN and silently fails both comparisons in the ordinary open-window filter.
+    const invalid = houseWindows.filter((link) => {
+      const opens = Date.parse(link.open_at);
+      const closes = Date.parse(link.due_at);
+      return !Number.isFinite(opens) || !Number.isFinite(closes) || opens >= closes;
+    });
+    if (invalid.length > 0) {
+      items.push({
+        id: 'applications',
+        label: 'House applications',
+        state: 'unknown',
+        detail: `${plural(invalid.length, 'enabled House application window')} have invalid opening or closing dates. Review Applications before Reveal.`,
+      });
+    } else {
+      const open = houseWindows.filter((link) =>
+        Date.parse(link.open_at) <= input.nowMs && Date.parse(link.due_at) > input.nowMs);
+      items.push(open.length > 0
+        ? { id: 'applications', label: 'House applications', state: 'needs_review', detail: `${open.map((link) => link.title).join(', ')} ${open.length === 1 ? 'is' : 'are'} still open. Revealing before applications close means late applicants are not placed.` }
+        : { id: 'applications', label: 'House applications', state: 'complete', detail: 'No House application window is open.' });
+    }
   }
 
   const rank: Record<ReadinessState, number> = { complete: 0, needs_review: 1, unknown: 2, blocked: 3 };
