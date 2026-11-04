@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
 import { PRESIDENTS_CONTENT_QUERY_KEY } from '../../hooks/usePresidentsContent';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
+import { isDirty } from '../../lib/adminDirty';
 import {
   DEFAULT_PRESIDENTS_CONTENT,
   PRESIDENTS_CONTENT_ID,
@@ -36,7 +37,7 @@ export default function AdminContent() {
   const [previewOpen, setPreviewOpen] = useState(false);
   // Drafts must survive accidental navigation. Track the selected local file too:
   // a photo-only edit otherwise looks clean even before it has been uploaded.
-  const dirty = photoFile !== null || JSON.stringify(form) !== JSON.stringify(savedForm);
+  const dirty = photoFile !== null || isDirty(savedForm, form);
   const confirmDiscard = useUnsavedChangesGuard(dirty, saving);
 
   const resetToDefault = () => {
