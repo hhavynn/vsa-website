@@ -6,6 +6,7 @@ import { PageTitle } from '../../components/common/PageTitle';
 import { supabase } from '../../lib/supabase';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
 import { PRESIDENTS_CONTENT_QUERY_KEY } from '../../hooks/usePresidentsContent';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import {
   DEFAULT_PRESIDENTS_CONTENT,
   PRESIDENTS_CONTENT_ID,
@@ -25,6 +26,7 @@ const labelCls = 'block text-[11px] font-semibold uppercase tracking-[0.07em]';
 export default function AdminContent() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<PresidentsContent>(DEFAULT_PRESIDENTS_CONTENT);
+  const [savedForm, setSavedForm] = useState<PresidentsContent>(DEFAULT_PRESIDENTS_CONTENT);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -32,6 +34,17 @@ export default function AdminContent() {
   const [originalPhotoUrl, setOriginalPhotoUrl] = useState('');
   const [originalPhotoThumbnailUrl, setOriginalPhotoThumbnailUrl] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
+  // Drafts must survive accidental navigation. Track the selected local file too:
+  // a photo-only edit otherwise looks clean even before it has been uploaded.
+  const dirty = photoFile !== null || JSON.stringify(form) !== JSON.stringify(savedForm);
+  const confirmDiscard = useUnsavedChangesGuard(dirty, saving);
+
+  const resetToDefault = () => {
+    if (!confirmDiscard()) return;
+    setForm(DEFAULT_PRESIDENTS_CONTENT);
+    setPhotoFile(null);
+    setPhotoPreview('');
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -54,13 +67,15 @@ export default function AdminContent() {
         if (data && isMounted) {
           const loadedPhotoUrl = data.presidents_photo_url || '';
           const loadedPhotoThumbnailUrl = data.presidents_photo_thumbnail_url || '';
-          setForm({
+          const content: PresidentsContent = {
             names: data.presidents_names || DEFAULT_PRESIDENTS_CONTENT.names,
             role: data.presidents_role || DEFAULT_PRESIDENTS_CONTENT.role,
             message: data.presidents_message || DEFAULT_PRESIDENTS_CONTENT.message,
             photoUrl: loadedPhotoUrl,
             photoThumbnailUrl: loadedPhotoThumbnailUrl,
-          });
+          };
+          setForm(content);
+          setSavedForm(content);
           setOriginalPhotoUrl(loadedPhotoUrl);
           setOriginalPhotoThumbnailUrl(loadedPhotoThumbnailUrl);
         }
@@ -150,6 +165,7 @@ export default function AdminContent() {
       if (photoFile || photoThumbnailUrl !== originalPhotoThumbnailUrl) await removePresidentsImage(originalPhotoThumbnailUrl);
 
       setForm(savedContent);
+      setSavedForm(savedContent);
       setOriginalPhotoUrl(savedContent.photoUrl);
       setOriginalPhotoThumbnailUrl(savedContent.photoThumbnailUrl);
       setPhotoFile(null);
@@ -256,7 +272,7 @@ export default function AdminContent() {
             <button type="submit" disabled={loading || saving} className="rounded bg-brand-600 px-5 py-2 font-sans text-sm font-medium text-white transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 disabled:cursor-default disabled:opacity-50 dark:bg-brand-300 dark:text-brand-950 dark:hover:bg-brand-200">
               {saving ? 'Saving...' : 'Save Content'}
             </button>
-            <button type="button" disabled={loading || saving} onClick={() => { setForm(DEFAULT_PRESIDENTS_CONTENT); setPhotoFile(null); setPhotoPreview(''); }}
+            <button type="button" disabled={loading || saving} onClick={resetToDefault}
               className="font-sans font-medium px-5 py-2 rounded text-sm border transition-colors disabled:opacity-50"
               style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent', cursor: 'pointer' }}>
               Reset to Default
