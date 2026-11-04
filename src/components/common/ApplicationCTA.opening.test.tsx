@@ -56,14 +56,14 @@ afterEach(() => {
 describe('application opening transition on an already-open page (#276)', () => {
   it('refreshes the shared public view exactly once after the opening boundary', () => {
     mount();
-    expect(refetch).not.toHaveBeenCalled();
+    expect(mockRefetch).not.toHaveBeenCalled();
     expect(screen.queryByRole('link', { name: 'Apply' })).not.toBeInTheDocument();
 
     act(() => { jest.advanceTimersByTime(30_000); });
-    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
 
     act(() => { jest.advanceTimersByTime(90_000); });
-    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('link', { name: 'Apply' })).not.toBeInTheDocument();
   });
 
@@ -71,7 +71,7 @@ describe('application opening transition on an already-open page (#276)', () => 
     mockPublicLinks = [windowRow({ target_url: 'https://private-form.invalid/not-public' })];
     const view = mount();
     act(() => { jest.advanceTimersByTime(30_000); });
-    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
     expect(view.container.innerHTML).not.toContain('private-form.invalid');
   });
 
@@ -86,14 +86,14 @@ describe('application opening transition on an already-open page (#276)', () => 
     mockPublicLinks = [windowRow({ is_enabled: false })];
     mount();
     act(() => { jest.advanceTimersByTime(90_000); });
-    expect(refetch).not.toHaveBeenCalled();
+    expect(mockRefetch).not.toHaveBeenCalled();
   });
 
   it('refreshes a stale not-open result immediately when the page loads after its start', () => {
     jest.setSystemTime(new Date('2026-11-20T18:02:00Z'));
     mount();
-    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
     act(() => { jest.advanceTimersByTime(30_000); });
-    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
   });
 });
