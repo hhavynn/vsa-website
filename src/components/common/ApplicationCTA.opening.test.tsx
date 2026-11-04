@@ -33,9 +33,9 @@ const windowRow = (overrides: Partial<PublicApplicationLink> = {}): PublicApplic
   ...overrides,
 });
 
-function mount() {
+function mount(queryClient = new QueryClient()) {
   return render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={queryClient}>
       <MemoryRouter>
         <ApplicationCTA applicationKeys="house_fall" />
       </MemoryRouter>
@@ -65,6 +65,30 @@ describe('application opening transition on an already-open page (#276)', () => 
     act(() => { jest.advanceTimersByTime(90_000); });
     expect(mockRefetch).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('link', { name: 'Apply' })).not.toBeInTheDocument();
+  });
+
+  it('does not lose its opening refresh while a pre-opening request remains in flight', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    let finish!: (rows: PublicApplicationLink[]) => void;
+    const pending = client.fetchQuery<PublicApplicationLink[]>(
+      ['application-links', 'public'],
+      () => new Promise<PublicApplicationLink[]>((resolve) => { finish = resolve; }),
+    );
+    expect(client.isFetching(['application-links', 'public'])).toBe(1);
+    mount(client);
+
+    act(() => { jest.advanceTimersByTime(30_000); });
+    expect(mockRefetch).not.toHaveBeenCalled();
+
+    await act(async () => {
+      finish([windowRow()]); // A request begun before opening can return a masked row.
+      await pending;
+    });
+    expect(client.isFetching(['application-links', 'public'])).toBe(0);
+    act(() => { jest.advanceTimersByTime(30_000); });
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
+    act(() => { jest.advanceTimersByTime(30_000); });
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
   });
 
   it('never locally unmasks a form URL while waiting for the server response', () => {
