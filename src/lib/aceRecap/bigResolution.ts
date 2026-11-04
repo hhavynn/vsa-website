@@ -12,7 +12,8 @@ import { normalizeMemberName } from '../memberLinkMatching';
  *   recapSnapshot.ts) and is the only thing that marks a pairing publishable.
  */
 
-export type BigMatchKind = 'exact' | 'variant';
+/** 'selected' = the ACE Chair named this node explicitly in the approvals file. */
+export type BigMatchKind = 'exact' | 'variant' | 'selected';
 
 export interface BigCandidate {
   nodeId: string;
@@ -113,6 +114,19 @@ export function indexNodes(nodes: readonly AceNodeRef[]) {
   return { byId, childCount, depthOf };
 }
 
+export function candidateFromNode(node: AceNodeRef, matchKind: BigMatchKind, ctx: BigResolutionContext,
+  index = indexNodes(ctx.nodes)): BigCandidate {
+  return {
+    nodeId: node.id, nodeName: node.name, familyId: node.familyId,
+    familyName: node.familyName ?? node.familyId,
+    familyArchived: isArchivedFamilyName(node.familyName),
+    matchKind, memberId: node.memberId,
+    childCount: index.childCount.get(node.id) ?? 0,
+    depth: index.depthOf(node.id),
+    importTerm: ctx.importTermByNodeId?.get(node.id) ?? null,
+  };
+}
+
 export function resolveBig(bigName: string, bigNames: readonly string[], ctx: BigResolutionContext,
   index = indexNodes(ctx.nodes)): BigResolution {
   if (bigNames.length > 1) {
@@ -125,15 +139,7 @@ export function resolveBig(bigName: string, bigNames: readonly string[], ctx: Bi
   for (const node of ctx.nodes) {
     const matchKind = compareNames(bigName, node.name);
     if (!matchKind) continue;
-    candidates.push({
-      nodeId: node.id, nodeName: node.name, familyId: node.familyId,
-      familyName: node.familyName ?? node.familyId,
-      familyArchived: isArchivedFamilyName(node.familyName),
-      matchKind, memberId: node.memberId,
-      childCount: index.childCount.get(node.id) ?? 0,
-      depth: index.depthOf(node.id),
-      importTerm: ctx.importTermByNodeId?.get(node.id) ?? null,
-    });
+    candidates.push(candidateFromNode(node, matchKind, ctx, index));
   }
   candidates.sort((a, b) =>
     (a.matchKind === b.matchKind ? 0 : a.matchKind === 'exact' ? -1 : 1)

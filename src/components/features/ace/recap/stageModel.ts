@@ -136,11 +136,12 @@ export function cubicPoint(c: number[], t: number): Pt {
   return { x: b(c[0], c[2], c[4], c[6]), y: b(c[1], c[3], c[5], c[7]) };
 }
 
-const cache = new Map<string, StageFamily>();
+// Keyed by the family object itself: a revised snapshot (even with the same
+// id and counts) is a new object, so it never reuses stale geometry.
+const cache = new WeakMap<RecapFamily, StageFamily>();
 
 export function stageFamily(fam: RecapFamily): StageFamily {
-  const key = `${fam.id}:${fam.nodes.length}:${fam.added}`;
-  const hit = cache.get(key);
+  const hit = cache.get(fam);
   if (hit) return hit;
   const pos = new Map<string, Pt>();
   for (const n of fam.nodes) pos.set(n.id, { x: n.x * UNIT_X + PAD, y: n.y * UNIT_Y + PAD });
@@ -162,7 +163,7 @@ export function stageFamily(fam: RecapFamily): StageFamily {
     beforeBounds: boxOfPoints(fam.nodes.filter((n) => !n.isNew).map((n) => pos.get(n.id)!), NODE_R + 60),
     palette: familyPalette(fam.themeColor, fam.id),
   };
-  cache.set(key, sf);
+  cache.set(fam, sf);
   return sf;
 }
 

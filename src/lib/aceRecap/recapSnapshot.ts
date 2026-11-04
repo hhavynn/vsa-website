@@ -7,7 +7,7 @@ import { layoutTree } from '../aceTreeLayout';
 import type { TreeNode } from '../aceTreeLayout';
 import { normalizeMemberName } from '../memberLinkMatching';
 import type { OfficialPairing, PairingSheetIssue } from './officialPairings';
-import { PREVIEWABLE_BIG_STATUSES, compareNames, indexNodes, isArchivedFamilyName, resolveBig } from './bigResolution';
+import { PREVIEWABLE_BIG_STATUSES, candidateFromNode, compareNames, indexNodes, isArchivedFamilyName, resolveBig } from './bigResolution';
 import type { BigResolution } from './bigResolution';
 
 /**
@@ -28,6 +28,13 @@ export interface RecapCycle {
   academicYearStart: number;
 }
 
+/**
+ * The ACE Chair's decision for one Little: the exact existing Big node.
+ * It resolves a held pairing (ambiguous, not found, co-Big, outlier, legacy)
+ * to that node, but never overrides the hard checks: the node must be a
+ * published node in an active family, and rejected names, duplicate Littles
+ * and Littles already on the tree stay blocked.
+ */
 export interface RecapApproval {
   littleName: string;
   bigNodeId: string;
@@ -103,6 +110,7 @@ export type ReviewReason =
   | 'rejected_name_match'
   | 'rejected_namesake'
   | 'generation_outlier'
+  | 'approval_node_invalid'
   | 'little_already_on_tree'
   | 'duplicate_little';
 
@@ -125,6 +133,8 @@ export interface RecapReviewRecord {
   warnings: string[];
   safeToPreview: boolean;
   reviewerApproval: 'approved' | 'pending';
+  /** True when the Big node came from the Chair's approval, not name matching. */
+  chairSelected: boolean;
   approvedForPublication: boolean;
 }
 
@@ -177,7 +187,7 @@ export function buildRecapSnapshot(input: RecapBuildInput): AceRecapSnapshot {
   const familyById = new Map(input.families.map((f) => [f.id, f]));
   const nodes = input.nodes.map((n) => ({ ...n, familyName: n.familyName ?? familyById.get(n.familyId)?.name ?? null }));
   const index = indexNodes(nodes);
-  const approvals = new Set((input.approvals ?? []).map((a) => `${normalizeMemberName(a.littleName)}|${a.bigNodeId}`));
+  const approvalByLittle = new Map((input.approvals ?? []).map((a) => [normalizeMemberName(a.littleName), a.bigNodeId]));
   const rejected = new Set((input.rejectedNames ?? []).map(normalizeMemberName));
   const outlierGap = input.generationOutlierGap ?? DEFAULT_GENERATION_OUTLIER_GAP;
   const deepestByFamily = new Map<string, number>();
@@ -195,15 +205,37 @@ export function buildRecapSnapshot(input: RecapBuildInput): AceRecapSnapshot {
     const resolution = resolveBig(pairing.bigName, pairing.bigNames, {
       nodes, importTermByNodeId: input.importTermByNodeId,
     }, index);
-    const chosen = resolution.chosen;
     pairing.littleNames.forEach((littleName, i) => {
       const warnings: string[] = [];
       const evidence = [...resolution.notes];
+      let chosen = resolution.chosen;
       let blocked = !PREVIEWABLE_BIG_STATUSES.includes(resolution.status);
+      const approvedNodeId = approvalByLittle.get(normalizeMemberName(littleName)) ?? null;
+      let approvalValid = false;
+      let chairSelected = false;
+      if (approvedNodeId) {
+        const node = index.byId.get(approvedNodeId);
+        if (!node || node.isPublished === false || isArchivedFamilyName(node.familyName)) {
+          warnings.push('approval_node_invalid');
+          evidence.push('The approved Big node is not a published node in an active family; the approval was ignored.');
+          blocked = true;
+        } else {
+          approvalValid = true;
+          if (chosen?.nodeId !== node.id) {
+            chosen = candidateFromNode(node, 'selected', { nodes, importTermByNodeId: input.importTermByNodeId }, index);
+            chairSelected = true;
+            evidence.push(`ACE Chair selected node "${node.name}" in ${chosen.familyName}.`);
+          }
+          // The Chair's explicit node choice settles identity questions.
+          blocked = false;
+        }
+      }
       if (chosen && (deepestByFamily.get(chosen.familyId) ?? 0) - chosen.depth > outlierGap) {
-        warnings.push('generation_outlier');
         evidence.push(`Big node is ${(deepestByFamily.get(chosen.familyId) ?? 0) - chosen.depth} generations above the newest generation in ${chosen.familyName}; likely an earlier namesake — confirm the node.`);
-        blocked = true;
+        if (!approvalValid) {
+          warnings.push('generation_outlier');
+          blocked = true;
+        }
       }
       if (rejected.has(normalizeMemberName(littleName)) || pairing.bigNames.some((b) => rejected.has(normalizeMemberName(b)))) {
         warnings.push('rejected_name_match');
@@ -220,7 +252,8 @@ export function buildRecapSnapshot(input: RecapBuildInput): AceRecapSnapshot {
         warnings.push('duplicate_little');
         blocked = true;
       }
-      if (chosen && nodes.some((n) => n.parentId === chosen.nodeId && normalizeMemberName(n.name) === normalizeMemberName(littleName))) {
+      const bigNodeId = chosen?.nodeId;
+      if (bigNodeId && nodes.some((n) => n.parentId === bigNodeId && normalizeMemberName(n.name) === normalizeMemberName(littleName))) {
         warnings.push('little_already_on_tree');
         blocked = true;
       }
@@ -228,7 +261,7 @@ export function buildRecapSnapshot(input: RecapBuildInput): AceRecapSnapshot {
       if (sameNameNodes.length) {
         evidence.push(`A different published node already uses this Little's name (${Array.from(new Set(sameNameNodes.map((n) => n.familyName))).join(', ')}); not linked.`);
       }
-      const approved = !!chosen && approvals.has(`${normalizeMemberName(littleName)}|${chosen.nodeId}`);
+      const approved = approvalValid && !!chosen && chosen.nodeId === approvedNodeId;
       records.push({
         id: `${RECORD_PREFIX}-${pairing.rowNumber}-${i + 1}`,
         cycleLabel: input.cycle.label,
@@ -236,6 +269,7 @@ export function buildRecapSnapshot(input: RecapBuildInput): AceRecapSnapshot {
         bigName: pairing.bigName,
         littleName,
         bigStatus: resolution.status,
+        chairSelected,
         bigNodeId: chosen?.nodeId ?? null,
         bigMemberId: chosen?.memberId ?? null,
         familyId: chosen?.familyId ?? null,

@@ -173,6 +173,45 @@ describe('recap snapshot', () => {
     expect(s.records.filter((r) => r.approvedForPublication)).toHaveLength(1);
   });
 
+  it('lets a Chair approval resolve a held pairing to the named node', () => {
+    // Sable Fenn is ambiguous (o4 in Orchid, c3 in Comet); the Chair picks c3.
+    const s = build({ approvals: [{ littleName: 'Lumi Day', bigNodeId: 'c3' }] });
+    const lumi = s.records.find((r) => r.littleName === 'Lumi Day')!;
+    expect(lumi).toMatchObject({ bigStatus: 'ambiguous', chairSelected: true, safeToPreview: true, approvedForPublication: true, bigNodeId: 'c3' });
+    const comet = s.families.find((f) => f.id === 'f-comet')!;
+    expect(comet.nodes.find((n) => n.isNew && n.label === 'Lumi Day')?.parent).toBe('c3');
+    // A co-Big row and a not-found Big can be resolved the same way.
+    const more = build({ approvals: [{ littleName: 'Gus Wynn', bigNodeId: 'o3' }, { littleName: 'Eli Rook', bigNodeId: 'c2' }] });
+    expect(more.records.filter((r) => ['Gus Wynn', 'Eli Rook'].includes(r.littleName)).every((r) => r.safeToPreview && r.approvedForPublication)).toBe(true);
+  });
+
+  it('confirms a generation outlier only through an approval of that exact node', () => {
+    const deep: AceNodeRef[] = [...NODES];
+    let parent = 'o3';
+    for (let i = 0; i < 6; i++) { deep.push(node(`deep${i}`, `Deep Person${i}`, 'f-orchid', parent)); parent = `deep${i}`; }
+    const s = build({ nodes: deep, approvals: [{ littleName: 'Kit Lorne', bigNodeId: 'o2' }] });
+    const kit = s.records.find((r) => r.littleName === 'Kit Lorne')!;
+    expect(kit).toMatchObject({ safeToPreview: true, approvedForPublication: true, chairSelected: false });
+    expect(kit.warnings).not.toContain('generation_outlier');
+    expect(s.records.find((r) => r.littleName === 'Wren Oak')!.safeToPreview).toBe(false);
+  });
+
+  it('never lets an approval override the hard checks', () => {
+    const s = build({
+      rejectedNames: ['Pax Hale'],
+      approvals: [
+        { littleName: 'Pax Hale', bigNodeId: 'o3' },
+        { littleName: 'Fae Ray', bigNodeId: 'd1' }, // archived family
+        { littleName: 'Eli Rook', bigNodeId: 'no-such-node' },
+      ],
+    });
+    const by = (n: string) => s.records.find((r) => r.littleName === n)!;
+    expect(by('Pax Hale')).toMatchObject({ safeToPreview: false, approvedForPublication: false });
+    expect(by('Fae Ray').warnings).toContain('approval_node_invalid');
+    expect(by('Eli Rook')).toMatchObject({ safeToPreview: false, approvedForPublication: false });
+    expect(by('Eli Rook').warnings).toContain('approval_node_invalid');
+  });
+
   it('warns, without blocking, on a middle-initial namesake of a rejected person', () => {
     const s = build({ rejectedNames: ['Bo Q Stern'] });
     const bo = s.records.find((r) => r.littleName === 'Bo Stern')!;

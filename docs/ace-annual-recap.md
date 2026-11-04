@@ -77,7 +77,11 @@ Use a private folder outside every repo, for example
    in that folder). It is one self-contained file; nothing is served publicly.
 5. **Chair resolves the queue and approves.** Record approvals as
    `[{ "littleName": "…", "bigNodeId": "<ace_family_members.id>" }]` and rerun
-   step 3 with `--approvals`.
+   step 3 with `--approvals`. An approval resolves a held pairing (ambiguous,
+   not found, co-Big, legacy-only or generation outlier) to exactly that node,
+   but never overrides the hard checks: the node must be published in an
+   active fam, and rejected names, duplicate Littles and Littles already on the
+   tree stay blocked (`approval_node_invalid` marks a bad node id).
 6. **Publish the tree through the existing process** — Admin → ACE →
    Assignments (draft → lock → preflight → Publish). The recap tooling never
    writes ACE nodes. See [ace-assignments.md](ace-assignments.md).

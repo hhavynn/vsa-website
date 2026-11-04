@@ -29,6 +29,10 @@ export function AceRecapPlayer({ snapshot, autoPlay = false, className, watermar
     return finale ? finale.from + Math.min(finale.durationInFrames - 40, 230) : last;
   }, [timeline, last]);
   const [frame, setFrame] = useState(() => (reduceMotion ? finaleFrame : 0));
+  const frameRef = useRef(frame);
+  frameRef.current = frame;
+  /** Bumped to re-anchor the playback clock (Restart while playing). */
+  const [clockEpoch, setClockEpoch] = useState(0);
   const [playing, setPlaying] = useState(autoPlay && !reduceMotion);
   const [scale, setScale] = useState(0.5);
   const box = useRef<HTMLDivElement | null>(null);
@@ -43,10 +47,11 @@ export function AceRecapPlayer({ snapshot, autoPlay = false, className, watermar
   }, []);
 
   useEffect(() => {
-    if (!playing) { startRef.current = null; return; }
+    startRef.current = null;
+    if (!playing) return;
     let raf = 0;
     const tick = (t: number) => {
-      if (!startRef.current) startRef.current = { t, frame };
+      if (!startRef.current) startRef.current = { t, frame: frameRef.current };
       const next = startRef.current.frame + Math.floor(((t - startRef.current.t) / 1000) * timeline.fps);
       if (next >= last) { setFrame(last); setPlaying(false); return; }
       setFrame(next);
@@ -54,8 +59,7 @@ export function AceRecapPlayer({ snapshot, autoPlay = false, className, watermar
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- restart the clock only on play/pause
-  }, [playing, timeline.fps, last]);
+  }, [playing, clockEpoch, timeline.fps, last]);
 
   const toggle = useCallback(() => {
     if (!playing && frame >= last) setFrame(0);
@@ -75,13 +79,12 @@ export function AceRecapPlayer({ snapshot, autoPlay = false, className, watermar
           className="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400">
           {playing ? 'Pause' : frame >= last ? 'Replay' : 'Play'}
         </button>
-        <button type="button" onClick={() => { setFrame(0); setPlaying(!reduceMotion); }}
+        <button type="button" onClick={() => { frameRef.current = 0; setFrame(0); setClockEpoch((n) => n + 1); setPlaying(!reduceMotion); }}
           className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm text-text-primary hover:bg-surface2 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400">
           Restart
         </button>
         <label className="flex min-w-[200px] flex-1 items-center gap-3 text-sm text-text-secondary">
-          <span className="sr-only">Seek</span>
-          <input type="range" min={0} max={last} value={frame} className="w-full accent-brand-600"
+          <input type="range" aria-label="Seek recap" min={0} max={last} value={frame} className="w-full accent-brand-600"
             onChange={(e) => { setPlaying(false); setFrame(Number(e.target.value)); }} />
           <span className="tabular-nums">{fmtTime(frame / timeline.fps)} / {fmtTime(last / timeline.fps)}</span>
         </label>
