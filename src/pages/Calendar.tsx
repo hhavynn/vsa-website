@@ -37,7 +37,7 @@ import {
   vsaEventToCalendarItem,
 } from '../utils/calendar';
 import type { CalendarHouseTag } from '../utils/calendar';
-import { usePacificCalendarDay } from '../hooks/usePacificCalendarDay';
+import { reconcileCalendarMonthCursor, usePacificCalendarDay } from '../hooks/usePacificCalendarDay';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -134,18 +134,9 @@ export function Calendar() {
   useEffect(() => {
     const previousDay = previousTodayRef.current;
     previousTodayRef.current = todayStr;
-    const previousMonth = previousDay.slice(0, 7);
-    const newMonth = todayStr.slice(0, 7);
-    if (previousMonth === newMonth) return;
-
-    // Advance the visible month only when the visitor was following the
-    // current month, not while they were intentionally browsing another one.
-    setMonthCursor((cursor) => {
-      const displayedMonth = `${cursor.year}-${String(cursor.monthIndex + 1).padStart(2, '0')}`;
-      if (displayedMonth !== previousMonth) return cursor;
-      const [year, month] = newMonth.split('-').map(Number);
-      return { year, monthIndex: month - 1 };
-    });
+    if (previousDay.slice(0, 7) !== todayStr.slice(0, 7)) {
+      setMonthCursor((cursor) => reconcileCalendarMonthCursor(cursor, previousDay, todayStr));
+    }
   }, [todayStr]);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [overlay, setOverlay] = useState<CalendarOverlayState | null>(null);
