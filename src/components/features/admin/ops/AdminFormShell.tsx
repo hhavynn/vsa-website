@@ -88,9 +88,9 @@ export function AdminFormShell({
                     <button
                       type="button"
                       onClick={() => focusProblem(problem.name)}
-                      aria-label={`Go to ${problem.name} field: ${problem.message}`}
                       className="text-left underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 dark:focus-visible:outline-red-300"
                     >
+                      <span className="sr-only">Go to {problem.name} field: </span>
                       {problem.message}
                     </button>
                   </li>
