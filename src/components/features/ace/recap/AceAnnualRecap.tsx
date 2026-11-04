@@ -1,11 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import type { AceRecapSnapshot } from '../../../../lib/aceRecap/recapSnapshot';
+import type { AceRecapPresentation } from '../../../../lib/aceRecap/recapSnapshot';
 import { AceRecapPlayer } from './AceRecapPlayer';
 import { AceRecapFamilySequence } from './AceRecapFamilySequence';
 
 interface AceAnnualRecapProps {
-  /** One reviewed snapshot per academic year; newest is shown first. */
-  snapshots: readonly AceRecapSnapshot[];
+  /** One reviewed presentation per academic year; newest is shown first. */
+  presentations: readonly AceRecapPresentation[];
   /** Optional rendered MP4 per cycle label, for visitors who prefer a video file. */
   videoUrlByCycle?: Readonly<Record<string, string>>;
 }
@@ -16,10 +16,10 @@ interface AceAnnualRecapProps {
  * admin decides to release the recap (see docs/ace-annual-recap.md).
  * It refuses to render a private-preview snapshot outside development.
  */
-export function AceAnnualRecap({ snapshots, videoUrlByCycle }: AceAnnualRecapProps) {
+export function AceAnnualRecap({ presentations, videoUrlByCycle }: AceAnnualRecapProps) {
   const ordered = useMemo(
-    () => [...snapshots].sort((a, b) => b.cycle.academicYearStart - a.cycle.academicYearStart),
-    [snapshots],
+    () => [...presentations].sort((a, b) => b.cycle.academicYearStart - a.cycle.academicYearStart),
+    [presentations],
   );
   const [selected, setSelected] = useState(0);
   const snapshot = ordered[selected];
@@ -44,13 +44,13 @@ export function AceAnnualRecap({ snapshots, videoUrlByCycle }: AceAnnualRecapPro
           </div>
         )}
       </header>
-      <AceRecapPlayer key={snapshot.cycle.label} snapshot={snapshot} />
+      <AceRecapPlayer key={snapshot.cycle.label} presentation={snapshot} />
       {video && (
         <p className="text-sm text-text-secondary">
           <a className="underline" href={video} download>Download the recap video</a>
         </p>
       )}
-      <AceRecapFamilySequence snapshot={snapshot} />
+      <AceRecapFamilySequence presentation={snapshot} />
     </section>
   );
 }

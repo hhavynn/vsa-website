@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
-import type { AceRecapSnapshot } from '../../../../lib/aceRecap/recapSnapshot';
+import type { AceRecapPresentation } from '../../../../lib/aceRecap/recapSnapshot';
 import { planRecapTimeline } from '../../../../lib/aceRecap/recapTimeline';
 import { RecapStage } from './RecapStage';
 import { STAGE_H, STAGE_W } from './stageModel';
 
 interface AceRecapPlayerProps {
-  snapshot: AceRecapSnapshot;
+  presentation: AceRecapPresentation;
   /** Start playing on mount (ignored when the visitor prefers reduced motion). */
   autoPlay?: boolean;
   className?: string;
@@ -20,13 +20,13 @@ const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60
  * A clock advances the frame; the stage itself is stateless. With reduced
  * motion it never autoplays and opens on the closing overview.
  */
-export function AceRecapPlayer({ snapshot, autoPlay = false, className, watermark }: AceRecapPlayerProps) {
+export function AceRecapPlayer({ presentation, autoPlay = false, className, watermark }: AceRecapPlayerProps) {
   const reduceMotion = !!useReducedMotion();
-  const timeline = useMemo(() => planRecapTimeline(snapshot, { fps: 30 }), [snapshot]);
+  const timeline = useMemo(() => planRecapTimeline(presentation, { fps: 30 }), [presentation]);
   const last = timeline.durationInFrames - 1;
   const finaleFrame = useMemo(() => {
     const finale = timeline.scenes.find((s) => s.kind === 'finale');
-    return finale ? finale.from + Math.min(finale.durationInFrames - 40, 230) : last;
+    return finale ? finale.from + Math.min(finale.durationInFrames - 40, 250) : last;
   }, [timeline, last]);
   const [frame, setFrame] = useState(() => (reduceMotion ? finaleFrame : 0));
   const frameRef = useRef(frame);
@@ -67,11 +67,11 @@ export function AceRecapPlayer({ snapshot, autoPlay = false, className, watermar
   }, [playing, frame, last]);
 
   return (
-    <figure className={className} aria-label={`${snapshot.cycle.label} ACE recap`}>
+    <figure className={className} aria-label={`${presentation.cycle.label} ACE recap`}>
       <div ref={box} className="relative w-full overflow-hidden rounded-2xl bg-[#0b1030] shadow-lg"
         style={{ aspectRatio: `${STAGE_W} / ${STAGE_H}` }}>
         <div aria-hidden style={{ width: STAGE_W, height: STAGE_H, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
-          <RecapStage snapshot={snapshot} timeline={timeline} frame={frame} watermark={watermark} />
+          <RecapStage presentation={presentation} timeline={timeline} frame={frame} watermark={watermark} />
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-3">

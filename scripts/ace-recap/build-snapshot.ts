@@ -9,7 +9,8 @@
  *     [--compare <older export .csv>]  [--approvals approvals.json] \
  *     [--import-dir data/ace-families]
  *
- * Writes: recap-snapshot.json (feeds the preview + video), review.csv (one row
+ * Writes: recap-snapshot.json (review preview), recap-presentation.json and
+ * recap-video-props.json (video/player: no review data), review.csv (one row
  * per Little for the ACE Chair), summary.md, sheet-diff.json. Read-only: it
  * never contacts Supabase and never writes into the repo.
  */
@@ -19,7 +20,7 @@ import type { AceFamily } from '../../src/types';
 import type { AceNodeRef } from '../../src/lib/aceAssignments';
 import { normalizeMemberName } from '../../src/lib/memberLinkMatching';
 import {
-  buildRecapSnapshot, diffPairingSheets, parseOfficialPairingRows, planRecapTimeline,
+  buildRecapSnapshot, diffPairingSheets, parseOfficialPairingRows, planRecapTimeline, toRecapPresentation,
 } from '../../src/lib/aceRecap';
 import type { RecapApproval } from '../../src/lib/aceRecap';
 import { arg, assertPrivateDir, csvEscape, extractRejectedNames, readSheetRows, requireArg } from './privateIo';
@@ -98,9 +99,13 @@ function main() {
     families, nodes, pairings: sheet.pairings, sheetIssues: sheet.issues,
     approvals, rejectedNames, importTermByNodeId: terms,
   });
-  const timeline = planRecapTimeline(snapshot);
+  const timeline = planRecapTimeline(toRecapPresentation(snapshot));
 
   writeFileSync(path.join(out, 'recap-snapshot.json'), JSON.stringify(snapshot));
+  // Presentation-only copy for the video renderer and player: no review records or evidence.
+  const presentation = toRecapPresentation(snapshot);
+  writeFileSync(path.join(out, 'recap-presentation.json'), JSON.stringify(presentation));
+  writeFileSync(path.join(out, 'recap-video-props.json'), JSON.stringify({ presentation }));
   writeFileSync(path.join(out, 'sheet-diff.json'), JSON.stringify({ diff, rejectedNames, olderTotals: olderSheet && {
     bigs: olderSheet.bigCount, littles: olderSheet.littleCount, issues: olderSheet.issues } }, null, 2));
   const header = ['record_id', 'academic_cycle', 'sheet_row', 'big_display_name', 'canonical_big_node_id', 'big_member_id',

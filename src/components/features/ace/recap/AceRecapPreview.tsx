@@ -1,5 +1,6 @@
 import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import type { AceRecapSnapshot, RecapFamily, RecapReviewRecord } from '../../../../lib/aceRecap/recapSnapshot';
+import { toRecapPresentation } from '../../../../lib/aceRecap/recapSnapshot';
 import { layoutTree } from '../../../../lib/aceTreeLayout';
 import type { TreeNode } from '../../../../lib/aceTreeLayout';
 import { accentFromThemeColor } from '../../../../lib/aceFamilyAdapter';
@@ -150,6 +151,8 @@ export function AceRecapPreview({ snapshot }: { snapshot: AceRecapSnapshot }) {
   const [focusId, setFocusId] = useState<string | null>(null);
   const [tab, setTab] = useState<'trees' | 'queue' | 'recap'>('trees');
   const fam = snapshot.families.find((f) => f.id === familyId) ?? families[0];
+  // The player only ever sees presentation data, never review records.
+  const presentation = useMemo(() => toRecapPresentation(snapshot), [snapshot]);
   const queue = snapshot.records.filter((r) => !r.safeToPreview);
   const warned = snapshot.records.filter((r) => r.safeToPreview && r.warnings.length > 0);
   const byId = new Map(fam?.nodes.map((n) => [n.id, n.label]) ?? []);
@@ -249,7 +252,7 @@ export function AceRecapPreview({ snapshot }: { snapshot: AceRecapSnapshot }) {
         </section>
       )}
 
-      {tab === 'recap' && <AceRecapPlayer snapshot={snapshot} />}
+      {tab === 'recap' && <AceRecapPlayer presentation={presentation} />}
     </div>
   );
 }

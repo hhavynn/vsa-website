@@ -49,7 +49,10 @@ export interface RecapBuildInput {
   sheetIssues?: readonly PairingSheetIssue[];
   /** Pairings the ACE Chair has approved. Absent → nothing is approved. */
   approvals?: readonly RecapApproval[];
-  /** Names that appear in the sheet's rejection lists; never pairing candidates. */
+  /**
+   * Names from the sheet's rejection sections. Never pairing candidates, and
+   * never a reason to drop an accepted pairing: matches only add a Chair warning.
+   */
   rejectedNames?: readonly string[];
   importTermByNodeId?: ReadonlyMap<string, string>;
   /**
@@ -136,6 +139,31 @@ export interface RecapReviewRecord {
   /** True when the Big node came from the Chair's approval, not name matching. */
   chairSelected: boolean;
   approvedForPublication: boolean;
+}
+
+/**
+ * What the video and the in-site player need, and nothing else: no review
+ * records, candidate lists, evidence, sheet issues or source revision ids.
+ */
+export type RecapPresentationFamily = Omit<RecapFamily, 'checks'>;
+export interface AceRecapPresentation {
+  version: typeof ACE_RECAP_SNAPSHOT_VERSION;
+  /** 'published' only for a snapshot built from the published tree after approval. */
+  visibility: 'private-preview' | 'published';
+  cycle: RecapCycle;
+  families: RecapPresentationFamily[];
+  totals: Pick<AceRecapSnapshot['totals'], 'previewed' | 'queued' | 'familiesGrowing' | 'peopleBefore' | 'peopleAfter'>;
+}
+
+export function toRecapPresentation(snapshot: AceRecapSnapshot): AceRecapPresentation {
+  const { previewed, queued, familiesGrowing, peopleBefore, peopleAfter } = snapshot.totals;
+  return {
+    version: snapshot.version,
+    visibility: snapshot.visibility,
+    cycle: { ...snapshot.cycle },
+    families: snapshot.families.map(({ checks: _checks, ...family }) => family),
+    totals: { previewed, queued, familiesGrowing, peopleBefore, peopleAfter },
+  };
 }
 
 export interface AceRecapSnapshot {
@@ -237,9 +265,14 @@ export function buildRecapSnapshot(input: RecapBuildInput): AceRecapSnapshot {
           blocked = true;
         }
       }
-      if (rejected.has(normalizeMemberName(littleName)) || pairing.bigNames.some((b) => rejected.has(normalizeMemberName(b)))) {
+      // The official ACE Chair sheet is authoritative for acceptances.
+      // Rejection lists are separate sections (other people, other roles), so
+      // a name match there is a namesake to confirm — never a reason to drop
+      // an accepted pairing on its own. Flag it for the Chair instead.
+      const exactRejected = [littleName, ...pairing.bigNames].filter((n) => rejected.has(normalizeMemberName(n)));
+      if (exactRejected.length) {
         warnings.push('rejected_name_match');
-        blocked = true;
+        evidence.push(`A rejection list also contains ${exactRejected.join(', ')}; the accepted sheet is authoritative — confirm this is the same accepted person.`);
       }
       const namesake = (input.rejectedNames ?? []).filter((r) => compareNames(littleName, r) === 'variant');
       if (namesake.length) {

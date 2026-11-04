@@ -1,10 +1,10 @@
 import React from 'react';
-import type { AceRecapSnapshot } from '../../../../lib/aceRecap/recapSnapshot';
+import type { AceRecapPresentation } from '../../../../lib/aceRecap/recapSnapshot';
 import { displayFamilyName } from './RecapStage';
 
 /** Text companion to the recap: every family's growth, readable without motion. */
-export function AceRecapFamilySequence({ snapshot, showNames = true }: { snapshot: AceRecapSnapshot; showNames?: boolean }) {
-  const families = snapshot.families.filter((f) => !f.archived);
+export function AceRecapFamilySequence({ presentation, showNames = true }: { presentation: AceRecapPresentation; showNames?: boolean }) {
+  const families = presentation.families.filter((f) => !f.archived);
   return (
     <ol className="grid gap-3 sm:grid-cols-2">
       {families.map((fam) => {

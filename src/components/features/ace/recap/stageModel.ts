@@ -1,5 +1,7 @@
 import { edgeGeometry, treeMetrics } from '../../../../lib/aceTreeLayout';
-import type { RecapFamily, RecapNode } from '../../../../lib/aceRecap/recapSnapshot';
+import type { RecapNode, RecapPresentationFamily } from '../../../../lib/aceRecap/recapSnapshot';
+import { concatPolys, samplePath } from './motion/thread';
+import type { Poly } from './motion/thread';
 
 /**
  * Frame-independent geometry for the recap stage: world positions, edge
@@ -16,19 +18,21 @@ export const NODE_R = M.nodeR;
 const PAD = 80;
 
 export interface Pt { x: number; y: number }
-export interface StageEdge { id: string; from: string; to: string; d: string; length: number; isNew: boolean; cubic: number[] | null }
+export interface StageEdge { id: string; from: string; to: string; d: string; length: number; isNew: boolean; cubic: number[] | null; poly: Poly }
 export interface StageFamily {
-  fam: RecapFamily;
+  fam: RecapPresentationFamily;
   pos: Map<string, Pt>;
   byId: Map<string, RecapNode>;
   edges: StageEdge[];
+  edgeTo: Map<string, StageEdge>;
+  children: Map<string, string[]>;
   newIds: Set<string>;
   bounds: Box;
   beforeBounds: Box;
   palette: FamilyPalette;
 }
 export interface Box { x: number; y: number; w: number; h: number }
-export interface Camera { cx: number; cy: number; s: number }
+export interface Camera { cx: number; cy: number; s: number; r?: number }
 
 export interface FamilyPalette { accent: string; soft: string; edge: string; node: string }
 
@@ -75,7 +79,15 @@ export function fitCamera(box: Box, region: Box = { x: 0, y: 0, w: STAGE_W, h: S
 }
 
 export const cameraTransform = (c: Camera) =>
-  `translate(${STAGE_W / 2} ${STAGE_H / 2}) scale(${c.s}) translate(${-c.cx} ${-c.cy})`;
+  `translate(${STAGE_W / 2} ${STAGE_H / 2}) rotate(${c.r ?? 0}) scale(${c.s}) translate(${-c.cx} ${-c.cy})`;
+
+/** World point → screen point under a camera (roll included). */
+export function toScreen(c: Camera, p: Pt): Pt {
+  const x = (p.x - c.cx) * c.s;
+  const y = (p.y - c.cy) * c.s;
+  const r = ((c.r ?? 0) * Math.PI) / 180;
+  return { x: STAGE_W / 2 + x * Math.cos(r) - y * Math.sin(r), y: STAGE_H / 2 + x * Math.sin(r) + y * Math.cos(r) };
+}
 
 // ─── colour ──────────────────────────────────────────────────────────────────
 const FALLBACK = ['#a3b2ec', '#ebb4da', '#c9b6f0', '#8fd3e8', '#f2c48d', '#b9e3c6'];
@@ -138,9 +150,9 @@ export function cubicPoint(c: number[], t: number): Pt {
 
 // Keyed by the family object itself: a revised snapshot (even with the same
 // id and counts) is a new object, so it never reuses stale geometry.
-const cache = new WeakMap<RecapFamily, StageFamily>();
+const cache = new WeakMap<RecapPresentationFamily, StageFamily>();
 
-export function stageFamily(fam: RecapFamily): StageFamily {
+export function stageFamily(fam: RecapPresentationFamily): StageFamily {
   const hit = cache.get(fam);
   if (hit) return hit;
   const pos = new Map<string, Pt>();
@@ -154,11 +166,14 @@ export function stageFamily(fam: RecapFamily): StageFamily {
     const b = pos.get(n.id)!;
     const obstacles = all.filter((p) => p !== a && p !== b);
     const g = edgeGeometry(a, b, NODE_R, UNIT_Y, obstacles);
-    edges.push({ id: `${n.parent}-${n.id}`, from: n.parent, to: n.id, d: g.d, length: g.length, isNew: n.isNew, cubic: parseCubic(g.d) });
+    edges.push({ id: `${n.parent}-${n.id}`, from: n.parent, to: n.id, d: g.d, length: g.length, isNew: n.isNew, cubic: parseCubic(g.d), poly: samplePath(g.d) });
   }
   const newIds = new Set(fam.nodes.filter((n) => n.isNew).map((n) => n.id));
+  const edgeTo = new Map(edges.map((e) => [e.to, e]));
+  const children = new Map<string, string[]>();
+  for (const e of edges) children.set(e.from, [...(children.get(e.from) ?? []), e.to]);
   const sf: StageFamily = {
-    fam, pos, byId, edges, newIds,
+    fam, pos, byId, edges, edgeTo, children, newIds,
     bounds: boxOfPoints(all, NODE_R + 60),
     beforeBounds: boxOfPoints(fam.nodes.filter((n) => !n.isNew).map((n) => pos.get(n.id)!), NODE_R + 60),
     palette: familyPalette(fam.themeColor, fam.id),
@@ -173,3 +188,19 @@ export function labelLines(label: string): [string, string] {
   if (parts.length <= 1) return [label, ''];
   return [parts[0], parts.slice(1).join(' ')];
 }
+
+/**
+ * The real ancestry path (root first) as one polyline built from the actual
+ * edges between consecutive ids. Pairs with no edge are skipped, never drawn.
+ */
+export function lineagePoly(sf: StageFamily, ids: readonly string[]): Poly {
+  const parts: Poly[] = [];
+  for (let i = 1; i < ids.length; i++) {
+    const e = sf.edgeTo.get(ids[i]);
+    if (e && e.from === ids[i - 1]) parts.push(e.poly);
+  }
+  return concatPolys(parts);
+}
+
+/** Family-specific (but deterministic) seed for drift and decoration. */
+export const familySeed = (fam: { id: string }) => hashId(fam.id) % 997;

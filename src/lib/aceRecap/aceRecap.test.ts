@@ -3,7 +3,7 @@ import type { AceFamily } from '../../types';
 import type { AceNodeRef } from '../aceAssignments';
 import {
   buildRecapSnapshot, cleanPersonName, compareNames, diffPairingSheets, parseOfficialPairingRows,
-  planRecapTimeline, resolveBig, splitPeople,
+  planRecapTimeline, resolveBig, scenesAt, splitPeople, toRecapPresentation,
 } from '.';
 
 const fam = (id: string, name: string): AceFamily => ({
@@ -164,11 +164,12 @@ describe('recap snapshot', () => {
     expect(s.families.find((f) => f.id === 'f-old')!.added).toBe(0);
   });
 
-  it('blocks rejected names and requires an explicit approval for publication', () => {
+  it('flags, but never drops, an accepted pairing whose name is on a rejection list', () => {
     const s = build({ rejectedNames: ['Pax Hale'], approvals: [{ littleName: 'Kit Lorne', bigNodeId: 'o2' }] });
     const pax = s.records.find((r) => r.littleName === 'Pax Hale')!;
-    expect(pax.safeToPreview).toBe(false);
+    expect(pax.safeToPreview).toBe(true);
     expect(pax.warnings).toContain('rejected_name_match');
+    expect(pax.evidence.join(' ')).toMatch(/authoritative/);
     expect(s.records.find((r) => r.littleName === 'Kit Lorne')!.approvedForPublication).toBe(true);
     expect(s.records.filter((r) => r.approvedForPublication)).toHaveLength(1);
   });
@@ -196,7 +197,7 @@ describe('recap snapshot', () => {
     expect(s.records.find((r) => r.littleName === 'Wren Oak')!.safeToPreview).toBe(false);
   });
 
-  it('never lets an approval override the hard checks', () => {
+  it('never lets an approval override the hard node checks', () => {
     const s = build({
       rejectedNames: ['Pax Hale'],
       approvals: [
@@ -206,10 +207,20 @@ describe('recap snapshot', () => {
       ],
     });
     const by = (n: string) => s.records.find((r) => r.littleName === n)!;
-    expect(by('Pax Hale')).toMatchObject({ safeToPreview: false, approvedForPublication: false });
+    // A rejection-list namesake is a warning; the Chair's approval stands.
+    expect(by('Pax Hale')).toMatchObject({ safeToPreview: true, approvedForPublication: true });
+    expect(by('Pax Hale').warnings).toContain('rejected_name_match');
     expect(by('Fae Ray').warnings).toContain('approval_node_invalid');
     expect(by('Eli Rook')).toMatchObject({ safeToPreview: false, approvedForPublication: false });
     expect(by('Eli Rook').warnings).toContain('approval_node_invalid');
+  });
+
+  it('strips review data from the presentation used by the video and player', () => {
+    const p = toRecapPresentation(build({ rejectedNames: ['Pax Hale'] }));
+    const json = JSON.stringify(p);
+    expect(json).not.toMatch(/records|evidence|candidates|sheetIssues|revision|"checks"/);
+    expect(p.visibility).toBe('private-preview');
+    expect(p.families.flatMap((f) => f.nodes).some((n) => n.isNew)).toBe(true);
   });
 
   it('warns, without blocking, on a middle-initial namesake of a rejected person', () => {
@@ -239,23 +250,54 @@ describe('recap snapshot', () => {
 });
 
 describe('recap timeline', () => {
-  it('opens, follows the biggest-growth family, spotlights the rest and ends', () => {
-    const s = buildRecapSnapshot({
-      cycle: { label: 'Fall 2099', academicYearStart: 2099 },
-      source: { label: 'synthetic', revision: null, retrievedAt: '' },
-      families: FAMILIES, nodes: NODES, pairings: parseOfficialPairingRows(SHEET).pairings,
-    });
-    const t = planRecapTimeline(s, { fps: 30 });
+  const presentationOf = () => toRecapPresentation(buildRecapSnapshot({
+    cycle: { label: 'Fall 2099', academicYearStart: 2099 },
+    source: { label: 'synthetic', revision: null, retrievedAt: '' },
+    families: FAMILIES, nodes: NODES, pairings: parseOfficialPairingRows(SHEET).pairings,
+  }));
+
+  it('hooks, follows the biggest-growth family, gives every other growing family its own scene, then ends', () => {
+    const t = planRecapTimeline(presentationOf(), { fps: 30 });
     expect(t.heroFamilyId).toBe('f-orchid');
-    expect(t.scenes.map((x) => x.kind)).toEqual(['opening', 'origins', 'lineage', 'growth', 'expansion', 'spotlight', 'finale']);
+    expect(t.scenes.map((x) => x.kind)).toEqual(['hook', 'hero', 'family', 'finale']);
+    expect(t.scenes.find((x) => x.kind === 'family')?.familyId).toBe('f-comet');
     const gaps = t.scenes.slice(1).map((scene, i) => scene.from - (t.scenes[i].from + t.scenes[i].durationInFrames));
     expect(gaps.every((gap) => gap === 0)).toBe(true);
     expect(t.durationInFrames).toBe(t.scenes.reduce((a, x) => a + x.durationInFrames, 0));
+    const hero = t.scenes.find((x) => x.kind === 'hero')!;
+    expect(hero.phases!.lineage + hero.phases!.reveal + hero.phases!.expand).toBe(hero.durationInFrames);
   });
 
-  it('still renders an opening and finale when nothing is previewable', () => {
+  it('covers many families without dropping any, and never repeats a treatment back to back', () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({
+      id: `f${i}`, name: `Fam ${i}`, slug: `f${i}`, themeColor: null, archived: false, nodes: [], width: 1, rows: 1,
+      before: { people: 10, generations: 3, roots: 1 }, after: { people: 10 + (12 - i), generations: 4, roots: 1 },
+      added: 12 - i, growth: [{ bigNodeId: 'b', bigLabel: 'B', littleIds: ['x'], lineage: ['r', 'b'] }],
+    }));
+    const t = planRecapTimeline({ families: many }, { fps: 30 });
+    const covered = t.scenes.filter((x) => x.kind === 'hero' || x.kind === 'family').map((x) => x.familyId);
+    expect(new Set(covered)).toEqual(new Set(many.map((m) => m.id)));
+    const treatments = t.scenes.filter((x) => x.kind === 'family').map((x) => x.treatment);
+    const repeats = treatments.slice(1).filter((tr, i) => tr !== 'portrait' && tr === treatments[i]);
+    expect(repeats).toEqual([]);
+    expect(treatments.slice(-2)).toEqual(['portrait', 'portrait']); // 2 and 1 new Littles
+    expect(t.durationInFrames / 30).toBeLessThanOrEqual(110);
+  });
+
+  it('overlaps an entrance with the outgoing scene for a motivated transition', () => {
+    const t = planRecapTimeline(presentationOf(), { fps: 30 });
+    const family = t.scenes.find((x) => x.kind === 'family')!;
+    expect(family.overlapIn).toBeGreaterThan(0);
+    const during = scenesAt(t, family.from + 2);
+    expect(during.map((l) => l.scene.kind)).toEqual(['hero', 'family']);
+    expect(during[0].local).toBeGreaterThanOrEqual(during[0].scene.durationInFrames);
+    expect(during[1].enter).toBeGreaterThan(0);
+    expect(scenesAt(t, family.from + family.overlapIn + 1).map((l) => l.scene.kind)).toEqual(['family']);
+  });
+
+  it('still renders a hook and finale when nothing is previewable', () => {
     const t = planRecapTimeline({ families: [] });
     expect(t.heroFamilyId).toBeNull();
-    expect(t.scenes.map((x) => x.kind)).toEqual(['opening', 'finale']);
+    expect(t.scenes.map((x) => x.kind)).toEqual(['hook', 'finale']);
   });
 });

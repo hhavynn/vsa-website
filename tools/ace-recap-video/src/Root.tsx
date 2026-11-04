@@ -11,11 +11,12 @@ import type { CalculateMetadataFunction } from 'remotion';
 import { RecapStage } from '../../../src/components/features/ace/recap/RecapStage';
 import { STAGE_H, STAGE_W } from '../../../src/components/features/ace/recap/stageModel';
 import { planRecapTimeline } from '../../../src/lib/aceRecap/recapTimeline';
-import type { AceRecapSnapshot } from '../../../src/lib/aceRecap/recapSnapshot';
+import type { AceRecapPresentation } from '../../../src/lib/aceRecap/recapSnapshot';
 
 export interface AceRecapProps {
-  snapshot: AceRecapSnapshot | null;
-  /** Override the private-preview banner (null hides it; only for an approved, published snapshot). */
+  /** Presentation-only data (recap-presentation.json). Never the full review snapshot. */
+  presentation: AceRecapPresentation | null;
+  /** Banner text. Cannot remove the banner from a private-preview presentation. */
   watermark?: string | null;
   [key: string]: unknown;
 }
@@ -30,19 +31,22 @@ function useFontsReady() {
   }, [handle]);
 }
 
-function AceRecap({ snapshot, watermark }: AceRecapProps) {
+function AceRecap({ presentation, watermark }: AceRecapProps) {
   useFontsReady();
   const frame = useCurrentFrame();
-  if (!snapshot) return null;
-  const timeline = planRecapTimeline(snapshot, { fps: FPS });
-  return <RecapStage snapshot={snapshot} timeline={timeline} frame={frame} watermark={watermark} />;
+  const timeline = React.useMemo(() => (presentation ? planRecapTimeline(presentation, { fps: FPS }) : null), [presentation]);
+  if (!presentation || !timeline) return null;
+  return <RecapStage presentation={presentation} timeline={timeline} frame={frame} watermark={watermark} />;
 }
 
 const calculateMetadata: CalculateMetadataFunction<AceRecapProps> = ({ props }) => {
-  if (!props.snapshot || props.snapshot.version !== 1) {
-    throw new Error('Pass --props=<file> containing {"snapshot": <recap-snapshot.json contents>}');
+  if ('snapshot' in props) {
+    throw new Error('Pass recap-video-props.json ({"presentation": …}); the full review snapshot is never sent to the renderer.');
   }
-  return { durationInFrames: planRecapTimeline(props.snapshot, { fps: FPS }).durationInFrames };
+  if (!props.presentation || props.presentation.version !== 1) {
+    throw new Error('Pass --props=<file> containing {"presentation": <recap-presentation.json contents>}');
+  }
+  return { durationInFrames: planRecapTimeline(props.presentation, { fps: FPS }).durationInFrames };
 };
 
 export const RemotionRoot: React.FC = () => (
@@ -53,7 +57,7 @@ export const RemotionRoot: React.FC = () => (
     height={STAGE_H}
     fps={FPS}
     durationInFrames={FPS * 60}
-    defaultProps={{ snapshot: null } as AceRecapProps}
+    defaultProps={{ presentation: null } as AceRecapProps}
     calculateMetadata={calculateMetadata}
   />
 );
