@@ -21,6 +21,7 @@ import { PageError } from '../../components/common/PageError';
 import { RESOURCE_LINKS_QUERY_KEY, useResourceLinks } from '../../hooks/useResourceLinks';
 import { useRowSelection } from '../../hooks/useRowSelection';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
+import { useDiscardConfirm } from '../../hooks/useDiscardConfirm';
 import { BulkPlan, planBulk } from '../../lib/adminBulk';
 import { BulkRunResult } from '../../lib/adminBulkRun';
 import {
@@ -173,7 +174,8 @@ export default function AdminResources() {
   const [formBaseline, setFormBaseline] = useState<ResourceFormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const isFormDirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(formBaseline), [form, formBaseline]);
-  const confirmDiscard = useUnsavedChangesGuard(isFormDirty, saving);
+  useUnsavedChangesGuard(isFormDirty, saving);
+  const { requestDiscard, discardDialog } = useDiscardConfirm();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('current');
@@ -232,15 +234,32 @@ export default function AdminResources() {
   };
 
   const requestResetForm = () => {
-    if (!saving && confirmDiscard()) resetForm();
+    if (saving) return;
+    requestDiscard(
+      isFormDirty,
+      {
+        title: 'Discard resource edits?',
+        description: `You have unsaved changes to ${selectedResource?.title ?? 'this new resource'}. Clearing the editor discards them.`,
+      },
+      resetForm,
+    );
   };
 
   const selectResource = (resource: ResourceLink) => {
-    if (saving || selectedResource?.id === resource.id || !confirmDiscard()) return;
-    const next = formFromResource(resource);
-    setSelectedResource(resource);
-    setForm(next);
-    setFormBaseline(next);
+    if (saving || selectedResource?.id === resource.id) return;
+    requestDiscard(
+      isFormDirty,
+      {
+        title: 'Discard resource edits?',
+        description: `You have unsaved changes to ${selectedResource?.title ?? 'this new resource'}. Opening ${resource.title} discards them.`,
+      },
+      () => {
+        const next = formFromResource(resource);
+        setSelectedResource(resource);
+        setForm(next);
+        setFormBaseline(next);
+      },
+    );
   };
 
   const refreshResources = async () => {
@@ -674,6 +693,8 @@ export default function AdminResources() {
           </form>
         </aside>
       </div>
+
+      {discardDialog}
 
       {deleteTarget && (
         <ConfirmDialog
