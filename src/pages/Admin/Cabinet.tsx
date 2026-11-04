@@ -19,6 +19,7 @@ import { useDiscardConfirm } from '../../hooks/useDiscardConfirm';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import { AdminCabinetRoleDescriptions } from '../../components/features/cabinet/AdminCabinetRoleDescriptions';
 import { ImageDropzone } from '../../components/features/admin/ImageDropzone';
+import { AdminCabinetAvatar } from '../../components/features/admin/AdminCabinetAvatar';
 import { CabinetPreviewDialog } from '../../components/features/admin/preview/CabinetPreviewDialog';
 import { PreviewAsPublicButton } from '../../components/features/admin/preview/PublicPreviewDialog';
 import { buildCabinetPreviewMembers } from '../../components/features/admin/preview/cabinetPreview';
@@ -701,13 +702,7 @@ export default function AdminCabinet() {
                             <span className="font-mono text-[10px]" style={{ color: 'var(--color-text3)' }}>{m.display_order}</span>
                             <button onClick={() => moveMember(m, 'down')} disabled={idx === categoryMembers.length - 1} className="text-xs leading-none transition-colors disabled:opacity-20" style={{ color: 'var(--color-text3)' }}>▼</button>
                           </div>
-                          {(m.thumbnail_url || m.image_url) ? (
-                            <img src={m.thumbnail_url || m.image_url || ''} alt={m.name} className="h-12 w-12 shrink-0 rounded-full border object-cover shadow-sm" style={{ borderColor: 'var(--color-border)' }} />
-                          ) : (
-                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border text-[13px] font-semibold" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text2)' }}>
-                              {m.name.charAt(0)}
-                            </div>
-                          )}
+                          <AdminCabinetAvatar name={m.name} thumbnailUrl={m.thumbnail_url} imageUrl={m.image_url} />
                           <div className="min-w-0">
                             <p className="truncate font-sans text-[15px] font-bold leading-tight" style={{ color: 'var(--color-text)' }}>{m.name}</p>
                             <p className="truncate font-sans text-xs" style={{ color: 'var(--color-text2)' }}>{m.role}</p>
@@ -826,7 +821,7 @@ export default function AdminCabinet() {
                 </p>
                 {selectedMember.image_url && !editImagePreview && (
                   <div className="mb-4 mt-2 flex items-center gap-4">
-                    <img src={selectedMember.image_url} alt="Current" className="h-20 w-20 rounded-full border object-cover shadow-sm" style={{ borderColor: 'var(--color-border)' }} />
+                    <AdminCabinetAvatar name={selectedMember.name} imageUrl={selectedMember.image_url} thumbnailUrl={selectedMember.thumbnail_url} alt="Current" size={80} />
                     <button type="button" className="text-xs font-semibold text-red-500 hover:text-red-600" onClick={() => setSelectedMember({...selectedMember, image_url: '', thumbnail_url: null})}>Remove image</button>
                   </div>
                 )}
