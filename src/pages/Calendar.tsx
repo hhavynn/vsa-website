@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from 'react-query';
 import { motion, useReducedMotion } from 'framer-motion';
 import { PageTitle } from '../components/common/PageTitle';
@@ -37,7 +37,7 @@ import {
   vsaEventToCalendarItem,
 } from '../utils/calendar';
 import type { CalendarHouseTag } from '../utils/calendar';
-import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
+import { usePacificCalendarDay } from '../hooks/usePacificCalendarDay';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -80,7 +80,7 @@ function LoadingBoard() {
 
 export function Calendar() {
   const shouldReduceMotion = useReducedMotion();
-  const todayStr = useMemo(() => getLosAngelesDateOnly(), []);
+  const todayStr = usePacificCalendarDay();
   const dataWindow = useMemo(() => getCalendarWindow(todayStr), [todayStr]);
 
   // ── Data (public-safe sources only) ────────────────────────────────────────
@@ -130,6 +130,23 @@ export function Calendar() {
     const [year, month] = todayStr.split('-').map(Number);
     return { year, monthIndex: month - 1 };
   });
+  const previousTodayRef = useRef(todayStr);
+  useEffect(() => {
+    const previousDay = previousTodayRef.current;
+    previousTodayRef.current = todayStr;
+    const previousMonth = previousDay.slice(0, 7);
+    const newMonth = todayStr.slice(0, 7);
+    if (previousMonth === newMonth) return;
+
+    // Advance the visible month only when the visitor was following the
+    // current month, not while they were intentionally browsing another one.
+    setMonthCursor((cursor) => {
+      const displayedMonth = `${cursor.year}-${String(cursor.monthIndex + 1).padStart(2, '0')}`;
+      if (displayedMonth !== previousMonth) return cursor;
+      const [year, month] = newMonth.split('-').map(Number);
+      return { year, monthIndex: month - 1 };
+    });
+  }, [todayStr]);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [overlay, setOverlay] = useState<CalendarOverlayState | null>(null);
 
