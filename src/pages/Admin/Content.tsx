@@ -276,7 +276,7 @@ export default function AdminContent() {
               <span role="status" className="self-center font-sans text-xs text-amber-700 dark:text-amber-400">
                 Unsaved changes
               </span>
-            )
+            )}
             <button type="button" disabled={loading || saving} onClick={resetToDefault}
               className="font-sans font-medium px-5 py-2 rounded text-sm border transition-colors disabled:opacity-50"
               style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent', cursor: 'pointer' }}>
