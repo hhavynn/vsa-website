@@ -129,7 +129,7 @@ export function buildRevealReadiness(input: RevealReadinessInput): RevealReadine
         id: 'applications',
         label: 'House applications',
         state: 'unknown',
-        detail: `${plural(invalid.length, 'enabled House application window')} have invalid opening or closing dates. Review Applications before Reveal.`,
+        detail: `${plural(invalid.length, 'enabled House application window')} ${invalid.length === 1 ? 'has' : 'have'} invalid opening or closing dates. Review Applications before Reveal.`,
       });
     } else {
       const open = houseWindows.filter((link) =>
