@@ -28,3 +28,17 @@ export function usePacificCalendarDay(): string {
 
   return today;
 }
+
+/** Follow the new month only if the user was displaying the previous current month. */
+export function reconcileCalendarMonthCursor(
+  cursor: { year: number; monthIndex: number },
+  previousDay: string,
+  today: string,
+): { year: number; monthIndex: number } {
+  const previousMonth = previousDay.slice(0, 7);
+  const currentMonth = today.slice(0, 7);
+  const displayedMonth = `${cursor.year}-${String(cursor.monthIndex + 1).padStart(2, '0')}`;
+  if (previousMonth === currentMonth || displayedMonth !== previousMonth) return cursor;
+  const [year, month] = currentMonth.split('-').map(Number);
+  return { year, monthIndex: month - 1 };
+}
