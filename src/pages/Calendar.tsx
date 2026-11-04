@@ -37,7 +37,7 @@ import {
   vsaEventToCalendarItem,
 } from '../utils/calendar';
 import type { CalendarHouseTag } from '../utils/calendar';
-import { reconcileCalendarMonthCursor, usePacificCalendarDay } from '../hooks/usePacificCalendarDay';
+import { reconcileCalendarMonthSelection, usePacificCalendarDay } from '../hooks/usePacificCalendarDay';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -130,15 +130,19 @@ export function Calendar() {
     const [year, month] = todayStr.split('-').map(Number);
     return { year, monthIndex: month - 1 };
   });
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const previousTodayRef = useRef(todayStr);
   useEffect(() => {
     const previousDay = previousTodayRef.current;
     previousTodayRef.current = todayStr;
     if (previousDay.slice(0, 7) !== todayStr.slice(0, 7)) {
-      setMonthCursor((cursor) => reconcileCalendarMonthCursor(cursor, previousDay, todayStr));
+      const next = reconcileCalendarMonthSelection(monthCursor, selectedDay, previousDay, todayStr);
+      if (next.cursor !== monthCursor) {
+        setMonthCursor(next.cursor);
+        setSelectedDay(next.selectedDay);
+      }
     }
-  }, [todayStr]);
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  }, [monthCursor, selectedDay, todayStr]);
   const [overlay, setOverlay] = useState<CalendarOverlayState | null>(null);
 
   // Only offer filters that have real data behind them in the loaded window.
