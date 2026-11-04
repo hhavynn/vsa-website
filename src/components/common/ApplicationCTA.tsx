@@ -274,12 +274,13 @@ export function ApplicationCTA({
     const crossed = openingWindowsNeedingRefresh(fetchedLinks, nowMillis)
       .filter((key) => !openingRefreshesAttempted.current.has(key));
     if (crossed.length === 0) return;
+    // A fetch started before the opening can still return a pre-opening masked
+    // snapshot. Do not mark this boundary handled until a post-opening fetch
+    // can actually start. The next clock tick will retry after the in-flight
+    // fetch settles, while multiple CTA instances share the same query.
+    if (queryClient.isFetching(PUBLIC_APPLICATION_LINKS_QUERY_KEY) !== 0) return;
     crossed.forEach((key) => openingRefreshesAttempted.current.add(key));
-    // Multiple page CTAs observe one shared query. Never cancel and resend
-    // another CTA's in-flight fetch or poll continuously after the boundary.
-    if (queryClient.isFetching(PUBLIC_APPLICATION_LINKS_QUERY_KEY) === 0) {
-      void refetch();
-    }
+    void refetch();
   }, [fetchedLinks, nowMillis, loading, error, queryClient, refetch]);
   const now = new Date(nowMillis);
   const links = fetchedLinks.map((link) => publicApplicationAtTime(link, now));
