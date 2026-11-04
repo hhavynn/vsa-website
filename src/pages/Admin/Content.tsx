@@ -272,6 +272,11 @@ export default function AdminContent() {
             <button type="submit" disabled={loading || saving} className="rounded bg-brand-600 px-5 py-2 font-sans text-sm font-medium text-white transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 disabled:cursor-default disabled:opacity-50 dark:bg-brand-300 dark:text-brand-950 dark:hover:bg-brand-200">
               {saving ? 'Saving...' : 'Save Content'}
             </button>
+            {dirty && !saving && (
+              <span role="status" className="self-center font-sans text-xs text-amber-700 dark:text-amber-400">
+                Unsaved changes
+              </span>
+            )
             <button type="button" disabled={loading || saving} onClick={resetToDefault}
               className="font-sans font-medium px-5 py-2 rounded text-sm border transition-colors disabled:opacity-50"
               style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent', cursor: 'pointer' }}>
