@@ -1,0 +1,99 @@
+import { act, render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from 'react-query';
+import { MemoryRouter } from 'react-router-dom';
+import { ApplicationCTA, openingWindowsNeedingRefresh } from './ApplicationCTA';
+import type { PublicApplicationLink } from '../../types';
+
+const refetch = jest.fn();
+let publicLinks: PublicApplicationLink[] = [];
+
+jest.mock('../../hooks/useApplicationLinks', () => ({
+  PUBLIC_APPLICATION_LINKS_QUERY_KEY: ['application-links', 'public'],
+  usePublicApplicationLinks: () => ({
+    links: publicLinks, loading: false, error: null, refetch,
+  }),
+}));
+
+const opening = '2026-11-20T18:00:00Z';
+const windowRow = (overrides: Partial<PublicApplicationLink> = {}): PublicApplicationLink => ({
+  id: 'synthetic-house-window',
+  application_key: 'house_fall',
+  title: 'House Applications',
+  description: null,
+  button_label: 'Apply',
+  target_url: null,
+  status: 'not_open',
+  open_at: opening,
+  due_at: '2026-11-28T18:00:00Z',
+  is_enabled: true,
+  before_open_message: null,
+  after_close_message: null,
+  sort_order: 0,
+  updated_at: '2026-11-01T00:00:00Z',
+  ...overrides,
+});
+
+function mount() {
+  return render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <ApplicationCTA applicationKeys="house_fall" />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+beforeEach(() => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2026-11-20T17:59:45Z'));
+  refetch.mockReset().mockResolvedValue(undefined);
+  publicLinks = [windowRow()];
+});
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+describe('application opening transition on an already-open page (#276)', () => {
+  it('refreshes the shared public view exactly once after the opening boundary', () => {
+    mount();
+    expect(refetch).not.toHaveBeenCalled();
+    expect(screen.queryByRole('link', { name: 'Apply' })).not.toBeInTheDocument();
+
+    act(() => { jest.advanceTimersByTime(30_000); });
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    act(() => { jest.advanceTimersByTime(90_000); });
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('link', { name: 'Apply' })).not.toBeInTheDocument();
+  });
+
+  it('never locally unmasks a form URL while waiting for the server response', () => {
+    publicLinks = [windowRow({ target_url: 'https://private-form.invalid/not-public' })];
+    const view = mount();
+    act(() => { jest.advanceTimersByTime(30_000); });
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(view.container.innerHTML).not.toContain('private-form.invalid');
+  });
+
+  it('does not refresh disabled, invalid or still-future rows', () => {
+    const now = Date.parse('2026-11-20T18:00:15Z');
+    expect(openingWindowsNeedingRefresh([
+      windowRow({ is_enabled: false }),
+      windowRow({ id: 'invalid', open_at: 'not-a-date' }),
+      windowRow({ id: 'future', open_at: '2026-11-21T18:00:00Z' }),
+      windowRow({ id: 'already-open', status: 'open' }),
+    ], now)).toEqual([]);
+    publicLinks = [windowRow({ is_enabled: false })];
+    mount();
+    act(() => { jest.advanceTimersByTime(90_000); });
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it('refreshes a stale not-open result immediately when the page loads after its start', () => {
+    jest.setSystemTime(new Date('2026-11-20T18:02:00Z'));
+    mount();
+    expect(refetch).toHaveBeenCalledTimes(1);
+    act(() => { jest.advanceTimersByTime(30_000); });
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+});
