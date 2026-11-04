@@ -1,10 +1,11 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import toast from 'react-hot-toast';
 import { MemoryRouter } from 'react-router-dom';
 import AdminResources from './Resources';
 import { resourceLinksRepository } from '../../data/repos/resourceLinks';
 import { ResourceLink } from '../../types';
+import { hasUnsavedChanges } from '../../hooks/useUnsavedChangesGuard';
 
 jest.mock('react-hot-toast', () => ({ __esModule: true, default: Object.assign(jest.fn(), { success: jest.fn(), error: jest.fn() }) }));
 jest.mock('react-query', () => ({ useQueryClient: () => ({ invalidateQueries: jest.fn() }) }));
@@ -181,5 +182,68 @@ describe('Resources delete', () => {
     expect(toast.error).toHaveBeenCalledWith('Failed to delete resource');
     expect(screen.getByRole('alertdialog')).toBeInTheDocument();
     errorSpy.mockRestore();
+  });
+});
+
+describe('Resources unsaved editor guard (#258)', () => {
+  it('does not discard an edited resource when switching rows without confirmation', async () => {
+    const confirm = jest.spyOn(window, 'confirm').mockReturnValue(false);
+    try {
+      renderPage();
+      await userEvent.click(screen.getAllByTitle('Edit resource')[0]);
+      const title = screen.getByDisplayValue('Alpha');
+      await userEvent.clear(title);
+      await userEvent.type(title, 'Alpha - unfinished');
+      await waitFor(() => expect(hasUnsavedChanges()).toBe(true));
+
+      await userEvent.click(screen.getAllByTitle('Edit resource')[1]);
+      expect(confirm).toHaveBeenCalledTimes(1);
+      expect(screen.getByDisplayValue('Alpha - unfinished')).toBeInTheDocument();
+
+      confirm.mockReturnValue(true);
+      await userEvent.click(screen.getAllByTitle('Edit resource')[1]);
+      expect(screen.getByDisplayValue('Bravo')).toBeInTheDocument();
+      expect(hasUnsavedChanges()).toBe(false);
+    } finally {
+      confirm.mockRestore();
+    }
+  });
+
+  it('warns for tab unload and New Resource while dirty, but not after discarding', async () => {
+    const confirm = jest.spyOn(window, 'confirm').mockReturnValue(false);
+    try {
+      renderPage();
+      await userEvent.click(screen.getAllByTitle('Edit resource')[0]);
+      await userEvent.type(screen.getByDisplayValue('Alpha'), ' draft');
+      await waitFor(() => expect(hasUnsavedChanges()).toBe(true));
+
+      const beforeUnload = new Event('beforeunload', { cancelable: true });
+      fireEvent(window, beforeUnload);
+      expect(beforeUnload.defaultPrevented).toBe(true);
+
+      await userEvent.click(screen.getByRole('button', { name: 'New Resource' }));
+      expect(screen.getByDisplayValue('Alpha draft')).toBeInTheDocument();
+      expect(confirm).toHaveBeenCalledTimes(1);
+
+      confirm.mockReturnValue(true);
+      await userEvent.click(screen.getByRole('button', { name: 'New Resource' }));
+      expect(screen.queryByDisplayValue('Alpha draft')).not.toBeInTheDocument();
+      expect(hasUnsavedChanges()).toBe(false);
+    } finally {
+      confirm.mockRestore();
+    }
+  });
+
+  it('clears the dirty guard after a successful update', async () => {
+    repo.update.mockResolvedValue(resource('a', 'Alpha updated'));
+    renderPage();
+    await userEvent.click(screen.getAllByTitle('Edit resource')[0]);
+    await userEvent.type(screen.getByDisplayValue('Alpha'), ' updated');
+    await waitFor(() => expect(hasUnsavedChanges()).toBe(true));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(repo.update).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(hasUnsavedChanges()).toBe(false));
+    expect(toast.success).toHaveBeenCalledWith('Resource updated');
   });
 });
