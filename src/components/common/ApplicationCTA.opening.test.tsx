@@ -4,13 +4,13 @@ import { MemoryRouter } from 'react-router-dom';
 import { ApplicationCTA, openingWindowsNeedingRefresh } from './ApplicationCTA';
 import type { PublicApplicationLink } from '../../types';
 
-const refetch = jest.fn();
-let publicLinks: PublicApplicationLink[] = [];
+const mockRefetch = jest.fn();
+let mockPublicLinks: PublicApplicationLink[] = [];
 
 jest.mock('../../hooks/useApplicationLinks', () => ({
   PUBLIC_APPLICATION_LINKS_QUERY_KEY: ['application-links', 'public'],
   usePublicApplicationLinks: () => ({
-    links: publicLinks, loading: false, error: null, refetch,
+    links: mockPublicLinks, loading: false, error: null, refetch: mockRefetch,
   }),
 }));
 
@@ -46,8 +46,8 @@ function mount() {
 beforeEach(() => {
   jest.useFakeTimers();
   jest.setSystemTime(new Date('2026-11-20T17:59:45Z'));
-  refetch.mockReset().mockResolvedValue(undefined);
-  publicLinks = [windowRow()];
+  mockRefetch.mockReset().mockResolvedValue(undefined);
+  mockPublicLinks = [windowRow()];
 });
 afterEach(() => {
   jest.useRealTimers();
@@ -68,7 +68,7 @@ describe('application opening transition on an already-open page (#276)', () => 
   });
 
   it('never locally unmasks a form URL while waiting for the server response', () => {
-    publicLinks = [windowRow({ target_url: 'https://private-form.invalid/not-public' })];
+    mockPublicLinks = [windowRow({ target_url: 'https://private-form.invalid/not-public' })];
     const view = mount();
     act(() => { jest.advanceTimersByTime(30_000); });
     expect(refetch).toHaveBeenCalledTimes(1);
@@ -83,7 +83,7 @@ describe('application opening transition on an already-open page (#276)', () => 
       windowRow({ id: 'future', open_at: '2026-11-21T18:00:00Z' }),
       windowRow({ id: 'already-open', status: 'open' }),
     ], now)).toEqual([]);
-    publicLinks = [windowRow({ is_enabled: false })];
+    mockPublicLinks = [windowRow({ is_enabled: false })];
     mount();
     act(() => { jest.advanceTimersByTime(90_000); });
     expect(refetch).not.toHaveBeenCalled();
