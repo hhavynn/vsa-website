@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from 'react-query';
 import { motion, useReducedMotion } from 'framer-motion';
 import { PageTitle } from '../components/common/PageTitle';
@@ -37,7 +37,7 @@ import {
   vsaEventToCalendarItem,
 } from '../utils/calendar';
 import type { CalendarHouseTag } from '../utils/calendar';
-import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
+import { reconcileCalendarMonthSelection, usePacificCalendarDay } from '../hooks/usePacificCalendarDay';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -80,7 +80,7 @@ function LoadingBoard() {
 
 export function Calendar() {
   const shouldReduceMotion = useReducedMotion();
-  const todayStr = useMemo(() => getLosAngelesDateOnly(), []);
+  const todayStr = usePacificCalendarDay();
   const dataWindow = useMemo(() => getCalendarWindow(todayStr), [todayStr]);
 
   // ── Data (public-safe sources only) ────────────────────────────────────────
@@ -131,6 +131,18 @@ export function Calendar() {
     return { year, monthIndex: month - 1 };
   });
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const previousTodayRef = useRef(todayStr);
+  useEffect(() => {
+    const previousDay = previousTodayRef.current;
+    previousTodayRef.current = todayStr;
+    if (previousDay.slice(0, 7) !== todayStr.slice(0, 7)) {
+      const next = reconcileCalendarMonthSelection(monthCursor, selectedDay, previousDay, todayStr);
+      if (next.cursor !== monthCursor) {
+        setMonthCursor(next.cursor);
+        setSelectedDay(next.selectedDay);
+      }
+    }
+  }, [monthCursor, selectedDay, todayStr]);
   const [overlay, setOverlay] = useState<CalendarOverlayState | null>(null);
 
   // Only offer filters that have real data behind them in the loaded window.
