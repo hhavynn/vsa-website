@@ -20,6 +20,8 @@ import { PageLoader } from '../../components/common/PageLoader';
 import { PageError } from '../../components/common/PageError';
 import { RESOURCE_LINKS_QUERY_KEY, useResourceLinks } from '../../hooks/useResourceLinks';
 import { useRowSelection } from '../../hooks/useRowSelection';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
+import { useDiscardConfirm } from '../../hooks/useDiscardConfirm';
 import { BulkPlan, planBulk } from '../../lib/adminBulk';
 import { BulkRunResult } from '../../lib/adminBulkRun';
 import {
@@ -169,7 +171,11 @@ export default function AdminResources() {
   const { resources, loading, error, refetch } = useResourceLinks();
   const [selectedResource, setSelectedResource] = useState<ResourceLink | null>(null);
   const [form, setForm] = useState<ResourceFormState>(EMPTY_FORM);
+  const [formBaseline, setFormBaseline] = useState<ResourceFormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const isFormDirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(formBaseline), [form, formBaseline]);
+  useUnsavedChangesGuard(isFormDirty, saving);
+  const { requestDiscard, discardDialog } = useDiscardConfirm();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('current');
@@ -220,14 +226,40 @@ export default function AdminResources() {
   const activeCount = useMemo(() => resources.filter((resource) => !resource.is_archived).length, [resources]);
   const archivedCount = useMemo(() => resources.filter((resource) => resource.is_archived).length, [resources]);
 
+  // Internal reset after an acknowledged save/delete does not need to prompt.
   const resetForm = () => {
     setSelectedResource(null);
     setForm(EMPTY_FORM);
+    setFormBaseline(EMPTY_FORM);
+  };
+
+  const requestResetForm = () => {
+    if (saving) return;
+    requestDiscard(
+      isFormDirty,
+      {
+        title: 'Discard resource edits?',
+        description: `You have unsaved changes to ${selectedResource?.title ?? 'this new resource'}. Clearing the editor discards them.`,
+      },
+      resetForm,
+    );
   };
 
   const selectResource = (resource: ResourceLink) => {
-    setSelectedResource(resource);
-    setForm(formFromResource(resource));
+    if (saving || selectedResource?.id === resource.id) return;
+    requestDiscard(
+      isFormDirty,
+      {
+        title: 'Discard resource edits?',
+        description: `You have unsaved changes to ${selectedResource?.title ?? 'this new resource'}. Opening ${resource.title} discards them.`,
+      },
+      () => {
+        const next = formFromResource(resource);
+        setSelectedResource(resource);
+        setForm(next);
+        setFormBaseline(next);
+      },
+    );
   };
 
   const refreshResources = async () => {
@@ -376,7 +408,7 @@ export default function AdminResources() {
         actions={
           <button
             type="button"
-            onClick={resetForm}
+            onClick={requestResetForm}
             className="inline-flex items-center gap-2 rounded border px-3 py-2 font-sans text-xs font-medium transition-colors"
             style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)', background: 'transparent' }}
           >
@@ -565,7 +597,7 @@ export default function AdminResources() {
               </p>
             </div>
             {selectedResource && (
-              <button type="button" onClick={resetForm} className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
+              <button type="button" onClick={requestResetForm} className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
                 Clear
               </button>
             )}
@@ -650,7 +682,7 @@ export default function AdminResources() {
               {selectedResource && (
                 <button
                   type="button"
-                  onClick={resetForm}
+                  onClick={requestResetForm}
                   className="rounded border px-4 py-2 font-sans text-sm"
                   style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)', background: 'transparent' }}
                 >
@@ -661,6 +693,8 @@ export default function AdminResources() {
           </form>
         </aside>
       </div>
+
+      {discardDialog}
 
       {deleteTarget && (
         <ConfirmDialog
