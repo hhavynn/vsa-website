@@ -1,6 +1,5 @@
-import { useState } from 'react';
 import { CalendarItem } from '../../../utils/calendar';
-import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
+import { OptimizedImage } from '../../common/OptimizedImage';
 import { cn } from '../../../lib/utils';
 
 interface Props {
@@ -11,24 +10,22 @@ interface Props {
 }
 
 /**
- * Decorative event thumbnail for calendar tiles and agenda rows. Renders
- * nothing when the item has no image or the image fails to load, so the
- * caller's colored backdrop shows through instead of a broken-image icon.
+ * Decorative calendar-grid flyer. Reuse shared image delivery, retaining a
+ * transparent fallback so the calendar cell's category-color backdrop shows
+ * when there is no image or the image cannot load.
  */
 export function CalendarThumb({ item, className, width = 160 }: Props) {
-  // Keyed by URL: a tile reused for another event (e.g. after a filter
-  // change) must retry instead of inheriting the previous image's failure.
-  const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const src = item.thumbnailUrl || item.imageUrl;
-  if (!src || src === failedSrc) return null;
 
   return (
-    <img
-      src={getSupabaseImageUrl(src, { width }) || src}
+    <OptimizedImage
+      src={src}
       alt=""
-      loading="lazy"
-      decoding="async"
-      onError={() => setFailedSrc(src)}
+      width={width}
+      height={width}
+      widths={[width, width * 2]}
+      sizes={`${width}px`}
+      resize="cover"
       className={cn('object-cover', className)}
     />
   );
