@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { FALLBACK_ASK_VSA } from "../../../config/publicFallbackContent";
 import { VsaAiAssistant } from "./VsaAiAssistant";
+import { aiFeedbackRepository } from '../../../data/repos/aiFeedback';
 
 interface RequestBody {
   message: string;
@@ -209,4 +210,40 @@ it("offers links on network errors while preserving Retry", async () => {
   expect(screen.getByRole("button", { name: "Retry" })).toHaveClass("min-h-11");
   const nav = screen.getByRole("navigation", { name: "Other ways to get VSA information" });
   expect(within(nav).getByRole("link", { name: "Events" })).toHaveAttribute("href", "/events");
+});
+
+it("keeps a failed feedback note visible, explains the error, and lets the student retry (#237)", async () => {
+  backend(() => response("ACE connects Bigs and Littles."));
+  const submit = jest.spyOn(aiFeedbackRepository, 'submitFeedback')
+    .mockRejectedValueOnce(new Error('synthetic connection failure'))
+    .mockResolvedValueOnce(undefined);
+
+  try {
+    await openAssistant();
+    await ask("What is ACE?");
+    await userEvent.click(screen.getByRole("button", { name: "No" }));
+
+    const note = screen.getByRole("textbox", { name: "Optional feedback about this answer" });
+    expect(note).toHaveAttribute("maxLength", "1000");
+    await userEvent.type(note, "The explanation left out the matching process.");
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Feedback could not be sent. Your note is still here; please try again.",
+    );
+    expect(note).toHaveValue("The explanation left out the matching process.");
+    expect(screen.getByRole("button", { name: "Submit" })).toBeEnabled();
+    expect(screen.queryByText("Thanks for the feedback!")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    expect(await screen.findByText("Thanks for the feedback!")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(submit).toHaveBeenCalledTimes(2);
+    expect(submit).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      rating: 'not_helpful',
+      feedback_text: "The explanation left out the matching process.",
+    }));
+  } finally {
+    submit.mockRestore();
+  }
 });
