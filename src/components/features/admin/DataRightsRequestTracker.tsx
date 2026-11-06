@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { UseFormRegisterReturn, useForm } from 'react-hook-form';
-import { useMutation, useQuery, useQueryClient } from 'react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import {
   DATA_RIGHTS_PRIORITY_LABELS,
@@ -160,21 +160,24 @@ export function DataRightsRequestTracker() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [exportSuccess, setExportSuccess] = useState<string | null>(null);
 
-  const requestsQuery = useQuery(
-    ['admin', 'data-rights-requests'],
-    () => dataRightsRequestsRepository.listDataRightsRequests(),
-    { staleTime: 30_000, refetchOnWindowFocus: false },
-  );
-  const adminsQuery = useQuery(
-    ['admin', 'data-rights-assignees'],
-    () => dataRightsRequestsRepository.listAdminAssignees(),
-    { staleTime: 5 * 60_000, refetchOnWindowFocus: false },
-  );
-  const eventsQuery = useQuery(
-    ['admin', 'data-rights-request-events', editingId],
-    () => dataRightsRequestsRepository.listDataRightsRequestEvents(editingId as string),
-    { enabled: editingId !== null, refetchOnWindowFocus: false },
-  );
+  const requestsQuery = useQuery({
+    queryKey: ['admin', 'data-rights-requests'],
+    queryFn: () => dataRightsRequestsRepository.listDataRightsRequests(),
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+  });
+  const adminsQuery = useQuery({
+    queryKey: ['admin', 'data-rights-assignees'],
+    queryFn: () => dataRightsRequestsRepository.listAdminAssignees(),
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+  const eventsQuery = useQuery({
+    queryKey: ['admin', 'data-rights-request-events', editingId],
+    queryFn: () => dataRightsRequestsRepository.listDataRightsRequestEvents(editingId as string),
+    enabled: editingId !== null,
+    refetchOnWindowFocus: false,
+  });
 
   const requests = useMemo(() => requestsQuery.data ?? [], [requestsQuery.data]);
   const selectedRequest = requests.find((request) => request.id === editingId) ?? null;
@@ -216,45 +219,41 @@ export function DataRightsRequestTracker() {
     setSaveError(null);
   }, [reset, selectedRequest, editingId]);
 
-  const saveMutation = useMutation(
-    ({ id, input }: { id: string | null; input: DataRightsRequestInput }) =>
+  const saveMutation = useMutation({
+    mutationFn: ({ id, input }: { id: string | null; input: DataRightsRequestInput }) =>
       id
         ? dataRightsRequestsRepository.updateDataRightsRequest(id, input)
         : dataRightsRequestsRepository.createDataRightsRequest(input),
-    {
-      onSuccess: async (request) => {
-        // What was just saved is the new baseline: let the refetched row load.
-        adoptNextRow.current = true;
-        setExportSuccess(null);
-        setEditingId(request.id);
-        setSaveError(null);
-        await Promise.all([
-          queryClient.invalidateQueries(['admin', 'data-rights-requests']),
-          queryClient.invalidateQueries(['admin', 'data-rights-request-events', request.id]),
-        ]);
-        toast.success(editingId ? 'Request updated' : 'Request created');
-      },
-      onError: (error: unknown) => {
-        console.error(error);
-        const message = toUserMessage(error, 'Unable to save request');
-        setSaveError(message);
-        toast.error('Unable to save request');
-      },
+    onSuccess: async (request) => {
+      // What was just saved is the new baseline: let the refetched row load.
+      adoptNextRow.current = true;
+      setExportSuccess(null);
+      setEditingId(request.id);
+      setSaveError(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'data-rights-requests'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'data-rights-request-events', request.id] }),
+      ]);
+      toast.success(editingId ? 'Request updated' : 'Request created');
     },
-  );
+    onError: (error: unknown) => {
+      console.error(error);
+      const message = toUserMessage(error, 'Unable to save request');
+      setSaveError(message);
+      toast.error('Unable to save request');
+    },
+  });
 
-  const previewMutation = useMutation(
-    (requestId: string) =>
+  const previewMutation = useMutation({
+    mutationFn: (requestId: string) =>
       dataRightsRequestsRepository.getDataRightsDependencyPreview(requestId),
-    {
-      onError: () => {
-        toast.error('Unable to generate dependency preview');
-      },
+    onError: () => {
+      toast.error('Unable to generate dependency preview');
     },
-  );
+  });
 
-  const exportMutation = useMutation(
-    async (requestId: string) => {
+  const exportMutation = useMutation({
+    mutationFn: async (requestId: string) => {
       const bundle = await dataRightsRequestsRepository.generateDataRightsExport(requestId);
       downloadExportBundle(bundle);
       return {
@@ -262,20 +261,18 @@ export function DataRightsRequestTracker() {
         warningCount: bundle.warnings.length,
       };
     },
-    {
-      onSuccess: async ({ requestId, warningCount }) => {
-        setExportSuccess(
-          `Export downloaded locally. The bundle includes ${warningCount} review warning${warningCount === 1 ? '' : 's'}.`,
-        );
-        await queryClient.invalidateQueries(['admin', 'data-rights-request-events', requestId]);
-        toast.success('Data-rights export downloaded');
-      },
-      onError: () => {
-        setExportSuccess(null);
-        toast.error('Unable to generate data-rights export');
-      },
+    onSuccess: async ({ requestId, warningCount }) => {
+      setExportSuccess(
+        `Export downloaded locally. The bundle includes ${warningCount} review warning${warningCount === 1 ? '' : 's'}.`,
+      );
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'data-rights-request-events', requestId] });
+      toast.success('Data-rights export downloaded');
     },
-  );
+    onError: () => {
+      setExportSuccess(null);
+      toast.error('Unable to generate data-rights export');
+    },
+  });
 
   function startNewRequest() {
     previewMutation.reset();
@@ -499,7 +496,7 @@ export function DataRightsRequestTracker() {
               )}
 
               <div className="flex flex-col gap-2 sm:flex-row">
-                <Button type="submit" loading={saveMutation.isLoading}>
+                <Button type="submit" loading={saveMutation.isPending}>
                   {selectedRequest ? 'Save review record' : 'Create request record'}
                 </Button>
                 {selectedRequest && <Button type="button" variant="outline" onClick={startNewRequest}>Cancel editing</Button>}
@@ -520,7 +517,7 @@ export function DataRightsRequestTracker() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  loading={previewMutation.isLoading}
+                  loading={previewMutation.isPending}
                   onClick={() => previewMutation.mutate(selectedRequest.id)}
                   aria-describedby="dependency-preview-safety"
                 >
@@ -531,7 +528,7 @@ export function DataRightsRequestTracker() {
                 Generates read-only counts and warnings without changing subject data.
               </p>
 
-              {previewMutation.isLoading && (
+              {previewMutation.isPending && (
                 <p role="status" aria-live="polite" className="mt-4 text-sm text-text-muted">
                   Generating dependency preview…
                 </p>
@@ -563,7 +560,7 @@ export function DataRightsRequestTracker() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    loading={exportMutation.isLoading}
+                    loading={exportMutation.isPending}
                     onClick={() => exportMutation.mutate(selectedRequest.id)}
                     aria-describedby="export-safety-warning"
                   >
@@ -579,7 +576,7 @@ export function DataRightsRequestTracker() {
                 </div>
               )}
 
-              {exportMutation.isLoading && (
+              {exportMutation.isPending && (
                 <p role="status" aria-live="polite" className="mt-4 text-sm text-text-muted">
                   Generating the allowlisted export…
                 </p>

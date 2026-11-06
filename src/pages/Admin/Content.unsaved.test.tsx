@@ -9,7 +9,7 @@ const mockUpsert = jest.fn();
 const mockSetQueryData = jest.fn();
 const mockInvalidateQueries = jest.fn();
 
-jest.mock('react-query', () => ({
+jest.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({
     setQueryData: mockSetQueryData,
     invalidateQueries: mockInvalidateQueries,

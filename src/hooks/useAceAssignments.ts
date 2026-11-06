@@ -1,4 +1,4 @@
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { AceAssignmentCycle, AceAssignmentDraft } from '../types';
 import { aceAssignmentsRepository } from '../data/repos/aceAssignments';
 import { aceFamiliesRepository } from '../data/repos/aceFamilies';

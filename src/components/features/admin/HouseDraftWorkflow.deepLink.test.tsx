@@ -1,10 +1,14 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { HouseDraftWorkflow } from './HouseDraftWorkflow';
 import { houseAssignmentsRepository, HouseBatchSnapshot } from '../../../data/repos/houseAssignments';
 
 import { housePaymentsRepository } from '../../../data/repos/housePayments';
+import { adminReviewRepository } from '../../../data/repos/adminReview';
+import { houseParentsRepository } from '../../../data/repos/houseParents';
+import { memberIdentityRepository } from '../../../data/repos/memberIdentity';
+
 jest.mock('../../../data/repos/housePayments', () => ({
   PAYMENTS_UNAVAILABLE: 'House payment eligibility is not available yet.',
   housePaymentsRepository: {
@@ -79,6 +83,9 @@ function renderWorkflow(url: string, onYearChange = jest.fn()) {
 }
 
 beforeEach(() => {
+  (adminReviewRepository.listReviewed as jest.Mock).mockResolvedValue(new Set());
+  (houseParentsRepository.listForYear as jest.Mock).mockResolvedValue([]);
+  (memberIdentityRepository.loadIdentityEmails as jest.Mock).mockResolvedValue([]);
   (housePaymentsRepository.listCycles as jest.Mock).mockResolvedValue([]);
   (housePaymentsRepository.getBatchBlockers as jest.Mock).mockResolvedValue([]);
   repo.listBatches.mockResolvedValue([]);

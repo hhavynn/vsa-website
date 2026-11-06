@@ -3,7 +3,7 @@
 // from matching this member (for example an address remembered for the wrong
 // person). Emails are private: this renders only inside Admin → Members.
 import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from 'react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { memberIdentityRepository, MemberIdentityEmail } from '../../../data/repos/memberIdentity';
 import { normalizeEmail } from '../../../lib/memberMatching';
 import { cn } from '../../../lib/utils';
@@ -19,14 +19,19 @@ const HOW: Record<MemberIdentityEmail['verification_method'], string> = {
 export function MemberIdentityEmails({ memberId, contactEmail }: { memberId: string; contactEmail: string | null }) {
   const queryClient = useQueryClient();
   const key = ['member-identity-emails', memberId];
-  const { data, isLoading, error, refetch } = useQuery(key, () => memberIdentityRepository.listMemberEmails(memberId));
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: key,
+    queryFn: () => memberIdentityRepository.listMemberEmails(memberId),
+  });
   const [draft, setDraft] = useState('');
   const [confirming, setConfirming] = useState<string | null>(null);
-  const refresh = () => queryClient.invalidateQueries(key);
-  const add = useMutation((email: string) => memberIdentityRepository.addMemberEmail(memberId, email), {
+  const refresh = () => queryClient.invalidateQueries({ queryKey: key });
+  const add = useMutation({
+    mutationFn: (email: string) => memberIdentityRepository.addMemberEmail(memberId, email),
     onSuccess: () => { setDraft(''); refresh(); },
   });
-  const remove = useMutation((id: string) => memberIdentityRepository.removeMemberEmail(id), {
+  const remove = useMutation({
+    mutationFn: (id: string) => memberIdentityRepository.removeMemberEmail(id),
     onSuccess: () => { setConfirming(null); refresh(); },
   });
   const normalized = normalizeEmail(draft);
@@ -46,7 +51,7 @@ export function MemberIdentityEmails({ memberId, contactEmail }: { memberId: str
       {isLoading && <p className="text-[11px] text-text-muted">Loading…</p>}
       {error ? (
         <p role="alert" className="text-[11px] text-red-700 dark:text-red-400">
-          Could not load the emails. <button type="button" className="underline" onClick={() => refetch()}>Retry</button>
+          Could not load the emails. <button type="button" className="underline" onClick={() => refetch({ cancelRefetch: false })}>Retry</button>
         </p>
       ) : null}
       {data && data.length === 0 && <p className="text-[11px] text-text-muted">No confirmed emails yet.</p>}
@@ -62,7 +67,7 @@ export function MemberIdentityEmails({ memberId, contactEmail }: { memberId: str
                 <span className="text-[11px] text-text-muted">Contact email: change it above to stop matching it</span>
               ) : confirming === alias.id ? (
                 <span className="flex gap-2">
-                  <button type="button" disabled={remove.isLoading} onClick={() => remove.mutate(alias.id)}
+                  <button type="button" disabled={remove.isPending} onClick={() => remove.mutate(alias.id)}
                     className="text-[11px] font-medium text-red-700 hover:underline dark:text-red-400">
                     Confirm remove
                   </button>
@@ -90,7 +95,7 @@ export function MemberIdentityEmails({ memberId, contactEmail }: { memberId: str
         />
         <button
           type="button"
-          disabled={!valid || add.isLoading}
+          disabled={!valid || add.isPending}
           onClick={() => add.mutate(normalized)}
           className={cn('rounded border px-2 py-1 text-xs font-medium', valid ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400' : 'border-[var(--color-border)] text-text-muted')}
         >

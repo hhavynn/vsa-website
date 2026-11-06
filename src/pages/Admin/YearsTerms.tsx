@@ -207,7 +207,7 @@ export default function AdminYearsTerms() {
         toast.success('Academic term created');
       }
       resetTermForm();
-      refreshTerms();
+      refreshTerms({ cancelRefetch: false });
     } catch (error) {
       console.error(error);
       toast.error(termForm.id ? 'Failed to update academic term' : 'Failed to create academic term');
@@ -238,7 +238,7 @@ export default function AdminYearsTerms() {
         toast.success('Cabinet year created');
       }
       resetCabinetYearForm();
-      refreshCabinetYears();
+      refreshCabinetYears({ cancelRefetch: false });
     } catch (error) {
       console.error(error);
       toast.error(cabinetYearForm.id ? 'Failed to update cabinet year' : 'Failed to create cabinet year');
@@ -252,7 +252,7 @@ export default function AdminYearsTerms() {
       setSettingActiveId(id);
       await academicTermsRepository.setActiveTerm(id);
       toast.success('Active academic term updated');
-      refreshTerms();
+      refreshTerms({ cancelRefetch: false });
     } catch (error) {
       console.error(error);
       toast.error('Failed to set active academic term');
@@ -266,7 +266,7 @@ export default function AdminYearsTerms() {
       setSettingActiveId(id);
       await cabinetYearsRepository.setActiveYear(id);
       toast.success('Active cabinet year updated');
-      refreshCabinetYears();
+      refreshCabinetYears({ cancelRefetch: false });
     } catch (error) {
       console.error(error);
       toast.error('Failed to set active cabinet year');

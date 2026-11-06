@@ -1,5 +1,5 @@
 import { act, render, screen } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ApplicationCTA, openingWindowsNeedingRefresh } from './ApplicationCTA';
 import type { PublicApplicationLink } from '../../types';
@@ -70,11 +70,11 @@ describe('application opening transition on an already-open page (#276)', () => 
   it('does not lose its opening refresh while a pre-opening request remains in flight', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     let finish!: (rows: PublicApplicationLink[]) => void;
-    const pending = client.fetchQuery<PublicApplicationLink[]>(
-      ['application-links', 'public'],
-      () => new Promise<PublicApplicationLink[]>((resolve) => { finish = resolve; }),
-    );
-    expect(client.isFetching(['application-links', 'public'])).toBe(1);
+    const pending = client.fetchQuery<PublicApplicationLink[]>({
+      queryKey: ['application-links', 'public'],
+      queryFn: () => new Promise<PublicApplicationLink[]>((resolve) => { finish = resolve; }),
+    });
+    expect(client.isFetching({ queryKey: ['application-links', 'public'] })).toBe(1);
     mount(client);
 
     act(() => { jest.advanceTimersByTime(30_000); });
@@ -84,7 +84,7 @@ describe('application opening transition on an already-open page (#276)', () => 
       finish([windowRow()]); // A request begun before opening can return a masked row.
       await pending;
     });
-    expect(client.isFetching(['application-links', 'public'])).toBe(0);
+    expect(client.isFetching({ queryKey: ['application-links', 'public'] })).toBe(0);
     act(() => { jest.advanceTimersByTime(30_000); });
     expect(mockRefetch).toHaveBeenCalledTimes(1);
     act(() => { jest.advanceTimersByTime(30_000); });

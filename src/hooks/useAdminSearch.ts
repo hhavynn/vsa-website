@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { adminSearchRepository } from '../data/repos/adminSearch';
 import { AdminSearchRecord, AdminSearchResult, pageRecords, searchAdmin } from '../lib/adminSearch';
 
@@ -17,7 +17,7 @@ export function useAdminSearch(query: string, enabled: boolean) {
     queryFn: () => adminSearchRepository.loadRecords(),
     enabled,
     staleTime: 2 * 60 * 1000,
-    cacheTime: 5 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
   const records = useMemo(() => data ?? pageRecords(), [data]);

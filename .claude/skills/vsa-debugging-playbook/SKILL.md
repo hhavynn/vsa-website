@@ -130,7 +130,7 @@ Re-verify before trusting, if this file is old:
 
 ```bash
 grep -n "transformIgnorePatterns" package.json                  # jest ESM allowlist still zod + @hookform/resolvers?
-grep -n '"typescript"\|"react-query"' package.json               # still TS 4.9.x / react-query v3?
+grep -n '"typescript"\|"@tanstack/react-query"' package.json     # still TS 4.9.x / TanStack Query v5?
 grep -n "429\|quota" src/utils/isSupabaseUnavailable.ts          # degraded-mode signals unchanged?
 grep -n "member_yearly_points" src/data/repos/leaderboard.ts     # leaderboard still reads the view?
 grep -rn "from('user_points')" src/data/repos/points.ts | head -1  # second system still live? (consolidation was FUTURE work as of 2026-07-06)

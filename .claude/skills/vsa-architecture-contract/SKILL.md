@@ -25,7 +25,7 @@ Jargon used below — defined once: **CRA** = Create React App (the build toolin
 
 ```
 Browser
-  └─ CRA SPA (React 18, TypeScript 4.9, react-router v6, react-query v3, Tailwind v3)
+  └─ CRA SPA (React 18, TypeScript 4.9, react-router v6, TanStack Query v5, Tailwind v3)
        ├─ reads/writes → Supabase (Postgres + Auth + Storage + Deno Edge Functions)
        │     Edge Functions: analytics-proxy, trigger-event-image-migration,
        │                     trigger-house-event-image-migration, vsa-ai-assistant
@@ -40,7 +40,7 @@ There is no application server. Every dynamic behavior is either client-side, a 
 
 ```
 ErrorBoundary
-└─ QueryClientProvider          (react-query; staleTime 5 min, cacheTime 10 min, no refetchOnWindowFocus)
+└─ QueryClientProvider          (TanStack Query, `src/lib/queryClient.ts`; staleTime 5 min, gcTime 10 min, no refetchOnWindowFocus)
    └─ ThemeProvider             (dark mode class on <html>)
       └─ AnalyticsConsentProvider
          └─ AuthProvider        (Supabase auth session)
@@ -99,7 +99,7 @@ State these plainly in reviews; none of them is intentional design.
 |---|---|---|---|
 | 1 | **Account/code points retirement.** The member-based model remains authoritative; old account ledgers are retained privately without application paths. | `docs/leaderboard-system.md`; `docs/member-account-retirement.md` | RESOLVED in source by owner decision #233; backend freeze requires manual migration apply/verification. |
 | 2 | **Thin automated tests.** The suite remains primarily metadata, utils/schemas/data helpers, and one `App.test.tsx` smoke test. Derive the current inventory with `find src -name "*.test.ts*" \| sort`; do not copy a count. Zero repository, RLS, or full-page behavior tests exist — invariants 1–8 above are enforced mainly by review. | `vsa-validation-and-qa` §2 + discovery command | OPEN — see `vsa-validation-and-qa` for how to add tests. |
-| 3 | **Aging platform.** CRA (`react-scripts` ^5.0.1 — CRA is deprecated upstream), TypeScript ^4.9.5, `react-query` ^3.39.3 (superseded by TanStack Query v4/v5 with a different import path and API). `npm run eject` is explicitly forbidden (`AGENTS.md` L274). Any migration off CRA is a major change-control item. | `package.json` L19/25/28/75 | OPEN |
+| 3 | **Aging platform.** CRA (`react-scripts` ^5.0.1 — CRA is deprecated upstream), TypeScript ^4.9.5. `npm run eject` is explicitly forbidden (`AGENTS.md` L274). Any migration off CRA is a major change-control item. | `package.json` L19/25/28/75 | OPEN |
 | 4 | **Client-side admin check is fetch-per-mount.** `useAdmin()` does a raw `useEffect` + `select is_admin` (not react-query, not cached) — a legacy exception to invariant 3 and a per-navigation query. Safe only because RLS is the real boundary. | `src/hooks/useAdmin.ts` | OPEN |
 | 5 | **Obsolete check-in repo exception removed.** The old hook, RPC call, provider and repository are deleted rather than moved. | `docs/member-account-retirement.md` | RESOLVED — #234 and #464 are obsolete through retirement, not RPC repair. |
 | 6 | **Documentation location drift.** Root `CLAUDE.md` points to `src/App.tsx` for provider hierarchy; `AGENTS.md` points to `src/hooks/useAdmin.ts` for admin lookup. | Source pointers | RESOLVED — preserve source pointers instead of copied inventories. |
@@ -133,6 +133,6 @@ grep -rn "check_in_to_event" src/                       # test guards only; no a
 grep -n "SYSTEM_PROMPT\|match_ai_knowledge_base" supabase/functions/vsa-ai-assistant/index.ts
 grep -n "is_admin" src/hooks/useAdmin.ts
 find src -name "*.test.*" | wc -l                       # test-file count
-grep -n '"typescript"\|"react-scripts"\|"react-query"' package.json
+grep -n '"typescript"\|"react-scripts"\|"@tanstack/react-query"' package.json
 grep -n "member_yearly_points" src/data/repos/leaderboard.ts
 ```

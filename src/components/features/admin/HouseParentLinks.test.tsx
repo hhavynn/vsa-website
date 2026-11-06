@@ -5,7 +5,7 @@
  */
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HouseParentLinks, suggestHouseParentMember } from './HouseParentLinks';
 import { houseParentsRepository, HouseParentLink } from '../../../data/repos/houseParents';
 import { memberLookupRepository } from '../../../data/repos/memberLookup';

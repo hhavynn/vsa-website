@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import AdminOverview from './Overview';
 import { adminOverviewRepository } from '../../data/repos/adminOverview';
@@ -93,7 +93,7 @@ describe('Admin Overview health scan', () => {
     await screen.findByText('820');
 
     // `observers` is private API; reading it is the only way to see the options the page actually passed.
-    const query = client.getQueryCache().find(ADMIN_HEALTH_QUERY_KEYS.overview) as unknown as { observers: Array<{ options: object }> };
+    const query = client.getQueryCache().find({ queryKey: ADMIN_HEALTH_QUERY_KEYS.overview }) as unknown as { observers: Array<{ options: object }> };
     expect(query.observers[0].options).toMatchObject({
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,

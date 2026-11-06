@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useQuery, useQueryClient } from 'react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FiRefreshCw, FiSearch } from '../../lib/adminIcons';
 import { PageTitle } from '../../components/common/PageTitle';
 import { Sparkle } from '../../components/ui/Sparkle';
@@ -24,7 +24,11 @@ export default function AdminOverview() {
 
   // Cached for a minute and never refetched on focus/reconnect or on a timer:
   // revisiting the page reuses the numbers, and "Refresh" is the way to re-scan.
-  const overview = useQuery(ADMIN_HEALTH_QUERY_KEYS.overview, () => adminOverviewRepository.load(), HEALTH_QUERY_OPTIONS);
+  const overview = useQuery({
+    queryKey: ADMIN_HEALTH_QUERY_KEYS.overview,
+    queryFn: () => adminOverviewRepository.load(),
+    ...HEALTH_QUERY_OPTIONS,
+  });
   // Shares the operations scan with Continue working (one request); only its counts are read here.
   const operations = useOperationsSummary();
   const stats = overview.data?.stats ?? null;
@@ -33,7 +37,7 @@ export default function AdminOverview() {
   const refreshing = overview.isFetching;
 
   function refreshHealth() {
-    return queryClient.invalidateQueries(ADMIN_HEALTH_QUERY_KEYS.all);
+    return queryClient.invalidateQueries({ queryKey: ADMIN_HEALTH_QUERY_KEYS.all });
   }
 
   const health = summarizeHealth({

@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { EventInterestButtons } from './EventInterestButtons';
 import { eventsRepository } from '../../../data/repos/events';
 
@@ -46,7 +46,7 @@ describe('EventInterestButtons', () => {
 
     fireEvent.click(screen.getAllByRole('button')[0]);
 
-    await waitFor(() => expect(invalidate).toHaveBeenCalledWith(['events']));
-    expect(invalidate).toHaveBeenCalledWith(['home', 'upcoming-events-section']);
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ['events'] }));
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['home', 'upcoming-events-section'] });
   });
 });

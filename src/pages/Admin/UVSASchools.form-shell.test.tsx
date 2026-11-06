@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import AdminUVSASchools from './UVSASchools';
 import { DEFAULT_UVSA_NETWORK_PAGE_SETTINGS } from '../../data/repos/uvsaNetworkSettings';

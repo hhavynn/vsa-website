@@ -10,7 +10,7 @@ Single source of truth for AI coding agents working in this repo.
 
 Vietnamese Student Association (VSA) at UCSD member website. This is a production-used site serving 600+ members. Members browse publicly to look up points and view house standings. Member accounts and code-based check-in are formally retired; Supabase Auth serves existing/invited approved admins only, with public signup disabled. Admins manage events, gallery, cabinet, VCN archives, house programs, and site content. There is also a public-facing side (home, events, leaderboard, cabinet, gallery) that degrades gracefully when Supabase is unavailable.
 
-**Tech stack:** Create React App · TypeScript · React 18 · React Router v6 · React Query v3 · Supabase (Auth + PostgreSQL + Storage) · Tailwind CSS v3 · Framer Motion · react-hook-form + Zod · react-hot-toast
+**Tech stack:** Create React App · TypeScript · React 18 · React Router v6 · TanStack Query v5 · Supabase (Auth + PostgreSQL + Storage) · Tailwind CSS v3 · Framer Motion · react-hook-form + Zod · react-hot-toast
 
 **Deployed to:** Vercel (zero-config CRA build, SPA fallback in `vercel.json`)
 
@@ -153,7 +153,7 @@ npm run analyze                                 # Bundle analysis (source-map-ex
 ### Data layer
 - **All Supabase queries go through a repository in `src/data/repos/`.** Import the exported singleton (e.g. `eventsRepository`), never call `supabase` directly from a component or page.
 - Wrap async repo operations with `withErrorHandling()` from `src/data/errors.ts`.
-- Use `react-query` (`useQuery`, `useMutation`) in components to call repositories — not raw `useEffect` + `useState` patterns.
+- Use `@tanstack/react-query` (`useQuery`, `useMutation`) in components to call repositories — not raw `useEffect` + `useState` patterns.
 
 ### Forms
 - react-hook-form + Zod schemas from `src/schemas/index.ts`.

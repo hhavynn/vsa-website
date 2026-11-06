@@ -4,7 +4,7 @@
 // which need investigating, with links to the page that fixes each. It never
 // writes and never recalculates points; a failed read is never shown as clean.
 import { Link } from 'react-router-dom';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { POINTS_CHECK_UNAVAILABLE, HousePointsCheckSummary, housePointsCheckRepository } from '../../../data/repos/housePointsCheck';
 import { formatAcademicYear } from '../../../lib/academicTerms';
 import { cn } from '../../../lib/utils';
@@ -37,11 +37,13 @@ const ROWS: Row[] = [
 const labelCls = 'font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted';
 
 export function HousePointsCheckPanel({ selectedYear }: { selectedYear: number | null }) {
-  const check = useQuery(
-    ['admin', 'house-points-check', selectedYear],
-    () => housePointsCheckRepository.getCheck(selectedYear as number),
-    { enabled: selectedYear !== null, retry: false, staleTime: 0 },
-  );
+  const check = useQuery({
+    queryKey: ['admin', 'house-points-check', selectedYear],
+    queryFn: () => housePointsCheckRepository.getCheck(selectedYear as number),
+    enabled: selectedYear !== null,
+    retry: false,
+    staleTime: 0,
+  });
 
   if (selectedYear === null) return <p className="p-6 text-sm text-text-muted">Choose an academic year.</p>;
 
@@ -57,7 +59,7 @@ export function HousePointsCheckPanel({ selectedYear }: { selectedYear: number |
           </div>
           <button
             type="button"
-            onClick={() => check.refetch()}
+            onClick={() => check.refetch({ cancelRefetch: false })}
             disabled={check.isFetching}
             className="rounded border bg-transparent px-3 py-1.5 text-xs font-semibold hover:bg-[var(--color-surface2)] disabled:opacity-50 border-[var(--color-border)] text-text-primary"
           >

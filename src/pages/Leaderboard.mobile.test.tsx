@@ -1,6 +1,6 @@
 /* eslint-disable testing-library/no-node-access -- layout-contract assertions on class lists and the details element */
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { Leaderboard } from './Leaderboard';
 import { leaderboardRepository } from '../data/repos/leaderboard';
@@ -75,7 +75,7 @@ function setViewport(isPhone: boolean) {
 let queryClient: QueryClient;
 
 function renderLeaderboard(entry = '/leaderboard') {
-  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[entry]}>

@@ -12,7 +12,7 @@ import { reviewAttendanceRows } from '../../lib/adminImportReview';
 import { supabase } from '../../lib/supabase';
 import { runBulkWrites } from '../../lib/bulkWrites';
 import toast from 'react-hot-toast';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { parseCsvTable } from '../../lib/csvParse';
 import {
   AttendanceColumnMapping,

@@ -1,8 +1,7 @@
-import { useInfiniteQuery, useQuery } from 'react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import {
   galleryRepository,
   GalleryCursor,
-  GalleryPage,
 } from '../data/repos/gallery';
 
 export const GALLERY_PAGE_SIZE = 12;
@@ -24,9 +23,10 @@ export function useGallery(options: UseGalleryOptions = {}) {
       }
     : {};
 
-  return useInfiniteQuery<GalleryPage, Error>({
+  return useInfiniteQuery({
     queryKey: ['gallery', { year: year ?? null, search: trimmedSearch }],
-    queryFn: ({ pageParam = null }: { pageParam?: GalleryCursor | null }) =>
+    initialPageParam: null as GalleryCursor | null,
+    queryFn: ({ pageParam }) =>
       galleryRepository.getAlbumPage({
         limit: GALLERY_PAGE_SIZE,
         cursor: pageParam,

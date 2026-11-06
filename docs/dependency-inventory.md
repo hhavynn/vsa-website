@@ -29,7 +29,7 @@ depcheck — depcheck-style tools false-positive on exactly these cases.
 | `react-hook-form` | Form state for signin, feedback, photo request and admin ops forms (`useAdminForm`). |
 | `react-hot-toast` | Project-wide toast surface (60+ call sites) with a11y-safe defaults. |
 | `react-icons` | Icon set for events/gallery/UVSA/admin surfaces, imported per-set (e.g. `react-icons/fa`) with named icons only. Webpack does not fully eliminate unused icons from every imported set, so import and bundle discipline matters. Lazy-boundary work is proposed in #581. |
-| `react-query` | Server-state hooks (caching, invalidations) for the whole data layer. v3 — the project's long-term data API; upgrades are a #301 change-control item. |
+| `@tanstack/react-query` | Server-state hooks (caching, invalidations) for the whole data layer. v5, configured in `src/lib/queryClient.ts`, which keeps the v3 behaviors the site relies on; upgrades are a #301 change-control item. |
 | `react-router-dom` | Routing for every surface (data routerless BrowserRouter usage). |
 | `tailwind-merge` | The other half of `cn()`: resolves Tailwind class conflicts so later utilities win. Can't be hand-trivially replicated. |
 | `web-vitals` | In `src/reportWebVitals.ts`, referenced via a **dynamic** import behind a handler that no caller currently passes — so nothing from it ships into the initial load. Kept as the scaffold for field-vitals wiring (measured in `vsa-diagnostics-and-measurement` §6); remove together with that scaffold if the analytics decision says no. |
@@ -97,7 +97,7 @@ spot-check, not proof of uninterrupted ownership history.
 | `react-hook-form` | `react-hook-form/react-hook-form` | bluebill1049 |
 | `react-hot-toast` | `timolins/react-hot-toast` | timolins |
 | `react-icons` | `react-icons/react-icons` | nwwells, tusbar, gorangajic, kamijin_fanta |
-| `react-query` | `tannerlinsley/react-query` (upstream name for v3; the package lives at `@tanstack/react-query` from v4) | tannerlinsley, tkdodo |
+| `@tanstack/react-query` | `TanStack/query` | tannerlinsley, tkdodo |
 | `react-router-dom` | `remix-run/react-router` | brophdawg11, mjackson |
 | `react-scripts` | `facebook/create-react-app` | fb, gaearon, timer, … |
 | `sharp` | `lovell/sharp` | lovell |

@@ -1,4 +1,4 @@
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { AceFamily, AceFamilyMember } from '../types';
 import { aceFamiliesRepository, type AcePickupEvidenceRow } from '../data/repos/aceFamilies';
 import { AceMemberLinkRef } from '../lib/aceMemberLinks';
@@ -13,7 +13,7 @@ export function usePublishedAceFamilies(academicYearStart?: number | null) {
     queryKey: ['ace-families', 'published', academicYearStart ?? null],
     queryFn: () => aceFamiliesRepository.getPublishedFamilies({ strict: true }),
     staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   return { families, loading, error, refetch };
@@ -29,7 +29,7 @@ export function useAllPublishedAceFamilyMembers() {
     queryKey: ['ace-family-members', 'published', 'all'],
     queryFn: () => aceFamiliesRepository.getAllPublishedMembers({ strict: true }),
     staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   return { members, loading, error, refetch };
@@ -47,7 +47,7 @@ export function usePublishedAceFamilyMembers(familyId: string | null) {
       familyId ? aceFamiliesRepository.getPublishedMembersForFamily(familyId) : Promise.resolve([]),
     enabled: !!familyId,
     staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   return { members, loading, error, refetch };
@@ -110,7 +110,7 @@ export function useAcePickupEvidence(familyId: string | null) {
       : Promise.resolve([]),
     enabled: !!familyId,
     staleTime: 0,
-    cacheTime: 0,
+    gcTime: 0,
   });
 
   return {

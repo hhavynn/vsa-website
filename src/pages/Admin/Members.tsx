@@ -4,7 +4,7 @@
 // backfill; it is deliberately left untouched.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useDropzone } from 'react-dropzone';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
@@ -344,7 +344,7 @@ export default function AdminMembers() {
         load();
         return;
       }
-      queryClient.invalidateQueries(MEMBER_AVATARS_QUERY_KEY);
+      queryClient.invalidateQueries({ queryKey: MEMBER_AVATARS_QUERY_KEY });
     }
 
     setSaving(null);

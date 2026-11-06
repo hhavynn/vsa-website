@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { isAuthApiError, isAuthRetryableFetchError } from '@supabase/supabase-js';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../../hooks/useAuth';
 import { adminStatusQuery } from '../../../hooks/useAdmin';
 import { SignInSchema, type SignInFormData } from '../../../schemas';

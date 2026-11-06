@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
   adminMembersRepository,
@@ -19,51 +19,49 @@ export function MemberAttendanceModal({
   onChanged: () => void | Promise<void>;
 }) {
   const client = useQueryClient();
-  const history = useQuery(
-    ["admin-member-history", memberId],
-    () => adminMembersRepository.getHistory(memberId),
-    { staleTime: 0 },
-  );
-  const events = useQuery(
-    ["admin-member-attendance-events"],
-    () => adminMembersRepository.getAttendanceEvents(),
-    { staleTime: 0 },
-  );
+  const history = useQuery({
+    queryKey: ["admin-member-history", memberId],
+    queryFn: () => adminMembersRepository.getHistory(memberId),
+    staleTime: 0,
+  });
+  const events = useQuery({
+    queryKey: ["admin-member-attendance-events"],
+    queryFn: () => adminMembersRepository.getAttendanceEvents(),
+    staleTime: 0,
+  });
   const [eventId, setEventId] = useState("");
   const [removing, setRemoving] = useState<AdminAttendanceRecord | null>(null);
-  const change = useMutation(
-    async (action: { type: "add" | "remove"; eventId: string }) =>
+  const change = useMutation({
+    mutationFn: async (action: { type: "add" | "remove"; eventId: string }) =>
       action.type === "add"
         ? adminMembersRepository.addAttendance(memberId, action.eventId)
         : adminMembersRepository.removeAttendance(memberId, action.eventId),
-    {
-      onSuccess: async (added, action) => {
-        setEventId("");
-        setRemoving(null);
-        await Promise.all([
-          client.invalidateQueries(["admin-member-history", memberId]),
-          client.invalidateQueries(["find-my-points"]),
-          client.invalidateQueries(["leaderboard-years"]),
-          client.invalidateQueries(["member-attendance", memberId]),
-          client.invalidateQueries(["house-detail", "standings"]),
-          client.invalidateQueries(["individual-leaderboard"]),
-          onChanged(),
-        ]);
-        toast.success(
-          action.type === "remove"
-            ? "Attendance removed."
-            : added
-              ? "Attendance added."
-              : "Attendance already recorded.",
-        );
-      },
+    onSuccess: async (added, action) => {
+      setEventId("");
+      setRemoving(null);
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ["admin-member-history", memberId] }),
+        client.invalidateQueries({ queryKey: ["find-my-points"] }),
+        client.invalidateQueries({ queryKey: ["leaderboard-years"] }),
+        client.invalidateQueries({ queryKey: ["member-attendance", memberId] }),
+        client.invalidateQueries({ queryKey: ["house-detail", "standings"] }),
+        client.invalidateQueries({ queryKey: ["individual-leaderboard"] }),
+        onChanged(),
+      ]);
+      toast.success(
+        action.type === "remove"
+          ? "Attendance removed."
+          : added
+            ? "Attendance added."
+            : "Attendance already recorded.",
+      );
     },
-  );
+  });
   const attended = new Set(
     history.data?.records.map((record) => record.event_id),
   );
   const selectedEvent = events.data?.find((event) => event.id === eventId);
-  const blocked = change.isLoading || history.isFetching || history.isError;
+  const blocked = change.isPending || history.isFetching || history.isError;
   const member = history.data?.member;
   const memberName = member
     ? `${member.first_name} ${member.last_name}`
@@ -80,7 +78,7 @@ export function MemberAttendanceModal({
   return (
     <MemberWorkflowDialog
       title={`Attendance for ${memberName}`}
-      busy={change.isLoading}
+      busy={change.isPending}
       onClose={onClose}
     >
       <h2 className="text-lg font-semibold">{memberName}</h2>
@@ -104,7 +102,7 @@ export function MemberAttendanceModal({
           <Button
             variant="outline"
             className="ml-2"
-            onClick={() => history.refetch()}
+            onClick={() => history.refetch({ cancelRefetch: false })}
           >
             Retry
           </Button>
@@ -132,7 +130,7 @@ export function MemberAttendanceModal({
                 <Button
                   variant="outline"
                   className="ml-2"
-                  onClick={() => events.refetch()}
+                  onClick={() => events.refetch({ cancelRefetch: false })}
                 >
                   Retry events
                 </Button>
@@ -268,7 +266,7 @@ export function MemberAttendanceModal({
                 </Button>
                 <Button
                   variant="outline"
-                  disabled={change.isLoading}
+                  disabled={change.isPending}
                   onClick={() => {
                     setRemoving(null);
                     change.reset();
@@ -279,7 +277,7 @@ export function MemberAttendanceModal({
               </div>
             </div>
           )}
-          {change.isLoading && (
+          {change.isPending && (
             <p role="status" className="text-sm">
               Saving attendance and refreshing points…
             </p>
@@ -299,7 +297,7 @@ export function MemberAttendanceModal({
         fullWidth
         variant="outline"
         onClick={onClose}
-        disabled={change.isLoading}
+        disabled={change.isPending}
       >
         Close
       </Button>

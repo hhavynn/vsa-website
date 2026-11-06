@@ -17,8 +17,8 @@ const mockState: { events: ExternalEvent[] } = { events: [] };
 
 jest.mock('../../hooks/useExternalEvents', () => ({
   useAdminExternalEvents: () => ({ events: mockState.events, loading: false, refreshEvents: jest.fn() }),
-  useUpsertExternalEvent: () => ({ mutateAsync: (...args: unknown[]) => mockMutateAsync(...args), isLoading: false }),
-  useDeleteExternalEvent: () => ({ mutateAsync: (...args: unknown[]) => mockDeleteMutateAsync(...args), isLoading: false }),
+  useUpsertExternalEvent: () => ({ mutateAsync: (...args: unknown[]) => mockMutateAsync(...args), isPending: false }),
+  useDeleteExternalEvent: () => ({ mutateAsync: (...args: unknown[]) => mockDeleteMutateAsync(...args), isPending: false }),
 }));
 jest.mock('../../hooks/useUVSASchools', () => ({
   useAdminUVSASchools: () => ({ schools: [mockUci], loading: false, error: null }),

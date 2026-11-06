@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useQuery } from "react-query";
+import { useQuery } from "@tanstack/react-query";
 import { PageTitle } from "../components/common/PageTitle";
 import { DegradedModeBanner } from "../components/common/DegradedModeBanner";
 import { RevealOnScrollWrapper } from "../components/common/RevealOnScrollWrapper";
@@ -38,7 +38,7 @@ export function Home() {
     queryKey: ["home", "upcoming-events-section", today],
     queryFn: () => eventsRepository.getPublicUpcomingPreview(today, 4),
     staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: 1,
   });

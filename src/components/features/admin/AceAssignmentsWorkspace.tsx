@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { aceAssignmentsRepository, AceAssignmentDraftPatch } from '../../../data/repos/aceAssignments';
 import { AceParticipationReview } from './AceParticipationReview';
 import { AceEligibilityPanel } from './AceEligibilityPanel';
@@ -201,8 +201,8 @@ export function AceAssignmentsWorkspace() {
     wasAllLinked.current = allLinked;
   }, [allLinked, preflight]);
 
-  const refreshDrafts = () => queryClient.invalidateQueries(aceAssignmentDraftsKey(cycleId));
-  const refreshCycles = () => queryClient.invalidateQueries(ACE_ASSIGNMENT_CYCLES_KEY);
+  const refreshDrafts = () => queryClient.invalidateQueries({ queryKey: aceAssignmentDraftsKey(cycleId) });
+  const refreshCycles = () => queryClient.invalidateQueries({ queryKey: ACE_ASSIGNMENT_CYCLES_KEY });
 
   async function run(action: () => Promise<void>, failure: string) {
     setBusy(true);
@@ -417,9 +417,9 @@ export function AceAssignmentsWorkspace() {
       const result = await aceAssignmentsRepository.publishCycle(cycle.id);
       setConfirmPublish(false);
       await Promise.all([refreshCycles(), refreshDrafts()]);
-      await queryClient.invalidateQueries(ACE_NODE_REFS_KEY);
-      await queryClient.invalidateQueries(ACE_MEMBER_LINKS_QUERY_KEY);
-      await queryClient.invalidateQueries('ace-family-members');
+      await queryClient.invalidateQueries({ queryKey: ACE_NODE_REFS_KEY });
+      await queryClient.invalidateQueries({ queryKey: ACE_MEMBER_LINKS_QUERY_KEY });
+      await queryClient.invalidateQueries({ queryKey: ['ace-family-members'] });
       if (!result.alreadyPublished) {
         logAdminActivity({
           action: ACTIVITY_ACTIONS.aceCyclePublished,

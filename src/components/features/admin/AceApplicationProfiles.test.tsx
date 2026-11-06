@@ -4,7 +4,7 @@
  */
 
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '../../../context/ThemeContext';
 import { logAdminActivity } from '../../../data/repos/adminActivity';
@@ -90,7 +90,7 @@ function seed() {
 }
 
 function renderWorkspace() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   render(
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>

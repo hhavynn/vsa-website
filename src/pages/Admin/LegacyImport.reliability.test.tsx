@@ -3,7 +3,7 @@
 // shapes, through the page. Synthetic members only; no network.
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import toast from "react-hot-toast";
-import { QueryClient, QueryClientProvider } from "react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AdminImport from "./LegacyImport";
 import { supabaseMock } from "../../test-utils/supabaseMock";
 import { MemoryRouter } from "react-router-dom";

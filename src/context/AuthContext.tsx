@@ -1,5 +1,5 @@
 import { createContext, useCallback, useEffect, useRef, useState } from "react";
-import { useQueryClient } from "react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Session, User, AuthChangeEvent } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import { clearStaged } from "../lib/recoveryStagingStore";
@@ -96,10 +96,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (previousId !== null && expiredUserIdRef.current === null) {
           expiredUserIdRef.current = previousId;
           setSessionExpired(true);
-          queryClient.removeQueries({ inactive: true });
+          queryClient.removeQueries({ type: 'inactive' });
           // Even though the admin shell still observes it: whoever signs back
           // in is verified afresh rather than trusting a verdict from before.
-          queryClient.removeQueries(['admin-status']);
+          queryClient.removeQueries({ queryKey: ['admin-status'] });
         }
         return;
       }
@@ -107,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (expiredUserIdRef.current !== null) {
         // An account that signed in at the expiry prompt was turned away. Back
         // to waiting for a verified sign-in; the held page is untouched.
-        queryClient.removeQueries(['admin-status']);
+        queryClient.removeQueries({ queryKey: ['admin-status'] });
         return;
       }
       expiredUserIdRef.current = null;

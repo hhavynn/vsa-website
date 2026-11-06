@@ -5,7 +5,7 @@
 // Read-only; corrections happen in Members, Import and House Assignments.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { AttendanceReason, HOUSE_ROSTER_UNAVAILABLE, RosterMember, houseRosterRepository } from '../../../data/repos/houseRoster';
 import { ConfirmDialog } from '../../common/ConfirmDialog';
 import { HOUSE_PARENT_SHARE_APPROVED, HOUSE_PARENT_SHARE_FIELDS, houseParentShareCsv, houseParentShareFilename } from '../../../lib/houseParentShare';
@@ -55,7 +55,11 @@ function laDate(value: string | null | undefined) {
 }
 
 function MemberAttendance({ memberId, year }: { memberId: string; year: number }) {
-  const events = useQuery(['admin', 'house-member-attendance', memberId, year], () => houseRosterRepository.getMemberAttendance(memberId, year), { retry: false });
+  const events = useQuery({
+    queryKey: ['admin', 'house-member-attendance', memberId, year],
+    queryFn: () => houseRosterRepository.getMemberAttendance(memberId, year),
+    retry: false,
+  });
   if (events.isLoading) return <p className="text-xs text-text-muted" role="status">Loading events…</p>;
   if (events.isError || !events.data) return <p className="text-xs text-red-700 dark:text-red-300" role="alert">Events could not be loaded.</p>;
   if (events.data.length === 0) return <p className="text-xs text-text-muted">No VSA attendance this year.</p>;
@@ -76,7 +80,13 @@ function MemberAttendance({ memberId, year }: { memberId: string; year: number }
 }
 
 export function HouseRosterPanel({ houseProfileId, termId, onClose }: { houseProfileId: string; termId: string | null; onClose: () => void }) {
-  const roster = useQuery(['admin', 'house-roster', houseProfileId, termId], () => houseRosterRepository.getRoster(houseProfileId, termId), { retry: false, staleTime: 0, refetchOnWindowFocus: false });
+  const roster = useQuery({
+    queryKey: ['admin', 'house-roster', houseProfileId, termId],
+    queryFn: () => houseRosterRepository.getRoster(houseProfileId, termId),
+    retry: false,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+  });
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState<string | null>(null);
@@ -96,11 +106,14 @@ export function HouseRosterPanel({ houseProfileId, termId, onClose }: { housePro
   // The share copy follows the public Reveal boundary (published House
   // assignments, public_house_memberships): only members publicly in this
   // House today, never unrevealed or transferred-out members.
-  const revealed = useQuery(
-    ['admin', 'house-parent-share-revealed', roster.data?.house.academicYearStart],
-    () => houseMembershipsRepository.getPublicHousesByMemberId(roster.data!.house.academicYearStart, getLosAngelesDateOnly()),
-    { enabled: HOUSE_PARENT_SHARE_APPROVED && !!roster.data, retry: false, staleTime: 60 * 1000, refetchOnWindowFocus: false },
-  );
+  const revealed = useQuery({
+    queryKey: ['admin', 'house-parent-share-revealed', roster.data?.house.academicYearStart],
+    queryFn: () => houseMembershipsRepository.getPublicHousesByMemberId(roster.data!.house.academicYearStart, getLosAngelesDateOnly()),
+    enabled: HOUSE_PARENT_SHARE_APPROVED && !!roster.data,
+    retry: false,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
   const revealedIds = useMemo(() => {
     const ids = new Set<string>();
     if (!revealed.data || !roster.data) return ids;

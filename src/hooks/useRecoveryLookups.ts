@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { attendanceRecoveryRepository } from '../data/repos/attendanceRecovery';
 import { memberIdentityRepository } from '../data/repos/memberIdentity';
 import { identityImportEnabled } from '../lib/identityRollout';
@@ -17,7 +17,9 @@ const STALE = 60_000;
 export function useRecoveryLookups(findings: readonly RecoveryFinding[], eventId: string | null) {
   // Confirmed addresses, so a row that used a member's other email still finds them.
   const identity = identityImportEnabled();
-  const aliases = useQuery(['attendance-recovery', 'identity-emails'], () => memberIdentityRepository.loadIdentityEmails(), {
+  const aliases = useQuery({
+    queryKey: ['attendance-recovery', 'identity-emails'],
+    queryFn: () => memberIdentityRepository.loadIdentityEmails(),
     enabled: !!eventId && identity, staleTime: STALE,
   });
   const { ids, surnames, emails } = useMemo(() => {
@@ -44,16 +46,24 @@ export function useRecoveryLookups(findings: readonly RecoveryFinding[], eventId
   const enabled = !!eventId;
   // Findings whose event was deleted have no event attendance to check.
   const realEvent = enabled && eventId !== NO_EVENT_ID;
-  const byIds = useQuery(['attendance-recovery', 'lookup', eventId, 'ids', ids.join(',')], () => attendanceRecoveryRepository.getMembers(ids), {
+  const byIds = useQuery({
+    queryKey: ['attendance-recovery', 'lookup', eventId, 'ids', ids.join(',')],
+    queryFn: () => attendanceRecoveryRepository.getMembers(ids),
     enabled: enabled && ids.length > 0, staleTime: STALE,
   });
-  const bySurname = useQuery(['attendance-recovery', 'lookup', eventId, 'surnames', surnames.join(',')], () => attendanceRecoveryRepository.findMembersBySurnames(surnames), {
+  const bySurname = useQuery({
+    queryKey: ['attendance-recovery', 'lookup', eventId, 'surnames', surnames.join(',')],
+    queryFn: () => attendanceRecoveryRepository.findMembersBySurnames(surnames),
     enabled: enabled && surnames.length > 0, staleTime: STALE,
   });
-  const byEmail = useQuery(['attendance-recovery', 'lookup', eventId, 'emails', emails.join(',')], () => attendanceRecoveryRepository.getMembersByEmails(emails), {
+  const byEmail = useQuery({
+    queryKey: ['attendance-recovery', 'lookup', eventId, 'emails', emails.join(',')],
+    queryFn: () => attendanceRecoveryRepository.getMembersByEmails(emails),
     enabled: enabled && emails.length > 0, staleTime: STALE,
   });
-  const attended = useQuery(['attendance-recovery', 'lookup', eventId, 'attended'], () => attendanceRecoveryRepository.getEventAttendanceMemberIds(eventId as string), {
+  const attended = useQuery({
+    queryKey: ['attendance-recovery', 'lookup', eventId, 'attended'],
+    queryFn: () => attendanceRecoveryRepository.getEventAttendanceMemberIds(eventId as string),
     enabled: realEvent, staleTime: STALE,
   });
 
@@ -73,11 +83,11 @@ export function useRecoveryLookups(findings: readonly RecoveryFinding[], eventId
   );
 
   const refetch = () => {
-    if (identity) void aliases.refetch();
-    void byIds.refetch();
-    void bySurname.refetch();
-    void byEmail.refetch();
-    if (realEvent) void attended.refetch();
+    if (identity) void aliases.refetch({ cancelRefetch: false });
+    void byIds.refetch({ cancelRefetch: false });
+    void bySurname.refetch({ cancelRefetch: false });
+    void byEmail.refetch({ cancelRefetch: false });
+    if (realEvent) void attended.refetch({ cancelRefetch: false });
   };
 
   return { lookup, loading: enabled && !ready && error == null, error, refetch };

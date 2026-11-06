@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import AppRoutes from "./routes";
 import { ThemeProvider } from "./context/ThemeContext";
@@ -9,16 +9,10 @@ import { AnalyticsConsentBanner } from "./components/common/AnalyticsConsentBann
 import { Toaster } from "react-hot-toast";
 import { TOAST_OPTIONS } from "./lib/toastOptions";
 import { MotionConfig } from "framer-motion";
+import { createQueryClient, listenForWindowFocus } from "./lib/queryClient";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000, // 5 minutes default
-      cacheTime: 10 * 60 * 1000,
-    },
-  },
-});
+const queryClient = createQueryClient();
+listenForWindowFocus();
 
 function App() {
   return (

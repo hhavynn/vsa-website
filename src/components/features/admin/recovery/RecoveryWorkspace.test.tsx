@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RecoveryWorkspace } from './RecoveryWorkspace';
 import { attendanceRecoveryRepository, RecoverRequest } from '../../../../data/repos/attendanceRecovery';
 import { DatabaseError, NetworkError } from '../../../../data/errors';
@@ -241,7 +241,7 @@ it('applies a batch of valid recoveries through the per-row writer with frozen r
   expect(within(dialog).getByText(/Applied all 3 changes\. 20 points awarded\. 1 member created\./)).toBeInTheDocument();
   expect(within(dialog).getByText(/cached total matches their attendance/)).toBeInTheDocument();
   expect(toolbar()).toHaveTextContent('0 staged');
-  const keys = invalidate.mock.calls.map(([key]) => JSON.stringify(key));
+  const keys = invalidate.mock.calls.map(([filters]) => JSON.stringify(filters?.queryKey));
   expect(keys.filter((k) => k === '["attendance-recovery"]')).toHaveLength(1);
   expect(keys).toEqual(expect.arrayContaining(['["individual-leaderboard"]', '["house-detail","standings"]']));
 });

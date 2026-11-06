@@ -13,7 +13,7 @@
 
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { axe } from 'jest-axe';
 import { formatAxeViolations, withoutReviewedFalsePositives } from '../lib/axeRegressionPolicy';
 import { ThemeProvider } from '../context/ThemeContext';
@@ -58,7 +58,7 @@ function mountRoute(path: string, theme: Theme) {
   setHtmlTheme(theme);
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { retry: false, cacheTime: 0 },
+      queries: { retry: false, gcTime: 0 },
     },
   });
 

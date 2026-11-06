@@ -8,7 +8,7 @@
 
 import { ReactNode, useContext } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider, useQuery } from 'react-query';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { AuthContext } from './AuthContext';
 import { AuthProvider } from './AuthContext';
 import { supabaseMock, AuthSession } from '../test-utils/supabaseMock';
@@ -33,7 +33,7 @@ function Probe() {
   const value = useContext(AuthContext);
   if (!value) throw new Error('AuthContext missing');
   auth = value;
-  useQuery(['on-screen'], () => activeFetches(), { staleTime: Infinity });
+  useQuery({ queryKey: ['on-screen'], queryFn: () => activeFetches(), staleTime: Infinity });
   return <div data-testid="user">{value.user?.id ?? 'none'}</div>;
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useQuery, useQueryClient } from 'react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getVerifiedLegacyHouseYears } from '../../../data/legacyHouseArchive';
 import { ADMIN_HOUSE_EVENT_LIMIT, houseEventsRepository, HouseEventFormData } from '../../../data/repos/houseEvents';
 import { useAcademicTerms } from '../../../hooks/useAcademicTerms';
@@ -199,7 +199,7 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
   const formRef = useRef<HTMLFormElement>(null);
 
   // Both entry points (Admin Events and this tab) read the same key.
-  const invalidateEvents = () => queryClient.invalidateQueries(['admin', 'house-events']);
+  const invalidateEvents = () => queryClient.invalidateQueries({ queryKey: ['admin', 'house-events'] });
 
   function loadForm(next: HouseEventDraft, event: HouseEvent | null) {
     setDraft(next);
@@ -444,7 +444,7 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
         today={today}
         loading={eventsLoading || profilesLoading}
         error={eventsError || !!profilesError}
-        onRetry={() => { void refetch(); void refetchProfiles(); }}
+        onRetry={() => { void refetch({ cancelRefetch: false }); void refetchProfiles({ cancelRefetch: false }); }}
         truncated={events.length >= ADMIN_HOUSE_EVENT_LIMIT}
       />
       <form ref={formRef} onSubmit={handleSubmit} aria-label="House event form" className="scrapbook-paper p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
@@ -621,7 +621,7 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
         isLoading={eventsLoading}
         isError={eventsError}
         truncated={events.length >= ADMIN_HOUSE_EVENT_LIMIT}
-        onRetry={() => refetch()}
+        onRetry={() => refetch({ cancelRefetch: false })}
         onEdit={editEvent}
         onDuplicate={duplicateEvent}
         onDelete={setDeletingEvent}

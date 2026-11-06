@@ -1,4 +1,4 @@
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { cabinetYearsRepository } from '../data/repos/cabinetYears';
 import { CabinetYear } from '../types';
 
@@ -12,7 +12,7 @@ export function useCabinetYears() {
     queryKey: ['cabinet-years'],
     queryFn: () => cabinetYearsRepository.getYears(),
     staleTime: 10 * 60 * 1000,
-    cacheTime: 20 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
   });
 
   return { cabinetYears, loading, error, refreshCabinetYears };

@@ -2,7 +2,7 @@
 // Admin → Import is the Stage A importer and never reads the identity tables
 // or calls the new import function. Synthetic members only.
 import { fireEvent, render, screen } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AdminImport from "./Import";
 import { supabaseMock } from "../../test-utils/supabaseMock";
 import { MemoryRouter } from "react-router-dom";

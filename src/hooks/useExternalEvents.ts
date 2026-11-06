@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from 'react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { externalEventsRepository, ExternalEventFilters } from '../data/repos/externalEvents';
 import { ExternalEvent } from '../types';
 
@@ -36,8 +36,8 @@ export function useUpsertExternalEvent() {
   return useMutation({
     mutationFn: (event: Partial<ExternalEvent>) => externalEventsRepository.upsertEvent(event),
     onSuccess: () => {
-      queryClient.invalidateQueries(['external-events']);
-      queryClient.invalidateQueries(['admin-external-events']);
+      queryClient.invalidateQueries({ queryKey: ['external-events'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-external-events'] });
     },
   });
 }
@@ -48,8 +48,8 @@ export function useDeleteExternalEvent() {
   return useMutation({
     mutationFn: (id: string) => externalEventsRepository.deleteEvent(id),
     onSuccess: () => {
-      queryClient.invalidateQueries(['external-events']);
-      queryClient.invalidateQueries(['admin-external-events']);
+      queryClient.invalidateQueries({ queryKey: ['external-events'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-external-events'] });
     },
   });
 }

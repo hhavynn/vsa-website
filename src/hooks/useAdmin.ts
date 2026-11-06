@@ -1,7 +1,8 @@
 // NOT a security boundary. This hook controls what renders in the browser (UX gate).
 // Real enforcement is Postgres RLS on the underlying tables — see docs/auth-model.md.
 // Never rely on this hook alone to protect sensitive data or API access.
-import { useQuery } from 'react-query';
+import { useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { authRepository } from '../data/repos/auth';
 import { useAuth } from './useAuth';
 
@@ -28,19 +29,20 @@ export function useAdmin() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     ...adminStatusQuery(userId ?? ''),
     enabled: userId !== null,
     staleTime: ADMIN_STATUS_STALE_MS,
-    cacheTime: ADMIN_STATUS_STALE_MS,
+    gcTime: ADMIN_STATUS_STALE_MS,
     refetchOnWindowFocus: true,
     // Failing closed needs no retry, and a retry loop during an outage only
     // adds traffic (see the db.retry note in lib/supabase.ts).
     retry: false,
-    onError: (error) => {
-      console.error('Error checking admin status:', error);
-    },
   });
+
+  useEffect(() => {
+    if (error) console.error('Error checking admin status:', error);
+  }, [error]);
 
   return {
     // Fail closed: only an explicit `true` for the signed-in user counts. No

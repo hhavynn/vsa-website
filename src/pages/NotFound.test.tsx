@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider, notifyManager } from 'react-query';
+import { QueryClient, QueryClientProvider, notifyManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '../context/ThemeContext';
 import { AuthProvider } from '../context/AuthContext';
@@ -36,7 +36,7 @@ afterEach(async () => {
 });
 
 function renderNotFound(path: string) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[path]}>
@@ -113,7 +113,7 @@ describe('NotFound recovery surface', () => {
 
 describe('NotFound inside the real app routes', () => {
   function renderApp(path: string) {
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
     return render(
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
