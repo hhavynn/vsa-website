@@ -38,6 +38,22 @@ describe('useAdminForm + AdminFormShell', () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
+  it('lets an officer jump from a validation summary to the exact invalid field', async () => {
+    const onSubmit = jest.fn();
+    render(<Demo onSubmit={onSubmit} />);
+    const name = screen.getByLabelText(/name/i);
+    const email = screen.getByLabelText(/email/i);
+    await userEvent.type(email, 'not-an-email');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(name).toHaveFocus());
+    const jumpToEmail = screen.getByRole('button', { name: /Go to email field: Enter a valid email/i });
+    await userEvent.click(jumpToEmail);
+    expect(email).toHaveFocus();
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByText('There are 2 problems to fix:')).toBeInTheDocument();
+  });
+
   it('guards unsaved edits, then clears the guard after a successful save', async () => {
     const onSubmit = jest.fn().mockResolvedValue(undefined);
     render(<Demo onSubmit={onSubmit} />);
