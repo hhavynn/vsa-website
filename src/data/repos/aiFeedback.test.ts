@@ -94,9 +94,41 @@ describe('aiFeedbackRepository query and write boundaries (#291)', () => {
     });
   });
 
+  it('requires a confirmed matching row before accepting an admin note save (#237)', async () => {
+    for (const returned of [[], null, [{ id: 'other-feedback' }]]) {
+      supabaseMock.queueResult('ai_feedback', { data: returned, error: null });
+      await expect(aiFeedbackRepository.updateAdminNotes('feedback-1', 'Needs knowledge review'))
+        .rejects.toMatchObject({
+          name: 'DatabaseError',
+          message: 'Failed to update admin notes: no matching row was updated',
+        });
+    }
+    const queries = supabaseMock.queriesFor('ai_feedback');
+    expect(queries).toHaveLength(3);
+    for (const query of queries) {
+      expect(query.calls).toContainEqual({ method: 'eq', args: ['id', 'feedback-1'] });
+      expect(query.calls).toContainEqual({ method: 'select', args: ['id'] });
+      expect(query.calls.find((call) => call.method === 'update')?.args[0]).toEqual({
+        admin_notes: 'Needs knowledge review',
+      });
+    }
+  });
+
+  it('preserves an explicit RLS error instead of confirming an admin note save', async () => {
+    supabaseMock.queueResult('ai_feedback', {
+      data: null,
+      error: postgrestError('permission denied', '42501'),
+    });
+    await expect(aiFeedbackRepository.updateAdminNotes('feedback-1', 'Still investigating'))
+      .rejects.toMatchObject({
+        name: 'DatabaseError',
+        message: 'Failed to update admin notes: permission denied',
+      });
+  });
+
   it('scopes resolution and notes updates to the selected row and trims notes', async () => {
     supabaseMock.queueResult('ai_feedback', { data: [{ id: 'feedback-1' }], error: null });
-    supabaseMock.queueResult('ai_feedback', { data: null, error: null });
+    supabaseMock.queueResult('ai_feedback', { data: [{ id: 'feedback-1' }], error: null });
     await aiFeedbackRepository.markResolved('feedback-1');
     await aiFeedbackRepository.updateAdminNotes('feedback-1', '  Reviewed by cabinet  ');
     const queries = supabaseMock.queriesFor('ai_feedback');

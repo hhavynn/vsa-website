@@ -36,7 +36,7 @@ describe('related link sets', () => {
 
   it('current-year House pages link the leaderboard, the points explainer and the archive', () => {
     expect(targets(houseRelatedLinks('current'))).toEqual([
-      '/leaderboard?view=houses',
+      '/leaderboard',
       `/points#${POINTS_HELP_ANCHOR}`,
       '/house/archive',
     ]);
@@ -46,8 +46,24 @@ describe('related link sets', () => {
     expect(targets(houseRelatedLinks('archive'))).toEqual([
       '/house',
       '/house/archive',
-      '/leaderboard?view=houses',
+      '/leaderboard',
     ]);
+  });
+
+  it('never advertises private live House standings through public related links', () => {
+    for (const mode of ['current', 'archive'] as const) {
+      const links = houseRelatedLinks(mode);
+      const leaderboard = links.find((link) => link.to === '/leaderboard');
+      expect(leaderboard).toMatchObject({
+        label: 'Individual leaderboard',
+        description: 'See published individual VSA points and member rankings.',
+      });
+      expect(JSON.stringify(links)).not.toMatch(/live standings|house standings|view=houses/i);
+    }
+    expect(houseRelatedLinks('archive')[0]).toMatchObject({
+      to: '/house',
+      description: "This year’s House profiles, parents and events.",
+    });
   });
 
   it('program pages compare programs via the Get Involved hub and carry no application URL', () => {

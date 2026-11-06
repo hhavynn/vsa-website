@@ -70,6 +70,46 @@ describe('buildRevealReadiness', () => {
     expect(readiness.items.find((item) => item.id === 'applications')?.detail).toMatch(/still open/);
   });
 
+  it.each([
+    ['invalid opening date', link({ open_at: 'not-a-date' })],
+    ['invalid closing date', link({ due_at: 'not-a-date' })],
+    ['closing before opening', link({ open_at: '2026-10-26T07:00:00Z', due_at: '2026-10-25T07:00:00Z' })],
+    ['zero-length window', link({ open_at: '2026-10-25T07:00:00Z', due_at: '2026-10-25T07:00:00Z' })],
+  ])('blocks Reveal for an enabled House application with %s', (_name, broken) => {
+    const readiness = buildRevealReadiness(input({ applicationLinks: [broken] }));
+    expect(readiness.items.find((item) => item.id === 'applications')).toMatchObject({
+      state: 'unknown',
+    });
+    expect(readiness.overall).toBe('unknown');
+    expect(readiness.canReveal).toBe(false);
+  });
+
+  it('does not hide a malformed House application behind another valid window', () => {
+    const readiness = buildRevealReadiness(input({
+      applicationLinks: [
+        link({ id: 'valid', due_at: '2026-11-10T07:59:00Z' }),
+        link({ id: 'invalid', due_at: 'bad-deadline' }),
+      ],
+    }));
+    expect(readiness.items.find((item) => item.id === 'applications')).toMatchObject({
+      state: 'unknown',
+    });
+    expect(readiness.canReveal).toBe(false);
+  });
+
+  it('does not block Reveal for a malformed disabled or unrelated application window', () => {
+    const readiness = buildRevealReadiness(input({
+      applicationLinks: [
+        link({ id: 'disabled', is_enabled: false, open_at: 'bad-start' }),
+        link({ id: 'other', application_key: 'ace_application', due_at: 'bad-deadline' }),
+      ],
+    }));
+    expect(readiness.items.find((item) => item.id === 'applications')).toMatchObject({
+      state: 'complete',
+    });
+    expect(readiness.canReveal).toBe(true);
+  });
+
   it('treats a manual batch\'s unlinked rows as review (they are skipped at Reveal), and a non-gated batch as complete', () => {
     const readiness = buildRevealReadiness(input({
       batch: { academic_year_start: 2026, status: 'locked', assignment_method: 'manual', effective_start_date: '2026-11-08' },

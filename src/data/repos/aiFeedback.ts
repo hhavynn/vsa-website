@@ -116,13 +116,19 @@ export class AiFeedbackRepository {
 
   async updateAdminNotes(id: string, notes: string): Promise<void> {
     return withErrorHandling(async () => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('ai_feedback')
         .update({ admin_notes: notes.trim() || null })
-        .eq('id', id);
+        .eq('id', id)
+        .select('id');
 
       if (error) {
         throw new DatabaseError(`Failed to update admin notes: ${error.message}`);
+      }
+      // An RLS-denied update or stale/deleted feedback ID can succeed with
+      // zero affected rows. Keep the draft dirty and retryable in the UI.
+      if (!data?.some((row) => row.id === id)) {
+        throw new DatabaseError('Failed to update admin notes: no matching row was updated');
       }
     }, 'Failed to update admin notes');
   }

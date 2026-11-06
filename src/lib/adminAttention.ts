@@ -12,6 +12,7 @@
 // items, which that page derives from ~12 separate queries. Counting either here
 // would reintroduce the fan-out #503/#505 removed, for a cosmetic number.
 import { isSummerBreak } from '../utils/seasonalState';
+import { addDaysToDateOnly, getLosAngelesDateOnly } from '../utils/losAngelesDate';
 import {
   CLOSING_SOON_DAYS,
   OPENING_SOON_DAYS,
@@ -24,7 +25,19 @@ import { pluralize } from './operationalStatus';
 
 /** How far ahead an unpublished draft event is worth a nudge. */
 export const DRAFT_EVENT_HORIZON_DAYS = 14;
-const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Events.date is a date-only value. Never parse YYYY-MM-DD as UTC midnight:
+ * before 5 PM Pacific, that instant is still the previous local day.
+ * Accept ISO instants defensively if a caller supplies them instead.
+ */
+function eventDayInSanDiego(value: string): string | null {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const parsed = new Date(`${value}T12:00:00Z`);
+    return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value ? value : null;
+  }
+  const millis = Date.parse(value);
+  return Number.isFinite(millis) ? getLosAngelesDateOnly(new Date(millis)) : null;
+}
 
 export const ATTENTION_LINKS = {
   applicationsClosing: '/admin/applications?filter=open',
@@ -184,10 +197,11 @@ export function buildAttentionQueue(signals: AttentionSignals, now: Date = new D
 
   if (signals.draftEventDates === null) unchecked.push('events');
   else {
-    const horizon = now.getTime() + DRAFT_EVENT_HORIZON_DAYS * DAY_MS;
+    const today = getLosAngelesDateOnly(now);
+    const lastDay = addDaysToDateOnly(today, DRAFT_EVENT_HORIZON_DAYS);
     const approaching = signals.draftEventDates.filter((date) => {
-      const at = Date.parse(date);
-      return !Number.isNaN(at) && at >= now.getTime() && at <= horizon;
+      const day = eventDayInSanDiego(date);
+      return day !== null && day >= today && day <= lastDay;
     }).length;
     const item = countItem(
       'draft-events',

@@ -44,12 +44,20 @@ function createMessageId() {
 function getSessionId() {
   if (typeof window === 'undefined') return createMessageId();
 
-  const existing = window.localStorage.getItem(SESSION_STORAGE_KEY);
-  if (existing) return existing;
+  // Some browsers deny Storage reads/writes (privacy settings, blocked
+  // cookies, sandboxed embeds). Ask VSA must still work in this tab.
+  try {
+    const existing = window.localStorage.getItem(SESSION_STORAGE_KEY);
+    if (existing) return existing;
 
-  const next = createMessageId();
-  window.localStorage.setItem(SESSION_STORAGE_KEY, next);
-  return next;
+    const next = createMessageId();
+    window.localStorage.setItem(SESSION_STORAGE_KEY, next);
+    return next;
+  } catch {
+    // An ephemeral ID still enables in-tab conversation and server quotas.
+    // Do not persist it elsewhere or bypass any server-side rate limit.
+    return createMessageId();
+  }
 }
 
 export function useVsaAiConversation(currentPage: string) {
