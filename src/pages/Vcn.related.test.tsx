@@ -1,12 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from 'react-query';
 import { VCN } from './Vcn';
 import type { ApplicationKey, ApplicationStatus, PublicApplicationLink } from '../types';
 
 let mockLinks: PublicApplicationLink[] = [];
 
 jest.mock('../hooks/useApplicationLinks', () => ({
-  usePublicApplicationLinks: () => ({ links: mockLinks, loading: false, error: null }),
+  usePublicApplicationLinks: () => ({ links: mockLinks, loading: false, error: null, refetch: jest.fn() }),
 }));
 
 // Hero photography is covered by ProgramPhotoStack.test.tsx.
@@ -37,9 +38,11 @@ function link(key: ApplicationKey, status: ApplicationStatus, targetUrl: string 
 
 const renderPage = () =>
   render(
-    <MemoryRouter>
-      <VCN />
-    </MemoryRouter>,
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <MemoryRouter>
+        <VCN />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 
 describe('VCN overview related links', () => {
