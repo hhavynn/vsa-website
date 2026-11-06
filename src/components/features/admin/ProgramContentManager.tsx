@@ -1,5 +1,7 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { useServerSeededDraft } from '../../../hooks/useServerSeededDraft';
+import { useDiscardConfirm } from '../../../hooks/useDiscardConfirm';
+import { useUnsavedChangesGuard } from '../../../hooks/useUnsavedChangesGuard';
 import toast from 'react-hot-toast';
 import { programContentRepository } from '../../../data/repos/programContent';
 import { useAllProgramContent } from '../../../hooks/useProgramContent';
@@ -197,12 +199,30 @@ export function ProgramContentManager() {
     draft: form,
     setDraft: setForm,
     markSaved,
+    isDirty,
   } = useServerSeededDraft<FormState>(
     `${selectedTarget.page_key}:${selectedTarget.section_key}`,
     formFromContent(selectedContent, selectedTarget),
   );
   const [saving, setSaving] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  useUnsavedChangesGuard(isDirty, saving);
+  const { requestDiscard, discardDialog } = useDiscardConfirm();
+
+  function switchTarget(pageKey: ProgramPageKey, label: string) {
+    if (saving || pageKey === selectedKey) return;
+    requestDiscard(
+      isDirty,
+      {
+        title: 'Discard your program edits?',
+        description: `You have unsaved changes to ${selectedTarget.label}. Switching to ${label} discards them.`,
+      },
+      () => {
+        setPreviewOpen(false);
+        setSelectedKey(pageKey);
+      },
+    );
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -265,7 +285,9 @@ export function ProgramContentManager() {
                 <button
                   key={target.page_key}
                   type="button"
-                  onClick={() => setSelectedKey(target.page_key)}
+                  onClick={() => switchTarget(target.page_key, target.label)}
+                  disabled={saving}
+                  aria-current={active ? 'true' : undefined}
                   className="block w-full border-b px-5 py-4 text-left transition-opacity hover:opacity-80 last:border-b-0"
                   style={{
                     borderColor: 'var(--color-border)',
@@ -399,6 +421,7 @@ export function ProgramContentManager() {
           </form>
         </div>
       )}
+      {discardDialog}
     </section>
   );
 }

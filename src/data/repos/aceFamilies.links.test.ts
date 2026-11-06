@@ -143,6 +143,32 @@ describe('complete admin ACE node references (#291)', () => {
     expect(supabaseMock.queriesFor('ace_family_members')).toHaveLength(1);
   });
 
+  it('rejects an overlapping second page instead of duplicating a selectable Big', async () => {
+    supabaseMock.queueResult('ace_family_members', {
+      data: Array.from({ length: 1000 }, (_, i) => row(i)), error: null,
+    });
+    supabaseMock.queueResult('ace_family_members', { data: [row(999), row(1000)], error: null });
+    await expect(aceFamiliesRepository.getAllNodeRefs()).rejects.toThrow(/pages are inconsistent/);
+    expect(supabaseMock.queriesFor('ace_family_members')).toHaveLength(2);
+  });
+
+  it('rejects an out-of-order or malformed Big node rather than returning an incomplete index', async () => {
+    for (const badPage of [
+      [row(2), row(1)],
+      [{ ...row(1), family_id: '' }],
+      [{ ...row(1), name: '' }],
+      [{ ...row(1), id: '' }],
+    ]) {
+      supabaseMock.queueResult('ace_family_members', { data: badPage, error: null });
+      await expect(aceFamiliesRepository.getAllNodeRefs()).rejects.toThrow(/pages are inconsistent/);
+    }
+  });
+
+  it('does not interpret a null-successful response as an empty ACE tree', async () => {
+    supabaseMock.queueResult('ace_family_members', { data: null, error: null });
+    await expect(aceFamiliesRepository.getAllNodeRefs()).rejects.toThrow(/incomplete page/);
+  });
+
   it('rejects the full read if the second admin node page fails', async () => {
     supabaseMock.queueResult('ace_family_members', {
       data: Array.from({ length: 1000 }, (_, i) => row(i)), error: null,

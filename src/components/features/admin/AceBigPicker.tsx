@@ -1,6 +1,7 @@
 import { useId, useMemo, useState } from 'react';
 import { AceNodeRef, BigLoad } from '../../../lib/aceAssignments';
 import { normalizeMemberName } from '../../../lib/memberLinkMatching';
+import { searchAceBigNodes } from '../../../lib/aceBigSearch';
 
 interface AceBigPickerProps {
   value: string | null;
@@ -34,14 +35,10 @@ export function AceBigPicker({ value, nodes, loadFor, onChange, disabled = false
   const [term, setTerm] = useState('');
   const selected = useMemo(() => nodes.find((node) => node.id === value) ?? null, [nodes, value]);
 
-  const results = useMemo(() => {
-    const needle = normalizeMemberName(term);
-    if (needle.length < 2) return [];
-    return nodes
-      .filter((node) => normalizeMemberName(`${node.name} ${node.familyName ?? ''}`).includes(needle))
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .slice(0, MAX_RESULTS);
-  }, [nodes, term]);
+  const { matches: results, total } = useMemo(
+    () => searchAceBigNodes(nodes, term, MAX_RESULTS),
+    [nodes, term],
+  );
 
   const choose = (bigId: string | null) => {
     onChange(bigId);
@@ -108,7 +105,7 @@ export function AceBigPicker({ value, nodes, loadFor, onChange, disabled = false
         autoComplete="off"
         className="block w-full max-w-xs rounded border border-[var(--color-border)] bg-[var(--color-surface2)] px-2.5 py-1.5 text-xs text-[var(--color-text)] placeholder-[var(--color-text3)] focus:border-[var(--brand)] focus:outline-none focus:ring-1 focus:ring-[var(--brand)]"
       />
-      {term.trim().length >= 2 && (
+      {normalizeMemberName(term).length >= 2 && (
         <div className="mt-1 max-w-xs rounded border border-[var(--color-border)] bg-[var(--color-surface)]">
           {results.length === 0 ? (
             <p className="px-2.5 py-1.5 text-[11px] text-[var(--color-text3)]">No ACE members found.</p>
@@ -129,6 +126,11 @@ export function AceBigPicker({ value, nodes, loadFor, onChange, disabled = false
             </ul>
           )}
         </div>
+      )}
+      {total > MAX_RESULTS && (
+        <p role="status" className="mt-1 max-w-xs text-[11px] text-[var(--color-text3)]">
+          Showing {MAX_RESULTS} of {total} matching Big nodes. Add a name or family to narrow the list.
+        </p>
       )}
       <button
         type="button"

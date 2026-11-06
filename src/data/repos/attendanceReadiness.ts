@@ -83,7 +83,13 @@ async function readSelectedAttendance(memberIds: readonly string[], events: read
           .order('event_id',{ascending:true})
           .range(from,from+499);
         if(error)throw error;
-        const page=(data??[]) as Array<{member_id:string;event_id:string}>;
+        // A successful list read must return an array, even if it is empty.
+        // Treating null as [] could silently drop every remaining attendance
+        // credit and falsely label an ACE applicant Short.
+        if (!Array.isArray(data) || data.length > 500) {
+          throw new ValidationError('ACE attendance returned an incomplete page. Retry the eligibility check.');
+        }
+        const page=data as Array<{member_id:string;event_id:string}>;
         for(const row of page) {
           if(!memberSet.has(row.member_id)||!eventSet.has(row.event_id))throw new Error('Attendance returned a row outside approved scope');
           const prior=records.get(row.member_id)??new Set<string>();

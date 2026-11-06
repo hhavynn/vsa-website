@@ -12,6 +12,7 @@ import {
   selectBulkLittleLinks,
 } from './aceAssignments';
 import { buildMemberNameIndex, toMemberOption } from './memberLinkMatching';
+import { searchAceBigNodes } from './aceBigSearch';
 import type { AceAssignmentDraft } from '../types';
 
 const draft = (id: string, name: string, over: Partial<AceAssignmentDraft> = {}): AceAssignmentDraft => ({
@@ -56,6 +57,40 @@ const index = buildMemberNameIndex([
 ]);
 
 const codes = (list: ReturnType<typeof computePreflight>['issues']) => list.map((i) => i.code);
+
+describe('ACE Big picker search (#647)', () => {
+  it('prioritizes an exact full name ahead of the first eight partial matches', () => {
+    const partials = Array.from({ length: 12 }, (_, i) => node(`partial-${i}`, `Avery Nguyen ${String(i).padStart(2, '0')}`));
+    const exact = node('canonical-exact', 'Avery Nguyen', { familyName: 'Night Fam' });
+    const result = searchAceBigNodes([...partials, exact], 'Avery Nguyen');
+    expect(result.total).toBe(13);
+    expect(result.matches).toHaveLength(8);
+    expect(result.matches[0].id).toBe('canonical-exact');
+    expect(result.matches.map((candidate) => candidate.id)).not.toContain('partial-9');
+  });
+
+  it('retains duplicate full-name Big nodes as distinct candidates and breaks ties by family and node ID', () => {
+    const candidates = [
+      node('id-2', 'Emily Nguyen', { familyName: 'Alpha' }),
+      node('id-3', 'Emily Nguyen', { familyName: 'Beta' }),
+      node('id-1', 'Emily Nguyen', { familyName: 'Alpha' }),
+    ];
+    const result = searchAceBigNodes(candidates, 'emily nguyen');
+    expect(result.total).toBe(3);
+    expect(result.matches.map((person) => person.id)).toEqual(['id-1', 'id-2', 'id-3']);
+  });
+
+  it('can search by family and reports every hidden candidate without loading the whole list in the UI', () => {
+    const list = Array.from({ length: 15 }, (_, i) =>
+      node(`member-${i}`, `Person ${String(i).padStart(2, '0')}`, { familyName: 'Night Fam' }));
+    const result = searchAceBigNodes(list, 'night');
+    expect(result.total).toBe(15);
+    expect(result.matches).toHaveLength(8);
+    expect(result.matches.every((person) => person.familyName === 'Night Fam')).toBe(true);
+    expect(searchAceBigNodes(list, 'n').matches).toEqual([]);
+    expect(searchAceBigNodes(list, 'night', 0)).toEqual({ matches: [], total: 15 });
+  });
+});
 
 describe('computePreflight', () => {
   it('counts Littles, links, and assignments', () => {

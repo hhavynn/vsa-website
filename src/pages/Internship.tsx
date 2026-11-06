@@ -9,7 +9,7 @@ import { useMemberAvatars } from '../hooks/useMemberAvatars';
 import { resolveMemberPhoto } from '../lib/memberPhotos';
 import { useProgramContent } from '../hooks/useProgramContent';
 import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
-import { getSupabaseImageUrl } from '../lib/supabaseImages';
+import { OptimizedImage } from '../components/common/OptimizedImage';
 
 const pillars = [
   { title: 'Social', desc: 'Build lasting friendships with fellow interns and cabinet. Bond through GBMs, aftersocials, externals, and VSA events throughout the year.' },
@@ -70,11 +70,19 @@ function resolveInternImageUrl(image?: string | null) {
   return image.startsWith('http') || image.startsWith('data:') || image.startsWith('/') ? image : `${publicUrl}/images/cabinet/${image}`;
 }
 
-function InternCard({ intern }: { intern: CabinetIntern }) {
+export function InternCard({ intern }: { intern: CabinetIntern }) {
   const imageSize = 360;
   const memberAvatars = useMemberAvatars();
   const imageUrl = resolveInternImageUrl(
     resolveMemberPhoto(memberAvatars, intern.member_id, intern.thumbnail_url || intern.image_url),
+  );
+
+  const initials = (
+    <div className="grid h-full w-full place-items-center" aria-hidden="true">
+      <span className="font-serif text-[34px]" style={{ color: 'var(--color-text3)' }}>
+        {internInitials(intern.name)}
+      </span>
+    </div>
   );
 
   return (
@@ -83,28 +91,18 @@ function InternCard({ intern }: { intern: CabinetIntern }) {
         className="aspect-[4/5] overflow-hidden rounded"
         style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
       >
-        {imageUrl ? (
-          <img
-            src={getSupabaseImageUrl(imageUrl, {
-              width: imageSize,
-              height: Math.round(imageSize * 1.25),
-              resize: 'cover',
-              quality: 75,
-            })}
-            alt={intern.name}
-            width={imageSize}
-            height={Math.round(imageSize * 1.25)}
-            loading="lazy"
-            decoding="async"
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="grid h-full w-full place-items-center">
-            <span className="font-serif text-[34px]" style={{ color: 'var(--color-text3)' }}>
-              {internInitials(intern.name)}
-            </span>
-          </div>
-        )}
+        <OptimizedImage
+          src={imageUrl}
+          alt={intern.name}
+          width={imageSize}
+          height={Math.round(imageSize * 1.25)}
+          widths={[180, 360, 720]}
+          sizes="(min-width: 1280px) 22vw, (min-width: 1024px) 30vw, (min-width: 640px) 45vw, 90vw"
+          resize="cover"
+          quality={75}
+          className="h-full w-full object-cover"
+          fallback={initials}
+        />
       </div>
       <div className="mt-3 px-1">
         <h3 className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{intern.name}</h3>

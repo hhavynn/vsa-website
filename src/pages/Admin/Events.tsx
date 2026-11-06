@@ -15,6 +15,7 @@ import { supabase } from '../../lib/supabase';
 import { AcademicTerm, Event } from '../../types';
 import { PageTitle } from '../../components/common/PageTitle';
 import { ImageDropzone } from '../../components/features/admin/ImageDropzone';
+import { AdminEventThumbnail } from '../../components/features/admin/AdminEventThumbnail';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
 import { BulkActionBar, RowCheckbox, bulkBtnCls } from '../../components/features/admin/ops/BulkActionBar';
@@ -782,8 +783,8 @@ export default function AdminEvents() {
       <label className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center sm:-ml-2.5 sm:-mt-2.5">
         <RowCheckbox checked={selection.isSelected(event.id)} onChange={() => selection.toggle(event.id)} label={`Select ${event.name}`} />
       </label>
-      {event.image_url && (
-        <img src={event.image_url} alt={event.name} className="h-40 w-full shrink-0 rounded border object-cover sm:h-16 sm:w-16" style={{ borderColor: 'var(--color-border)' }} />
+      {(event.thumbnail_url || event.image_url) && (
+        <AdminEventThumbnail thumbnailUrl={event.thumbnail_url} imageUrl={event.image_url} name={event.name} />
       )}
       <div className="min-w-0 flex-1">
         <p className="truncate font-sans text-base font-bold sm:text-sm sm:font-semibold" style={{ color: 'var(--color-text)' }}>{event.name}</p>

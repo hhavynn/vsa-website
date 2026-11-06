@@ -140,12 +140,12 @@ export function VCN() {
         <section className="program-section">
           <div className="program-section-inner">
             <RelatedLinks links={programRelatedLinks()}>
-              {/* Open windows only: closed/future forms stay hidden and no URL is
-                  ever read from anywhere but the public application-link model. */}
+              {/* Keep the path to VCN visible between production cycles.
+                  The shared CTA only renders real form URLs for open windows;
+                  closed and upcoming windows show status and next steps. */}
               <ApplicationCTA
                 applicationKeys={['vcn_stage_ninja_interest', 'vcn_props_team_interest']}
                 heading="Get involved in VCN"
-                openOnly
               />
             </RelatedLinks>
           </div>

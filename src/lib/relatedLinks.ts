@@ -38,10 +38,12 @@ export function leaderboardRelatedLinks(pathname: string, search: string): Relat
 export type HouseRelatedMode = 'current' | 'archive';
 
 export function houseRelatedLinks(mode: HouseRelatedMode): RelatedLink[] {
+  // House competition standings are privately tracked and announced at GBMs.
+  // A public related link must never promise live House scores.
   const leaderboard: RelatedLink = {
-    to: '/leaderboard?view=houses',
-    label: 'Leaderboard',
-    description: 'House standings and member rankings.',
+    to: '/leaderboard',
+    label: 'Individual leaderboard',
+    description: 'See published individual VSA points and member rankings.',
   };
   const archive: RelatedLink = {
     to: '/house/archive',
@@ -51,7 +53,7 @@ export function houseRelatedLinks(mode: HouseRelatedMode): RelatedLink[] {
 
   if (mode === 'archive') {
     return [
-      { to: '/house', label: 'Current Houses', description: 'This year’s Houses and live standings.' },
+      { to: '/house', label: 'Current Houses', description: 'This year’s House profiles, parents and events.' },
       archive,
       leaderboard,
     ];

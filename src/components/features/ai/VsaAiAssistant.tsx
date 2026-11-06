@@ -82,6 +82,7 @@ export function VsaAiAssistant() {
   const [feedbackRating, setFeedbackRating] = useState<'helpful' | 'not_helpful' | null>(null);
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
 
   const isAdminRoute = location.pathname.startsWith('/admin');
 
@@ -142,11 +143,13 @@ export function VsaAiAssistant() {
     setActiveFeedbackMsgId(messageId);
     setFeedbackRating(rating);
     setFeedbackText('');
+    setFeedbackError(null);
   }
 
   async function submitFeedback(message: ChatMessage) {
     if (!feedbackRating) return;
     setFeedbackSubmitting(true);
+    setFeedbackError(null);
     
     // Extract a category if available from sources
     const category = message.sources && message.sources.length > 0 ? message.sources[0].category : null;
@@ -167,12 +170,12 @@ export function VsaAiAssistant() {
       );
       setActiveFeedbackMsgId(null);
       setFeedbackRating(null);
+      setFeedbackError(null);
     } catch (err) {
       console.error("Failed to submit feedback", err);
-      // We log it but don't disrupt the chat flow aggressively.
-      // We could add a small toast here if we imported react-hot-toast.
-      // For now, we'll just close the inline form to avoid blocking the user.
-      setActiveFeedbackMsgId(null);
+      // Keep the selected rating and unsent text in the inline form, so a
+      // temporary network or permission failure never silently discards it.
+      setFeedbackError('Feedback could not be sent. Your note is still here; please try again.');
     } finally {
       setFeedbackSubmitting(false);
     }
@@ -381,6 +384,8 @@ export function VsaAiAssistant() {
                             {feedbackRating === 'helpful' ? 'Glad it helped! Any other feedback?' : 'Sorry about that. What was missing or wrong?'}
                           </p>
                           <textarea
+                            aria-label="Optional feedback about this answer"
+                            maxLength={1000}
                             value={feedbackText}
                             onChange={(e) => setFeedbackText(e.target.value)}
                             placeholder="Optional. Do not include private information."
@@ -388,9 +393,14 @@ export function VsaAiAssistant() {
                             style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
                             rows={2}
                           />
+                          {feedbackError && (
+                            <p role="alert" className="mt-2 font-sans text-xs text-red-700 dark:text-red-300">
+                              {feedbackError}
+                            </p>
+                          )}
                           <div className="mt-2 flex items-center justify-end gap-2">
                             <button
-                              onClick={() => setActiveFeedbackMsgId(null)}
+                              onClick={() => { setActiveFeedbackMsgId(null); setFeedbackError(null); }}
                               disabled={feedbackSubmitting}
                               className="font-sans text-[10px] text-[var(--color-text3)] hover:text-[var(--color-text)]"
                             >

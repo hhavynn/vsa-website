@@ -164,6 +164,34 @@ describe('published-cycle ACE participation roster (#649)',()=>{
       expect(selection).not.toMatch(/notes|email|\*/);
     });
   });
+  it('does not treat a null successful roster page as zero published Littles',async()=>{
+    supabaseMock.queueResult('ace_assignment_cycles',{data:{id:'cycle',status:'published',academic_year_start:2026},error:null});
+    supabaseMock.queueResult('ace_assignment_drafts',{data:null,error:null});
+    await expect(aceAssignmentsRepository.listPublishedCycleLittles('cycle',2026))
+      .rejects.toThrow(/published ACE roster is incomplete/);
+  });
+
+  it('rejects a duplicate Little ID across pages instead of double-counting participation',async()=>{
+    supabaseMock.queueResult('ace_assignment_cycles',{data:{id:'cycle',status:'published',academic_year_start:2026},error:null});
+    supabaseMock.queueResult('ace_assignment_drafts',{data:Array.from({length:500},(_,i)=>sample(String(i))),error:null});
+    supabaseMock.queueResult('ace_assignment_drafts',{data:[sample('499'),sample('500')],error:null});
+    await expect(aceAssignmentsRepository.listPublishedCycleLittles('cycle',2026))
+      .rejects.toThrow(/inconsistent identities/);
+    expect(supabaseMock.queriesFor('ace_assignment_drafts')).toHaveLength(2);
+  });
+
+  it('rejects malformed published Little identities without leaking notes',async()=>{
+    for(const invalid of [
+      {...sample('a'),id:''},
+      {...sample('b'),little_name:''},
+    ]) {
+      supabaseMock.queueResult('ace_assignment_cycles',{data:{id:'cycle',status:'published',academic_year_start:2026},error:null});
+      supabaseMock.queueResult('ace_assignment_drafts',{data:[invalid],error:null});
+      await expect(aceAssignmentsRepository.listPublishedCycleLittles('cycle',2026))
+        .rejects.toThrow(/inconsistent identities/);
+    }
+  });
+
   it('refuses unapproved cycles and never reads draft roster',async()=>{
     supabaseMock.queueResult('ace_assignment_cycles',{data:{id:'cycle',status:'locked',academic_year_start:2026},error:null});
     await expect(aceAssignmentsRepository.listPublishedCycleLittles('cycle',2026)).rejects.toThrow();
