@@ -1,4 +1,4 @@
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { houseMembershipsRepository, type PublicMemberHouse } from '../data/repos/houseMemberships';
 import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
 

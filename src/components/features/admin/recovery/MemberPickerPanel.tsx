@@ -1,5 +1,5 @@
 import { KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { attendanceRecoveryRepository } from '../../../../data/repos/attendanceRecovery';
 import { MemberSnapshot, RecoveryFinding, memberName } from '../../../../lib/attendanceRecovery';
 import { Candidate, describeCandidate, rankCandidates } from '../../../../lib/recoveryTriage';
@@ -55,11 +55,12 @@ export function MemberPickerPanel({
   const inputRef = useRef<HTMLInputElement>(null);
   const confirmRef = useRef<HTMLInputElement>(null);
 
-  const search = useQuery(
-    ['attendance-recovery', 'member-search', debounced.trim().toLowerCase()],
-    () => attendanceRecoveryRepository.searchMembers(debounced, 10),
-    { enabled: debounced.trim().length >= 2, staleTime: 30_000 },
-  );
+  const search = useQuery({
+    queryKey: ['attendance-recovery', 'member-search', debounced.trim().toLowerCase()],
+    queryFn: () => attendanceRecoveryRepository.searchMembers(debounced, 10),
+    enabled: debounced.trim().length >= 2,
+    staleTime: 30_000,
+  });
 
   const options = useMemo(() => {
     const excluded = mode === 'reassign' ? credited?.id ?? record.attendance_member_id : null;

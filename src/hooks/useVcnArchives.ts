@@ -1,4 +1,4 @@
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { VCNArchive } from '../types';
 import { vcnArchivesRepository } from '../data/repos/vcnArchives';
 
@@ -12,7 +12,7 @@ export function usePublishedVcnArchives() {
     queryKey: ['vcn-archives', 'published'],
     queryFn: () => vcnArchivesRepository.getPublishedArchives(),
     staleTime: 10 * 60 * 1000,
-    cacheTime: 20 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
   });
 
   return { archives, loading, error, refreshArchives };
@@ -28,7 +28,7 @@ export function useCurrentVcnArchive() {
     queryKey: ['vcn-archives', 'current'],
     queryFn: () => vcnArchivesRepository.getCurrentArchive(),
     staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   return { archive, loading, error, refreshArchive };
@@ -44,7 +44,7 @@ export function useAllVcnArchives() {
     queryKey: ['vcn-archives', 'all'],
     queryFn: () => vcnArchivesRepository.getAllArchives(),
     staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   return { archives, loading, error, refreshArchives };

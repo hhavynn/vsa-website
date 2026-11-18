@@ -1,10 +1,11 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import toast from 'react-hot-toast';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import AdminUVSASchools from './UVSASchools';
 import { uvsaSchoolsRepository } from '../../data/repos/uvsaSchools';
+import { DEFAULT_UVSA_NETWORK_PAGE_SETTINGS, uvsaNetworkSettingsRepository } from '../../data/repos/uvsaNetworkSettings';
 import { UVSASchool } from '../../types';
 
 jest.mock('react-hot-toast', () => ({ __esModule: true, default: Object.assign(jest.fn(), { success: jest.fn(), error: jest.fn() }) }));
@@ -51,6 +52,7 @@ function renderPage() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  (uvsaNetworkSettingsRepository.getSettings as jest.Mock).mockResolvedValue(DEFAULT_UVSA_NETWORK_PAGE_SETTINGS);
   repo.getAllSchools.mockResolvedValue([school]);
 });
 

@@ -102,11 +102,11 @@ The global default is `refetchOnWindowFocus: false`. Any hook overriding this to
 
 **Check for:** `grep -rn 'refetchOnWindowFocus' src/`
 
-### 3. cacheTime: 0
+### 3. gcTime: 0
 
-Setting `cacheTime: 0` means React Query discards data the moment a component unmounts. Navigating away and back always triggers a fresh fetch.
+Setting `gcTime: 0` means TanStack Query discards data the moment a component unmounts. Navigating away and back always triggers a fresh fetch.
 
-**Check for:** `grep -rn 'cacheTime.*0' src/`
+**Check for:** `grep -rn 'gcTime.*0' src/`
 
 ### 4. Edge Function console.log on success
 
@@ -149,7 +149,7 @@ Setting up a Log Drain (e.g., to Datadog or Logflare) does **not** reduce your L
 ## Previous optimization work
 
 - **Egress optimization**: Migrated event/house images from Supabase Storage to Git repo static assets (served via Vercel CDN). See `docs/event-image-migration.md`.
-- **React Query defaults**: Global `staleTime: 5min`, `cacheTime: 10min`, `refetchOnWindowFocus: false` set in `src/App.tsx`.
+- **React Query defaults**: Global `staleTime: 5min`, `gcTime: 10min`, `refetchOnWindowFocus: false` set in `src/lib/queryClient.ts`.
 - **Storage audit queries**: `docs/supabase-usage-audit.sql` contains read-only queries for storage usage, orphaned objects, and duplicate detection.
 
 ---
@@ -160,6 +160,6 @@ When adding new queries or hooks:
 
 1. Does the query inherit sensible global defaults, or does it override them aggressively?
 2. Is `refetchInterval` justified by a real-time UX need?
-3. Is `cacheTime: 0` intentional? (Almost never needed for public read queries.)
+3. Is `gcTime: 0` intentional? (Almost never needed for public read queries.)
 4. Are Edge Function success paths free of `console.log`?
 5. Does the `select()` call request only the columns the component actually reads?

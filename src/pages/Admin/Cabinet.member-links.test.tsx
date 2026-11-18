@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import AdminCabinet from './Cabinet';
 import { supabaseMock } from '../../test-utils/supabaseMock';
@@ -32,7 +32,7 @@ const cabinet = (id: string, name: string, memberId: string | null = null) => ({
 });
 
 function mount() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>

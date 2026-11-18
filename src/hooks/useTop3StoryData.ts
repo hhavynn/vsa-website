@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { leaderboardRepository } from '../data/repos/leaderboard';
 import { buildTopNStoryEntries, selectPublishedStoryCohort, selectTopNMembers, type StoryLimit, type TopNStoryEntry } from '../lib/story/topNStory';
 import type { MemberHouseBadge } from '../types';
@@ -48,17 +48,19 @@ export function useTop3StoryData(limit: StoryLimit = 3, cohort: LeaderboardCohor
   const selection = useMemo(() => selectTopNMembers(filtered, limit), [filtered, limit]);
   const topIds = useMemo(() => selection.selected.map((member) => member.id), [selection]);
 
-  const { data: houses, isLoading: housesLoading } = useQuery(
-    ['top-n-story-houses', academicYearStart, topIds.join(',')],
-    async () => {
+  const { data: houses, isLoading: housesLoading } = useQuery({
+    queryKey: ['top-n-story-houses', academicYearStart, topIds.join(',')],
+    queryFn: async () => {
       const year = academicYearStart as number;
       const badges = await Promise.all(
         topIds.map(async (id) => [id, await leaderboardRepository.getMemberHouseBadge(id, year).catch(() => null)] as const),
       );
       return new Map<string, MemberHouseBadge | null>(badges);
     },
-    { enabled: academicYearStart !== null && topIds.length > 0, staleTime: 60_000, retry: false },
-  );
+    enabled: academicYearStart !== null && topIds.length > 0,
+    staleTime: 60_000,
+    retry: false,
+  });
 
   const entries = useMemo(
     () => buildTopNStoryEntries(selection, { avatars, houses }),

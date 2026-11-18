@@ -4,7 +4,7 @@
  * the DOM; nothing renders when nothing is closing soon; and it leaves the
  * existing This Week section untouched.
  */
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ClosingSoonApplications } from './ClosingSoonApplications';

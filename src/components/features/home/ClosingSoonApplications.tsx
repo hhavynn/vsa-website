@@ -63,7 +63,7 @@ export function ClosingSoonApplications() {
     const timer = window.setTimeout(() => {
       setNow(new Date());
       // The server withholds the URL until a window opens, so only a refetch can bring it in.
-      if (boundary.opens) void refetch();
+      if (boundary.opens) void refetch({ cancelRefetch: false });
     }, Math.min(Math.max(boundary.at - current, 0) + BOUNDARY_SLACK_MS, MAX_TIMEOUT_MS));
     return () => window.clearTimeout(timer);
   }, [links, now, refetch]);

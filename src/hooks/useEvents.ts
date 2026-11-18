@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from 'react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { eventsRepository, EventFilters } from '../data/repos/events';
 import { Event } from '../types';
 import { CreateEventFormData, UpdateEventFormData } from '../schemas';
@@ -8,7 +8,7 @@ export function useEvents(filters?: EventFilters) {
     queryKey: ['events', filters],
     queryFn: () => eventsRepository.getEvents(filters),
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   return { events, loading, error, refreshEvents };
@@ -21,14 +21,15 @@ export function usePublishedPastEventArchiveAvailability(dateTo: string, now?: D
     queryKey: ['events', 'archive-availability', dateTo, now?.toISOString()],
     queryFn: () => eventsRepository.getPublishedPastEventArchiveAvailability(dateTo, now),
     staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 }
 
 export function useInfiniteEvents(filters: Omit<EventFilters, 'limit' | 'offset'> = {}) {
-  return useInfiniteQuery<Event[]>({
+  return useInfiniteQuery({
     queryKey: ['events', 'infinite', filters],
-    queryFn: ({ pageParam = 0 }) =>
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
       eventsRepository.getEvents({
         ...filters,
         limit: EVENTS_PAGE_SIZE,

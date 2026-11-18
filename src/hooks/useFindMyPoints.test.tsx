@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useFindMyPoints } from './useFindMyPoints';
 import { leaderboardRepository } from '../data/repos/leaderboard';
@@ -74,7 +74,8 @@ describe('useFindMyPoints characterization', () => {
       const { result } = renderHook(() => useFindMyPoints(null), { wrapper });
       await act(async () => { await Promise.resolve(); });
 
-      expect(result.current.isIdle).toBe(true);
+      expect(result.current.isPending).toBe(true);
+      expect(result.current.fetchStatus).toBe('idle');
       expect(result.current.data).toBeUndefined();
       expect(yearly).not.toHaveBeenCalled();
       expect(supabaseMock.queries()).toHaveLength(0);

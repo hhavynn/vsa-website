@@ -1,7 +1,7 @@
 // House events in Admin → Events (#630). Read-only list of the same
 // house_events records Admin → Houses edits (shared query key, so both stay in
 // sync). Editing opens the shared House event editor; nothing here writes.
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { houseEventsRepository } from '../../../data/repos/houseEvents';
 import { formatAcademicYear } from '../../../lib/academicTerms';
 import { formatDateOnly } from '../../../lib/dateOnly';

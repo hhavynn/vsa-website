@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { format, isBefore, addDays, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { PageTitle } from '../../components/common/PageTitle';
@@ -22,17 +22,23 @@ interface CalendarItem {
 }
 
 export default function ContentCalendar() {
-  const { data: events = [], isLoading: eventsLoading } = useQuery(['admin-events-calendar'], () => 
-    eventsRepository.getEvents({ include_unpublished: true })
-  );
+  const { data: events = [], isLoading: eventsLoading } = useQuery({
+    queryKey: ['admin-events-calendar'],
+    queryFn: () => 
+      eventsRepository.getEvents({ include_unpublished: true }),
+  });
 
-  const { data: appLinks = [], isLoading: appsLoading } = useQuery(['admin-apps-calendar'], () => 
-    applicationLinksRepository.listAdminApplicationLinks()
-  );
+  const { data: appLinks = [], isLoading: appsLoading } = useQuery({
+    queryKey: ['admin-apps-calendar'],
+    queryFn: () => 
+      applicationLinksRepository.listAdminApplicationLinks(),
+  });
 
-  const { data: terms = [], isLoading: termsLoading } = useQuery(['admin-terms-calendar'], () => 
-    academicTermsRepository.getTerms()
-  );
+  const { data: terms = [], isLoading: termsLoading } = useQuery({
+    queryKey: ['admin-terms-calendar'],
+    queryFn: () => 
+      academicTermsRepository.getTerms(),
+  });
 
   const loading = eventsLoading || appsLoading || termsLoading;
 

@@ -1,4 +1,4 @@
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { houseAssetsRepository } from '../data/repos/houseAssets';
 import { HousePageAsset } from '../types';
 

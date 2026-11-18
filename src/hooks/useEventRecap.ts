@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from 'react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { eventRecapsRepository, EventRecapFormData } from '../data/repos/eventRecaps';
 import { EventRecap } from '../types';
 
@@ -29,7 +29,7 @@ export function useEventRecap(eventId?: string) {
     }) => eventRecapsRepository.saveRecapForEvent(eventId as string, values, userId, existingRecapId),
     onSuccess: (savedRecap) => {
       queryClient.setQueryData(['event-recap', eventId], savedRecap);
-      queryClient.invalidateQueries(['event-recaps', 'ids']);
+      queryClient.invalidateQueries({ queryKey: ['event-recaps', 'ids'] });
     },
   });
 
@@ -39,7 +39,7 @@ export function useEventRecap(eventId?: string) {
     error,
     refetch,
     saveRecap: saveMutation.mutateAsync,
-    saving: saveMutation.isLoading,
+    saving: saveMutation.isPending,
   };
 }
 

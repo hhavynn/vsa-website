@@ -1,5 +1,5 @@
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { PageTitle } from '../components/common/PageTitle';
 import { PublicBreadcrumbs } from '../components/common/PublicBreadcrumbs';
@@ -116,7 +116,7 @@ export function HouseDetail() {
     queryFn: () => activeYear ? houseAssetsRepository.getPublishedAssets(activeYear) : Promise.resolve([]),
     enabled: activeYear !== null,
     staleTime: 10 * 60 * 1000,
-    cacheTime: 20 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
@@ -135,7 +135,7 @@ export function HouseDetail() {
     queryFn: () => houseAssetsRepository.getAllPublishedAssets(),
     enabled: needsYearFallback,
     staleTime: 10 * 60 * 1000,
-    cacheTime: 20 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
   const fallbackHouse = needsYearFallback
@@ -156,7 +156,7 @@ export function HouseDetail() {
     queryFn: () => house ? houseEventsRepository.getPublicUpcomingForHouse(house.id, today, 12) : Promise.resolve([]),
     enabled: !!house,
     staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
@@ -165,7 +165,7 @@ export function HouseDetail() {
     queryFn: () => house ? houseEventsRepository.getPublicPastForHouse(house.id, today, 24) : Promise.resolve([]),
     enabled: !!house,
     staleTime: 10 * 60 * 1000,
-    cacheTime: 20 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 

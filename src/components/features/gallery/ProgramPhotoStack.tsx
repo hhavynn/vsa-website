@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { OptimizedImage } from '../../common/OptimizedImage';
 import { Skeleton } from '../../ui/Skeleton';
 import { galleryRepository, type ProgramAlbum } from '../../../data/repos/gallery';
@@ -13,7 +13,7 @@ export function useProgramAlbums(eventTypes: SiteEventType[]) {
     queryKey: ['gallery', 'program-albums', eventTypes.join(',')],
     queryFn: () => galleryRepository.getProgramAlbums(eventTypes, 2),
     staleTime: 10 * 60 * 1000,
-    cacheTime: 30 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: false,
   });

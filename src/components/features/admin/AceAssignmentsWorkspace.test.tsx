@@ -3,7 +3,7 @@
  */
 
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '../../../context/ThemeContext';
 import AdminAceFamilies from '../../../pages/Admin/AceFamilies';
@@ -83,7 +83,7 @@ function seed(status: string, drafts: ReturnType<typeof draft>[], cycleOver: Rec
 }
 
 function renderWorkspace() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   render(
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
@@ -420,7 +420,7 @@ describe('Admin → ACE page', () => {
   it('opens the workspace from the Assignments tab and offers to start a cycle when none exists', async () => {
     supabaseMock.reset();
     supabaseMock.setDefault('ace_families', { data: [], error: null });
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
     render(
       <ThemeProvider>
         <QueryClientProvider client={queryClient}>

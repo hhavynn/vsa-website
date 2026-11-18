@@ -1,12 +1,12 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { AceParticipationReview } from './AceParticipationReview';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { aceAssignmentsRepository } from '../../../data/repos/aceAssignments';
 import { attendanceReadinessRepository } from '../../../data/repos/attendanceReadiness';
 jest.mock('../../../data/repos/aceAssignments',()=>({aceAssignmentsRepository:{listPublishedCycleLittles:jest.fn()}}));
 jest.mock('../../../data/repos/attendanceReadiness',()=>({attendanceReadinessRepository:{getReadiness:jest.fn(),getVerifiedSelectedAttendance:jest.fn()}}));
 function mount(){
-  const client=new QueryClient({defaultOptions:{queries:{retry:false,cacheTime:0}}});
+  const client=new QueryClient({defaultOptions:{queries:{retry:false,gcTime:0}}});
   return render(<QueryClientProvider client={client}><AceParticipationReview cycleId="cycle-1" year={2026}/></QueryClientProvider>);
 }
 const readiness={events:[{id:'e1',name:'Example Event',date:'2026-10-10',term_label:'Fall',is_published:true,

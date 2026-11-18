@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { useMutation, useQuery, useQueryClient } from 'react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { ReviewEntityType, adminReviewRepository } from '../data/repos/adminReview';
 
@@ -20,17 +20,18 @@ export function useReviewMarks(entityType: ReviewEntityType, scopeId: string | n
   });
   const reviewed = useMemo(() => query.data ?? new Set<string>(), [query.data]);
 
-  const refresh = useCallback(() => queryClient.invalidateQueries(['admin-review-marks', entityType]), [queryClient, entityType]);
-  const mark = useMutation(
-    (targets: readonly string[]) => adminReviewRepository.mark(entityType, targets, academicYearStart),
-    {
-      onSuccess: refresh,
-      onError: () => {
-        toast.error('Could not save reviewed marks. They may not be available yet.');
-      },
+  const refresh = useCallback(() => queryClient.invalidateQueries({ queryKey: ['admin-review-marks', entityType] }), [queryClient, entityType]);
+  const mark = useMutation({
+    mutationFn: (targets: readonly string[]) => adminReviewRepository.mark(entityType, targets, academicYearStart),
+    onSuccess: refresh,
+    onError: () => {
+      toast.error('Could not save reviewed marks. They may not be available yet.');
     },
-  );
-  const unmark = useMutation((targets: readonly string[]) => adminReviewRepository.unmark(entityType, targets), { onSuccess: refresh });
+  });
+  const unmark = useMutation({
+    mutationFn: (targets: readonly string[]) => adminReviewRepository.unmark(entityType, targets),
+    onSuccess: refresh,
+  });
 
-  return { reviewed, markReviewed: mark.mutateAsync, clearReviewed: unmark.mutateAsync, marking: mark.isLoading };
+  return { reviewed, markReviewed: mark.mutateAsync, clearReviewed: unmark.mutateAsync, marking: mark.isPending };
 }

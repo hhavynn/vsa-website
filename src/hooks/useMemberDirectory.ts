@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { memberLookupRepository } from '../data/repos/memberLookup';
 import { MemberOption, buildMemberNameIndex } from '../lib/memberLinkMatching';
 
@@ -12,7 +12,7 @@ export function useMemberDirectory(enabled = true) {
     queryFn: () => memberLookupRepository.listMemberDirectory(),
     enabled,
     staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const byId = useMemo(() => new Map(members.map((member) => [member.id, member])), [members]);

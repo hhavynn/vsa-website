@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Event } from '../../../types';
 import { EventsSkeleton } from '../../common/PageSkeletons';
 import { FeaturedEventCard, UpcomingEventRow } from './PublicEventCards';

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { aceAssignmentsRepository } from '../data/repos/aceAssignments';
 import { attendanceReadinessRepository, type AttendanceReadiness } from '../data/repos/attendanceReadiness';
 import { ValidationError, toUserMessage } from '../data/errors';

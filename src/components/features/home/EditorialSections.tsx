@@ -1,6 +1,6 @@
 import { type ComponentType } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "react-query";
+import { useQuery } from "@tanstack/react-query";
 import { type IconBaseProps } from "react-icons";
 import { FiCalendar, FiClock, FiMapPin } from "react-icons/fi";
 import { OptimizedImage } from "../../common/OptimizedImage";
@@ -551,7 +551,7 @@ export function EditorialGallery() {
     queryKey: ["home", "recent-public-gallery-albums"],
     queryFn: () => galleryRepository.getAlbums({ limit: GALLERY_FETCH_LIMIT }),
     staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     retry: 1,
   });
   // Cap after dropping cover-less albums so one missing cover never leaves a

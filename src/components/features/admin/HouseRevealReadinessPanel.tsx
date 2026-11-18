@@ -2,7 +2,7 @@
 // link coverage (#621). Read-only: it loads the active term, House Parents and
 // application windows, then summarizes them with buildRevealReadiness. It
 // never writes; the Reveal itself stays the editor's explicit, confirmed action.
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { academicTermsRepository } from '../../../data/repos/academicTerms';
 import { applicationLinksRepository } from '../../../data/repos/applicationLinks';
 import { houseParentsRepository } from '../../../data/repos/houseParents';
@@ -28,9 +28,27 @@ export function useRevealReadiness(input: {
   const year = input.batch.academic_year_start;
   // Only a locked batch can be revealed, so only then is readiness read.
   const enabled = input.batch.status === 'locked';
-  const term = useQuery(['admin', 'active-term'], () => academicTermsRepository.getActiveTerm(), { retry: false, enabled, staleTime: 0 });
-  const parents = useQuery(['admin', 'house-parents', year], () => houseParentsRepository.listForYear(year), { retry: false, enabled, staleTime: 0 });
-  const links = useQuery(ADMIN_APPLICATION_LINKS_QUERY_KEY, () => applicationLinksRepository.listAdminApplicationLinks(), { retry: false, enabled, staleTime: 0 });
+  const term = useQuery({
+    queryKey: ['admin', 'active-term'],
+    queryFn: () => academicTermsRepository.getActiveTerm(),
+    retry: false,
+    enabled,
+    staleTime: 0,
+  });
+  const parents = useQuery({
+    queryKey: ['admin', 'house-parents', year],
+    queryFn: () => houseParentsRepository.listForYear(year),
+    retry: false,
+    enabled,
+    staleTime: 0,
+  });
+  const links = useQuery({
+    queryKey: ADMIN_APPLICATION_LINKS_QUERY_KEY,
+    queryFn: () => applicationLinksRepository.listAdminApplicationLinks(),
+    retry: false,
+    enabled,
+    staleTime: 0,
+  });
   // A failed refetch is Unknown even if older data is still cached.
   const parentCounts = parents.isSuccess && parents.data
     ? parents.data.reduce((map, parent) => map.set(parent.house_profile_id, (map.get(parent.house_profile_id) ?? 0) + 1), new Map<string, number>())

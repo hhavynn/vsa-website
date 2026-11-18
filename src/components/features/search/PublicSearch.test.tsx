@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider, notifyManager } from 'react-query';
+import { QueryClient, QueryClientProvider, notifyManager } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { eventsRepository } from '../../../data/repos/events';
 import { galleryRepository } from '../../../data/repos/gallery';

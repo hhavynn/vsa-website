@@ -1,4 +1,4 @@
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { ProgramContent, ProgramPageKey, ProgramSectionKey } from '../types';
 import { programContentRepository } from '../data/repos/programContent';
 
@@ -15,7 +15,7 @@ export function useProgramContent(
     queryKey: ['program-content', 'published', pageKey, sectionKey],
     queryFn: () => programContentRepository.getPublishedContent(pageKey, sectionKey),
     staleTime: 60 * 1000,
-    cacheTime: 5 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 
   return { content: data, loading, error, refetch };

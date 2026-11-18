@@ -1,7 +1,7 @@
 import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { PageTitle } from '../../components/common/PageTitle';
 import { NextStepBanner, PreflightSummary, YearContextBadge } from '../../components/features/admin/ops';
@@ -153,8 +153,8 @@ export default function AdminYearSetup() {
       const result = await yearSetupRepository.runSetup(targetYear, options, userId);
       setReport(result.report);
       await loadSnapshot(targetYear);
-      await refreshCabinetYears();
-      queryClient.invalidateQueries('cabinet-years');
+      await refreshCabinetYears({ cancelRefetch: false });
+      queryClient.invalidateQueries({ queryKey: ['cabinet-years'] });
       if (result.report.created > 0) {
         logAdminActivity({
           action: ACTIVITY_ACTIONS.yearSetupCreated,

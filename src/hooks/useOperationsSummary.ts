@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { useQuery } from 'react-query';
+import { useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { adminOperationsRepository } from '../data/repos/adminOperations';
 import {
   OperationsInputs,
@@ -23,11 +23,16 @@ export function useOperationsSummary(
   /** A late-mounting observer (the health details disclosure) passes `refetchOnMount: false` so opening it reuses the cached scan instead of re-running it. */
   options: { refetchOnMount?: boolean } = {},
 ) {
-  const query = useQuery(ADMIN_HEALTH_QUERY_KEYS.operations, loadInputs, {
+  const query = useQuery({
+    queryKey: ADMIN_HEALTH_QUERY_KEYS.operations,
+    queryFn: loadInputs,
     ...HEALTH_QUERY_OPTIONS,
     ...options,
-    onError: (error) => console.error(error),
   });
+  const { error } = query;
+  useEffect(() => {
+    if (error) console.error(error);
+  }, [error]);
   const inputs = query.data ?? null;
   const summary: OperationsSummary | null = useMemo(() => (inputs ? buildOperationsSummary(inputs) : null), [inputs]);
   const preflight = useMemo(() => (summary ? buildOperationsPreflight(summary) : []), [summary]);

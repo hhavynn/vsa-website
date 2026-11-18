@@ -5,7 +5,7 @@
  * fetched when the event is already listed.
  */
 import { render, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { HouseDetail } from './HouseDetail';
 import { houseAssetsRepository } from '../data/repos/houseAssets';

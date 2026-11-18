@@ -6,7 +6,7 @@
  * live in the URL; and a failed House read leaves the regular events usable.
  */
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { Events } from './Events';
 import { houseAssetsRepository } from '../data/repos/houseAssets';

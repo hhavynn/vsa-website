@@ -1,6 +1,6 @@
 import { act, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Home } from './Home';
 import { eventsRepository, PublicEventPreview } from '../data/repos/events';
 import { galleryRepository } from '../data/repos/gallery';
@@ -51,7 +51,7 @@ describe('Home.tsx Upcoming Events section', () => {
   beforeEach(() => {
     queryClient = new QueryClient({
       defaultOptions: {
-        queries: { retry: false, cacheTime: 0 },
+        queries: { retry: false, gcTime: 0 },
       },
     });
     jest.useFakeTimers();

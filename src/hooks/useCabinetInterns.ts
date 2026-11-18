@@ -1,4 +1,4 @@
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { getCurrentCabinetYear } from '../lib/cabinetYears';
 import { useCabinetYears } from './useCabinetYears';
@@ -47,7 +47,7 @@ export function useCurrentCabinetInterns() {
     },
     enabled: !yearsLoading,
     staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   return {

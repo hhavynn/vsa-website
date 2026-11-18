@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from 'react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { uvsaSchoolsRepository } from '../data/repos/uvsaSchools';
 import { UVSASchool } from '../types';
 
@@ -44,8 +44,8 @@ export function useUpsertUVSASchool() {
   return useMutation({
     mutationFn: (school: Partial<UVSASchool>) => uvsaSchoolsRepository.upsertSchool(school),
     onSuccess: () => {
-      queryClient.invalidateQueries(['uvsa-schools']);
-      queryClient.invalidateQueries(['admin-uvsa-schools']);
+      queryClient.invalidateQueries({ queryKey: ['uvsa-schools'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-uvsa-schools'] });
     },
   });
 }
@@ -56,8 +56,8 @@ export function useDeleteUVSASchool() {
   return useMutation({
     mutationFn: (id: string) => uvsaSchoolsRepository.deleteSchool(id),
     onSuccess: () => {
-      queryClient.invalidateQueries(['uvsa-schools']);
-      queryClient.invalidateQueries(['admin-uvsa-schools']);
+      queryClient.invalidateQueries({ queryKey: ['uvsa-schools'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-uvsa-schools'] });
     },
   });
 }

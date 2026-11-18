@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ApplicationCTA, publicApplicationAtTime, publicWindowCue } from './ApplicationCTA';
 import type { PublicApplicationLink } from '../../types';
@@ -32,7 +32,7 @@ function linkRow(overrides: Record<string, unknown>) {
 }
 
 function renderCTA() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>

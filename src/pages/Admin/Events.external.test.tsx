@@ -4,7 +4,7 @@
  */
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import AdminEvents from './Events';
 import { makeEvent, makeSchool } from '../../test-utils/uvsaFixtures';
@@ -341,8 +341,8 @@ describe('Manage Events', () => {
       });
 
       expect(mockUpdate.mock.calls[0][0]).toMatchObject({ points: 7 });
-      expect(invalidate).toHaveBeenCalledWith(['find-my-points']);
-      expect(invalidate).toHaveBeenCalledWith(['individual-leaderboard']);
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ['find-my-points'] });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ['individual-leaderboard'] });
     });
 
     it('leaves those totals alone when only other fields change', async () => {
@@ -353,8 +353,8 @@ describe('Manage Events', () => {
       });
 
       expect(mockUpdate.mock.calls[0][0]).toMatchObject({ points: 4, location: 'Newport' });
-      expect(invalidate).not.toHaveBeenCalledWith(['find-my-points']);
-      expect(invalidate).not.toHaveBeenCalledWith(['individual-leaderboard']);
+      expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['find-my-points'] });
+      expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['individual-leaderboard'] });
     });
   });
 

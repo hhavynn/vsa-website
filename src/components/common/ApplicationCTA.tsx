@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ApplicationKey, ApplicationStatus, PublicApplicationLink } from '../../types';
 import { PUBLIC_APPLICATION_LINKS_QUERY_KEY, usePublicApplicationLinks } from '../../hooks/useApplicationLinks';
@@ -278,9 +278,9 @@ export function ApplicationCTA({
     // snapshot. Do not mark this boundary handled until a post-opening fetch
     // can actually start. The next clock tick will retry after the in-flight
     // fetch settles, while multiple CTA instances share the same query.
-    if (queryClient.isFetching(PUBLIC_APPLICATION_LINKS_QUERY_KEY) !== 0) return;
+    if (queryClient.isFetching({ queryKey: PUBLIC_APPLICATION_LINKS_QUERY_KEY }) !== 0) return;
     crossed.forEach((key) => openingRefreshesAttempted.current.add(key));
-    void refetch();
+    void refetch({ cancelRefetch: false });
   }, [fetchedLinks, nowMillis, loading, error, queryClient, refetch]);
   const now = new Date(nowMillis);
   const links = fetchedLinks.map((link) => publicApplicationAtTime(link, now));

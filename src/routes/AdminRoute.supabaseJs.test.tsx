@@ -10,8 +10,9 @@ import { useEffect, useState } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '../context/AuthContext';
+import { listenForWindowFocus } from '../lib/queryClient';
 import { AdminRoute } from './AdminRoute';
 import AdminLayout from '../components/features/admin/AdminLayout';
 import { supabase } from '../lib/supabase';
@@ -62,6 +63,8 @@ afterEach(() => {
   localStorage.clear();
   lifecycle.length = 0;
 });
+
+beforeAll(() => listenForWindowFocus());
 
 it('keeps unsaved text when an expired token is refreshed on refocus and admin status is re-checked', async () => {
   const now = Math.floor(Date.now() / 1000);

@@ -1,7 +1,7 @@
 /* eslint-disable testing-library/no-container, testing-library/no-node-access */
 // #675: real DOM/SVG characterizations of the chronological tree, never mocked layout.
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { FamSheet } from './FamSheet';
 import type { AceFamily, AceFamilyMember } from '../../../types';
@@ -50,7 +50,7 @@ function renderTree(
   members: AceFamilyMember[],
   options: { focusNodeId?: string; onFocusNodeChange?: (id: string | null) => void } = {},
 ) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
     <QueryClientProvider client={client}>
       <FamSheet

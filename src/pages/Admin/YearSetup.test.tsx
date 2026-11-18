@@ -9,7 +9,7 @@ jest.mock('react-hot-toast', () => {
   const toast = Object.assign(jest.fn(), { success: jest.fn(), error: jest.fn() });
   return { __esModule: true, default: toast };
 });
-jest.mock('react-query', () => ({ useQueryClient: () => ({ invalidateQueries: jest.fn() }) }));
+jest.mock('@tanstack/react-query', () => ({ useQueryClient: () => ({ invalidateQueries: jest.fn() }) }));
 jest.mock('../../data/repos/adminActivity', () => ({ logAdminActivity: jest.fn() }));
 jest.mock('../../data/repos/adminOperations', () => ({
   adminOperationsRepository: { resolveYearStart: jest.fn().mockResolvedValue(2026) },

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import AdminContentHealth from './ContentHealth';
 import { adminOverviewRepository } from '../../data/repos/adminOverview';
@@ -132,7 +132,7 @@ describe('Content Health page', () => {
     fireEvent.click(within(draft).getByRole('button', { name: 'Acknowledge' }));
 
     await waitFor(() => expect(acknowledge).toHaveBeenCalledWith(expect.objectContaining({ key: 'draft-event-past:d1', check: 'draft-event-past' })));
-    await waitFor(() => expect(invalidate).toHaveBeenCalledWith(ADMIN_HEALTH_QUERY_KEYS.all));
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ADMIN_HEALTH_QUERY_KEYS.all }));
   });
 
   it('cannot acknowledge Ask VSA findings: it links to the snippet to review instead', async () => {

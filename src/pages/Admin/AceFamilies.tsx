@@ -1,7 +1,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useDropzone } from 'react-dropzone';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
@@ -668,9 +668,9 @@ export default function AdminAceFamilies() {
     .sort((a, b) => a - b), [members]);
   const refreshPickupSources = async () => {
     const [membersResult, evidenceResult] = await Promise.all([
-      refetchMembers(), refetchPickupEvidence(),
+      refetchMembers({ cancelRefetch: false }), refetchPickupEvidence({ cancelRefetch: false }),
     ]);
-    // React Query v3 resolves refetch() with an error result by default.
+    // refetch() resolves with an error result by default.
     // A successful DB write + failed refresh must never be reported as a retryable write failure.
     if (membersResult.isError || evidenceResult.isError) {
       throw new Error('ACE family data could not refresh after the correction.');
@@ -678,7 +678,7 @@ export default function AdminAceFamilies() {
   };
   const onPickupSaved = async () => {
     await refreshPickupSources();
-    await queryClient.invalidateQueries(['ace-family-members', 'published']);
+    await queryClient.invalidateQueries({ queryKey: ['ace-family-members', 'published'] });
   };
   const onPickupConflict = refreshPickupSources;
   const openReviewNode = (nodeId: string) => {
@@ -727,12 +727,12 @@ export default function AdminAceFamilies() {
   }
 
   const invalidateLists = async () => {
-    await queryClient.invalidateQueries(['ace-families']);
-    await queryClient.invalidateQueries(['ace-family-members']);
+    await queryClient.invalidateQueries({ queryKey: ['ace-families'] });
+    await queryClient.invalidateQueries({ queryKey: ['ace-family-members'] });
   };
 
   const refreshMemberLinks = async () => {
-    await queryClient.invalidateQueries(ACE_MEMBER_LINKS_QUERY_KEY);
+    await queryClient.invalidateQueries({ queryKey: ACE_MEMBER_LINKS_QUERY_KEY });
     await invalidateLists();
   };
 
@@ -865,7 +865,7 @@ export default function AdminAceFamilies() {
       setCoverFile(null);
       setCoverPreview('');
       await invalidateLists();
-      await refetch();
+      await refetch({ cancelRefetch: false });
       setSaveFailed(false);
       setJustSaved(true);
     } catch (err) {
@@ -888,7 +888,7 @@ export default function AdminAceFamilies() {
       setDeleteFamilyOpen(false);
       setSelectedFamilyId(null);
       await invalidateLists();
-      await refetch();
+      await refetch({ cancelRefetch: false });
     } catch (err) {
       console.error(err);
       toast.error('Failed to delete family');
@@ -915,7 +915,7 @@ export default function AdminAceFamilies() {
       });
       setNewMemberName('');
       toast.success('Member added');
-      await refetchMembers();
+      await refetchMembers({ cancelRefetch: false });
     } catch (err) {
       console.error(err);
       toast.error('Failed to add member');
@@ -946,8 +946,8 @@ export default function AdminAceFamilies() {
         await removeAceImage(currentMember?.photo_url);
       }
       toast.success(clearedLink ? 'Member saved. The rename cleared its member link.' : 'Member saved');
-      await refetchMembers();
-      if (clearedLink) await queryClient.invalidateQueries(ACE_MEMBER_LINKS_QUERY_KEY);
+      await refetchMembers({ cancelRefetch: false });
+      if (clearedLink) await queryClient.invalidateQueries({ queryKey: ACE_MEMBER_LINKS_QUERY_KEY });
     } catch (err) {
       console.error(err);
       const message = toUserMessage(err, 'Failed to save member');
@@ -1007,9 +1007,9 @@ export default function AdminAceFamilies() {
       setImportError(null);
       setSelectedFamilyId(family.id);
       setImportedFamilyId(family.id);
-      await queryClient.invalidateQueries(['ace-families']);
-      await queryClient.invalidateQueries(['ace-family-members']);
-      await refetch();
+      await queryClient.invalidateQueries({ queryKey: ['ace-families'] });
+      await queryClient.invalidateQueries({ queryKey: ['ace-family-members'] });
+      await refetch({ cancelRefetch: false });
     } catch (err) {
       console.error(err);
       const message = toUserMessage(err, 'Import failed.');
@@ -1026,7 +1026,7 @@ export default function AdminAceFamilies() {
       await aceFamiliesRepository.deleteMember(memberToRemove.id);
       await removeAceImage(memberToRemove.photo_url);
       toast.success(`Removed ${memberToRemove.name} from the fam`);
-      await refetchMembers();
+      await refetchMembers({ cancelRefetch: false });
     } catch (err) {
       console.error(err);
       toast.error('Failed to remove member');

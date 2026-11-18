@@ -1,4 +1,4 @@
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { leaderboardRepository } from '../data/repos/leaderboard';
 
 export interface IndividualLeaderboardMember {
@@ -13,9 +13,9 @@ export interface IndividualLeaderboardMember {
 }
 
 export function useIndividualLeaderboard(year: number | 'all' | null) {
-  return useQuery<IndividualLeaderboardMember[], unknown>(
-    ['individual-leaderboard', year],
-    async () => {
+  return useQuery<IndividualLeaderboardMember[], unknown>({
+    queryKey: ['individual-leaderboard', year],
+    queryFn: async () => {
       if (year === null) return [];
       if (year === 'all') {
         return await leaderboardRepository.getAllTimeLeaderboard() as IndividualLeaderboardMember[];
@@ -33,14 +33,12 @@ export function useIndividualLeaderboard(year: number | 'all' | null) {
         user_id: member.user_id,
       }));
     },
-    {
-      enabled: year !== null,
-      // Cached leaderboard data is considered fresh for 5 minutes.
-      // It refreshes on a later query trigger/remount/invalidation rather than continuous polling.
-      staleTime: 5 * 60 * 1000,
-      cacheTime: 10 * 60 * 1000,
-      refetchOnReconnect: false,
-      retry: false,
-    },
-  );
+    enabled: year !== null,
+    // Cached leaderboard data is considered fresh for 5 minutes.
+    // It refreshes on a later query trigger/remount/invalidation rather than continuous polling.
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnReconnect: false,
+    retry: false,
+  });
 }

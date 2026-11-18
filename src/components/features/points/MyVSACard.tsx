@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { eventsRepository, PublicEventPreview } from '../../../data/repos/events';
 import { type FindMyPointsEntry } from '../../../hooks/useFindMyPoints';
 import { normalizeHouse } from '../../../constants/houses';

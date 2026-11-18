@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { readableInk } from '../lib/readableInk';
 import { Link, useParams } from 'react-router-dom';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { PageTitle } from '../components/common/PageTitle';
 import { PublicBreadcrumbs } from '../components/common/PublicBreadcrumbs';
 import { EditorialHero, EditorialHeroScript } from '../components/common/EditorialHero';
@@ -311,7 +311,7 @@ export function House() {
     queryKey: ['house', 'upcoming-house-event-preview', today, activeYear],
     queryFn: () => houseEventsRepository.getPublicUpcomingPreview(today, activeYear, 3),
     staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     enabled: !invalidYearSlug && !isArchive && !isFutureYear && activeYear !== null,
   });
@@ -320,7 +320,7 @@ export function House() {
     queryKey: ['house', 'past-house-event-preview', today, activeYear],
     queryFn: () => houseEventsRepository.getPublicPastEventsForYear(today, activeYear!, 4),
     staleTime: 10 * 60 * 1000,
-    cacheTime: 20 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
     refetchOnWindowFocus: false,
     enabled: !isArchive && !isFutureYear && activeYear !== null,
   });
@@ -329,7 +329,7 @@ export function House() {
     queryKey: ['house', 'archive-events-for-year', activeYear],
     queryFn: () => houseEventsRepository.getPublicEventsForYear(activeYear!, 12),
     staleTime: 10 * 60 * 1000,
-    cacheTime: 20 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
     refetchOnWindowFocus: false,
     enabled: isArchive && activeYear !== null,
   });

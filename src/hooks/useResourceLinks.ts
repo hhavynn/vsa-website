@@ -1,4 +1,4 @@
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { ResourceLink } from '../types';
 import { resourceLinksRepository } from '../data/repos/resourceLinks';
 
@@ -14,7 +14,7 @@ export function useResourceLinks() {
     queryKey: RESOURCE_LINKS_QUERY_KEY,
     queryFn: () => resourceLinksRepository.getAll(),
     staleTime: 60 * 1000,
-    cacheTime: 5 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 
   return { resources, loading, error, refetch };
